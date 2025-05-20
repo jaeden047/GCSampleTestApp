@@ -1,0 +1,22 @@
+{
+  "name": "backendform",
+  "version": "1.0.0",
+  "main": "backendForm.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vanilliqs2/GCSampleTestApp.git"
+  },
+  "author": "GreenContributor: Emily Chang & Jaeden George",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/vanilliqs2/GCSampleTestApp/issues"
+  },
+  "homepage": "https://github.com/vanilliqs2/GCSampleTestApp#readme",
+  "description": "",
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
