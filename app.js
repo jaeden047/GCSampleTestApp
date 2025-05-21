@@ -5,9 +5,10 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 
 var indexRouter = require('./routes/index'); // indexRouter points to routes folder -> index.js
-var usersRouter = require('./routes/users'); // indexRouter points to routes folder -> users.js
+var usersRouter = require('./routes/users'); // usersRouter points to routes folder -> users.js
+var formRouter = require('./routes/form'); // formRouter points to routes folder -> form.js
 
-var app = express();
+var app = express(); // For main application
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views')); // creates a path to the views folder
@@ -15,7 +16,7 @@ app.set('view engine', 'jade'); // sets the view engine to jade so that HTML use
 
 app.use(logger('dev')); // prints to the dev console
 app.use(express.json()); // tells express to receive from the frontend (i.e. req.body = { key: value })
-app.use(express.urlencoded({ extended: false })); 
+app.use(express.urlencoded({ extended: true })); // if form sends data -> put data into req.body (requires encoded url tied to front-end submission)
 app.use(cookieParser()); // read parser 
 app.use(express.static(path.join(__dirname, 'public'))); // serves files from public folder
 
@@ -25,6 +26,8 @@ app.use('/', indexRouter);
 app.use('/users', usersRouter);
  // usersRouter : /users as req -> strips '/users' to '/' -> usersRouter checks router.get('/')
  // Express strips only when prefix more than / in app.use().
+app.use('/form', formRouter); 
+ // formRouter : /form as req -> strips '/form' -> formRouter checks through router commands.
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
