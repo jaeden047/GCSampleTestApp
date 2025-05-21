@@ -10,8 +10,4 @@ router.get('/', function(req, res, next) {
   // response: check /views/index/ with title variable as 'Express', responds to browser
 });
 
-router.get('/', (req, res) => {
-  res.send('Hello World!') // response: 'Hello World!' on browser
-})
-
 module.exports = router;
