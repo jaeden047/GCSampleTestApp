@@ -20,10 +20,10 @@ app.use(cookieParser()); // read parser
 app.use(express.static(path.join(__dirname, 'public'))); // serves files from public folder
 
 app.use('/', indexRouter); 
-// When given / -> indexrouter receives '/' -> router.get receives '/'
-// (i.e. /about -> indexrouter receives '/about' -> router.get receives '/about)
+// When given / -> router.get('/') to indexrouter
+// (i.e. /about -> router.get('/about') to index.js)
 app.use('/users', usersRouter);
- // When given /users -> strips '/users' -> usersrouter receives 
+ // When given /users -> strips '/users' -> router.get('/') to usersrouter
  // -> router.get receives '/'. (i.e. /users/profile -> /profile -> received by routers.get)
  // Express strips only when prefix more than / in app.use().
 
