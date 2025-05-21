@@ -20,11 +20,10 @@ app.use(cookieParser()); // read parser
 app.use(express.static(path.join(__dirname, 'public'))); // serves files from public folder
 
 app.use('/', indexRouter); 
-// When given / -> router.get('/') to indexrouter
-// (i.e. /about -> router.get('/about') to index.js)
+// indexRouter : '/' as req -> no strip occur -> indexRouter checks router.get('/') 
+// i.e. indexRouter receives '/about' -> no strip occur -> indexRouter checks /routes/index -> indexRouter checks router.get('/about') -> Match
 app.use('/users', usersRouter);
- // When given /users -> strips '/users' -> router.get('/') to usersrouter
- // -> router.get receives '/'. (i.e. /users/profile -> /profile -> received by routers.get)
+ // usersRouter : /users as req -> strips '/users' to '/' -> usersRouter checks router.get('/')
  // Express strips only when prefix more than / in app.use().
 
 // catch 404 and forward to error handler
