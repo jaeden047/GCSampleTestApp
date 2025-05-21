@@ -4,12 +4,10 @@ var router = express.Router();
 const db = require('../db'); // make sure path is correct
 
 /* GET users listing. */
-router.get('/', function(req, res, next) {
-  db.query('SELECT * FROM users', (err, results) => {
-    if (err) {
-      return next(err);
-    }
-    res.json(results); // send results as JSON
+router.get('/db-test', (req, res) => {
+  db.query('SELECT NOW() AS now', (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ time: results[0].now }); // send results as JSON
   });
 });
 
