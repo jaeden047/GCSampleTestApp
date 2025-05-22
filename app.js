@@ -1,3 +1,5 @@
+// To run from scratch, run node setup.js on terminal after downloading mySQL, readying connection, workbench, etc.
+// Then run npm start to test the backend.
 var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
@@ -7,6 +9,7 @@ var logger = require('morgan');
 var indexRouter = require('./routes/index'); // indexRouter points to routes folder -> index.js
 var usersRouter = require('./routes/users'); // usersRouter points to routes folder -> users.js
 var formRouter = require('./routes/form'); // formRouter points to routes folder -> form.js
+require('./db'); // needed to open & access database file
 
 var app = express(); // For main application
 
