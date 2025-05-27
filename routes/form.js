@@ -11,7 +11,8 @@ router.post('/', (req, res) => {
 
 import { getGrade } from './mainmenu.js'; // Call getGrade() to pull grade from current Main Menu. Only works on local applications? **
 
-router.post('/g8/submit', (req, res) => { 
+router.post('/submit', (req, res) => {
+  // SELECT Grade getGrade From the mySQL Database 
   console.log("Question 1: " + req.body.Q1);
   console.log("Question 2: " + req.body.Q2);
   console.log("Question 3: " + req.body.Q3);
@@ -28,37 +29,4 @@ router.post('/g8/submit', (req, res) => {
   // The session data will be saved in req.session.username, etc. Results form will then display results pertaining to the parameter using views folder, images, and other tools.
 })
 
-router.post('/g910/submit', (req, res) => { 
-  console.log("Question 1: " + req.body.Q1);
-  console.log("Question 2: " + req.body.Q2);
-  console.log("Question 3: " + req.body.Q3);
-  console.log("Question 4: " + req.body.Q4);
-  console.log("Question 5: " + req.body.Q5);
-  console.log("Question 6: " + req.body.Q6);
-  console.log("Question 7: " + req.body.Q7);
-  console.log("Question 8: " + req.body.Q8);
-  console.log("Question 9: " + req.body.Q9);
-  console.log("Question 10: " + req.body.Q10);
-  // SAVE INTO DATABASE**
-  
-  res.redirect('/form/results'); // Results form will recollect data from consistent session ID number, username, password, email, all submitted at the start of the form.
-  // The session data will be saved in req.session.username, etc. Results form will then display results pertaining to the parameter using views folder, images, and other tools.
-})
-
-router.post('/g1112/submit', (req, res) => { 
-  console.log("Question 1: " + req.body.Q1);
-  console.log("Question 2: " + req.body.Q2);
-  console.log("Question 3: " + req.body.Q3);
-  console.log("Question 4: " + req.body.Q4);
-  console.log("Question 5: " + req.body.Q5);
-  console.log("Question 6: " + req.body.Q6);
-  console.log("Question 7: " + req.body.Q7);
-  console.log("Question 8: " + req.body.Q8);
-  console.log("Question 9: " + req.body.Q9);
-  console.log("Question 10: " + req.body.Q10);
-  // SAVE INTO DATABASE UNDER MAIN MENU LOGIN**
-
-  res.redirect('/form/results'); // Results form will recollect data from consistent session ID number, username, password, email, all submitted at the start of the form.
-  // The session data will be saved in req.session.username, etc. Results form will then display results pertaining to the parameter using views folder, images, and other tools.
-})
 module.exports = router;
