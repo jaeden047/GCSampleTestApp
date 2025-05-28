@@ -13,9 +13,6 @@ const routes = require('./routes');
 app.use(express.json()); // for parsing JSON request bodies
 app.use('/api', routes); // all routes are under /api prefix
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
 require('./db'); // needed to open & access database file
 
 // view engine setup
