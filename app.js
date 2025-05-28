@@ -1,17 +1,22 @@
 // To run from scratch, run node setup.js on terminal after downloading mySQL, readying connection, workbench, etc.
 // Then run npm start to test the backend.
 var createError = require('http-errors');
-var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 const session = require('express-session');
-var indexRouter = require('./routes/index'); // indexRouter points to routes folder -> index.js
-var usersRouter = require('./routes/users'); // usersRouter points to routes folder -> users.js
-var formRouter = require('./routes/form'); // formRouter points to routes folder -> form.js
-require('./db'); // needed to open & access database file
 
-var app = express(); // For main application
+const express = require('express');
+const app = express();
+const routes = require('./routes');
+
+app.use(express.json()); // for parsing JSON request bodies
+app.use('/api', routes); // all routes are under /api prefix
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+require('./db'); // needed to open & access database file
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views')); // creates a path to the views folder
@@ -30,14 +35,14 @@ app.use(session({
   cookie: { secure: false } // set to true if using HTTPS
 }));
 
-app.use('/', indexRouter); 
-// indexRouter : '/' as req -> no strip occur -> indexRouter checks router.get('/') 
-// i.e. indexRouter receives '/about' -> no strip occur -> indexRouter checks /routes/index -> indexRouter checks router.get('/about') -> Match
-app.use('/users', usersRouter);
- // usersRouter : /users as req -> strips '/users' to '/' -> usersRouter checks router.get('/')
- // Express strips only when prefix more than / in app.use().
-app.use('/form', formRouter); 
- // formRouter : /form as req -> strips '/form' -> formRouter checks through router commands.
+// app.use('/', indexRouter); 
+// // indexRouter : '/' as req -> no strip occur -> indexRouter checks router.get('/') 
+// // i.e. indexRouter receives '/about' -> no strip occur -> indexRouter checks /routes/index -> indexRouter checks router.get('/about') -> Match
+// app.use('/users', usersRouter);
+//  // usersRouter : /users as req -> strips '/users' to '/' -> usersRouter checks router.get('/')
+//  // Express strips only when prefix more than / in app.use().
+// app.use('/form', formRouter); 
+//  // formRouter : /form as req -> strips '/form' -> formRouter checks through router commands.
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

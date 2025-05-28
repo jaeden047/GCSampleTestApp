@@ -1,13 +1,9 @@
-var express = require('express');
-var router = express.Router();
-// req receives info about request
-// res generates response to browser
-// duplicate routes don't work, only first duplicate in order gets complete. 
+const express = require('express');
+const router = express.Router();
 
-/* GET home page. */
-router.get('/', function(req, res, next) {
-  res.render('index', { title: 'Express' }); 
-  // response: check /views/index/ with title variable as 'Express', responds to browser
-});
+// Centralize all route files
+router.use('/users', require('./users'));
+router.use('/quiz', require('./quiz'));
+router.use('/results', require('./results'));
 
 module.exports = router;
