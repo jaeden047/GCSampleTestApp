@@ -9,6 +9,8 @@ const session = require('express-session');
 const express = require('express');
 const app = express();
 const routes = require('./routes');
+const usersRouter = require('./routes/users');
+const formRouter = require('./routes/form');
 
 app.use(express.json()); // for parsing JSON request bodies
 app.use('/api', routes); // all routes are under /api prefix
@@ -32,13 +34,13 @@ app.use(session({
   cookie: { secure: false } // set to true if using HTTPS
 }));
 
-// app.use('/', indexRouter); 
+//app.use('/', indexRouter); 
 // // indexRouter : '/' as req -> no strip occur -> indexRouter checks router.get('/') 
 // // i.e. indexRouter receives '/about' -> no strip occur -> indexRouter checks /routes/index -> indexRouter checks router.get('/about') -> Match
-// app.use('/users', usersRouter);
+app.use('/users', usersRouter);
 //  // usersRouter : /users as req -> strips '/users' to '/' -> usersRouter checks router.get('/')
 //  // Express strips only when prefix more than / in app.use().
-// app.use('/form', formRouter); 
+app.use('/form', formRouter); 
 //  // formRouter : /form as req -> strips '/form' -> formRouter checks through router commands.
 
 // catch 404 and forward to error handler
