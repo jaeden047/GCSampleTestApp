@@ -6,9 +6,22 @@ var router = express.Router();
  * - Could be skipped if you’re evaluating in POST only
  * - TODO: Implement only if needed
  */
-router.get('/', (req, res) => {
-  // TODO: Fetch user's saved answers from DB/session
-  res.json({ answers: [] });
+app.get('/result', async (req, res) => {
+  if (!userId) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  try {
+    const [results] = await db.query(
+      'SELECT * FROM TestAttempts WHERE user_id = ? ORDER BY test_date DESC',
+      [userId]
+    );
+
+    res.json({ results });
+  } catch (error) {
+    console.error('Error fetching results:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 /**
@@ -24,3 +37,16 @@ router.post('/', (req, res) => {
 });
 
 module.exports = router;
+
+
+/**Front end should look something like this to fetch:
+ * const fetchResults = async () => {
+  const res = await fetch('/result');
+  if (res.ok) {
+    const data = await res.json();
+    console.log(data.results); // your past attempts
+  } else {
+    console.error('Error:', await res.json());
+  }
+};
+ */

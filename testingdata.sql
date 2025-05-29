@@ -1,6 +1,3 @@
--- Insert user (Emily Chang, no phone number)
-INSERT INTO Users (name, email) VALUES ('Emily Chang', 'emily0109.ec@gmail.com');
-
 -- Insert topic (Grade 8 Math)
 INSERT INTO Topics (topic_name) VALUES ('Grade 8 Math');
 
