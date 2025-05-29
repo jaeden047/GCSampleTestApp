@@ -1,12 +1,12 @@
 var express = require('express');
 var router = express.Router();
 /**
- * GET /results
- * - (Optional) Fetch previous attempt or saved answers
- * - Could be skipped if you’re evaluating in POST only
- * - TODO: Implement only if needed
+ * GET /pastAttempts
+ * - Fetch previous attempt or saved answers
  */
-app.get('/result', async (req, res) => {
+app.get('/pastAttempts', async (req, res) => {
+  const userId = req.session.userId;
+  
   if (!userId) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
@@ -22,18 +22,6 @@ app.get('/result', async (req, res) => {
     console.error('Error fetching results:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
-});
-
-/**
- * POST /results
- * - Receive submitted answers from user
- * - Evaluate and return score
- * - TODO: Implement quiz grading logic
- */
-router.post('/', (req, res) => {
-  const { answers } = req.body;
-  // TODO: Grade answers, calculate score, save if needed
-  res.json({ score: 0, correct: 0 });
 });
 
 module.exports = router;
