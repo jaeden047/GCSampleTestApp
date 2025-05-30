@@ -26,7 +26,7 @@ app.use(cookieParser()); // read parser
 app.use(express.static(path.join(__dirname, 'public'))); // serves files from public folder
 
 app.use(session({
-  secret: 'your-secret-key', // should be stored in env variable
+  secret: process.env.SESSION_SECRET, // should be stored in env variable
   resave: false,
   saveUninitialized: true,
   cookie: { secure: false } // set to true if using HTTPS
