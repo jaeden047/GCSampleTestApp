@@ -1,12 +1,19 @@
--- Insert topic (Grade 8 Math)
-INSERT INTO Topics (topic_name) VALUES ('Grade 8 Math');
+-- Insert topics
+INSERT INTO Topics (topic_name)
+VALUES 
+    ('Grade 7'),
+    ('Grade 8'),
+    ('Grade 9'),
+    ('Grade 10'),
+    ('Grade 11'),
+    ('Grade 12');
 
 -- Insert questions and answers
--- Assume topic_id = 1 for Grade 8 Math
+-- Assume topic_id = 2 for Grade 8 Math
 
 -- Question 1
 INSERT INTO Questions (topic_id, question_text)
-VALUES (1, 'Factorize completely: x² - 4y²');
+VALUES (2, 'Factorize completely: x² - 4y²');
 INSERT INTO Answers (question_id, answer_text, is_correct)
 VALUES 
   (1, '(x+2y)(x-2y)', TRUE),
