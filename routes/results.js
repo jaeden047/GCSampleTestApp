@@ -1,10 +1,11 @@
 var express = require('express');
 var router = express.Router();
+const db = require('../db');// Review for later
 /**
  * GET /pastAttempts
  * - Fetch previous attempt or saved answers
  */
-app.get('/pastAttempts', async (req, res) => {
+router.get('/pastAttempts', async (req, res) => {
   const userId = req.session.userId;
   
   if (!userId) {
