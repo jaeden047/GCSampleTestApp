@@ -9,7 +9,7 @@ const db = require('../db');// Review for later
  */
   // TODO: Create sessions in order to fetch and display user info
 
-router.post('/', async (req, res) => { // asynchronously because route wait for the database to finish before responding to the user
+router.post('/users', async (req, res) => { // asynchronously because route wait for the database to finish before responding to the user
   const { Name, Email, Phone } = req.body;
   console.log(Name);
   console.log(Email);
@@ -42,7 +42,6 @@ router.post('/', async (req, res) => { // asynchronously because route wait for 
       name: user.name,
       email: user.email,
       phone: user.phone,
-      grade: user.grade
     };
     // Frontend then pushes you to the quizzes page you selected. Backend redirect not necessary. Else, if failed prior:
     // 4. Respond with success (Frontend can later redirect to dashboard)

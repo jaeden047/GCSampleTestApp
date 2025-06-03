@@ -6,6 +6,7 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
+  MyApp({super.key});
   final ApiService api = ApiService();
 
   @override
@@ -16,7 +17,8 @@ class MyApp extends StatelessWidget {
         appBar: AppBar(title: Text('Login Test')),
         body: Center(
           child: ElevatedButton(
-            onPressed: () async {
+            onPressed: () async { //add a text box for user
+              print('Sending request...');
               final response = await api.loginUser(
                 'Test User',
                 'test@example.com',
