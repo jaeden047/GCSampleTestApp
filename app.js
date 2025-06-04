@@ -12,6 +12,10 @@ const routes = require('./routes');
 const usersRouter = require('./routes/users');
 const quizRouter = require('./routes/quiz');
 
+app.listen(3000, 'localhost', () => {
+  console.log('Server running on http://localhost:3000');
+});
+
 app.use(express.json()); // for parsing JSON request bodies
 app.use('/api', routes); // all routes are under /api prefix
 
