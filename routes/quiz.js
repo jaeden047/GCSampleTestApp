@@ -17,38 +17,59 @@ router.post('/', async (req, res) => { // Get Grade, User selects a quiz
   req.session.user.grade = grade;
   // <-- HERE Frontend redirects to quiz page
   const [tableQuestions] = await db.query( // Quiz loads with questions
-      'SELECT * FROM Questions WHERE Topics = ? ORDER BY RAND() LIMIT 10',
+      'SELECT * FROM Questions WHERE topic_id = ? ORDER BY RAND() LIMIT 10',
       [grade]
     );
 for (let question of tableQuestions) {
   const [tableAnswers] = await db.query(
     'SELECT * FROM Answers WHERE question_id = ? ORDER BY RAND() LIMIT 4',
-    [question.question_id] // *
+    [question.question_id] 
   );
 }
   //res.json({ questions: tableQuestions }, { answers: tableAnswers }); // Show questions to Frontend, *need to display
 });
-router.post('/submit', async (req, res) => {
-  // SELECT Grade getGrade From the mySQL Database
-  if (req.session.user){ // If there's a user
-    console.log("Session: " + req.session.user.name); // test
-    // USER'S ANSWERS BELOW
+// Must call users before quiz **
+router.post('/submit', async (req, res) => { 
+  if (req.session.user){ // If user exists: collect submissions
     const questionAnswers = [req.body.Q1, req.body.Q2, req.body.Q3, req.body.Q4, req.body.Q5, req.body.Q6, req.body.Q7, req.body.Q8, req.body.Q9, req.body.Q10];
-    for (let answer of questionAnswers) {
-       const [tableCorrectAnswers] = await db.query(
-        'SELECT * FROM Answers WHERE question_id = ? AND is_correct = TRUE', // *
-        [answer.question_id] // *
-      );
-    }
+    // Above is list of question answers submitted by quiz
+    // question has : question_id (question number), topic_id (grade), question_text
+    // answer has : answer_id (answer number), question_id (question number), answer_text, is_correct (bool) 
     answerCount = 0;
-    for (let i = 0; i < 10; i++) {
-      if (tableCorrectAnswers[i].question_id == questionAnswers[i].question_id){
+    const correctAnswers = [];
+    const incorrectAnswers = [];
+    for (let answer of questionAnswers) { // for each question-submission of quiz
+      const [mcCorrectAnswers] = await db.query( // The correct multiple choice answer related to question
+        'SELECT * FROM answers WHERE question_id = ? AND is_correct = TRUE', 
+        // The answer of selected question 
+        [answer.question_id] 
+      );
+      const [questionData] = await db.query( // The correct multiple choice answer related to question
+        'SELECT * FROM questions WHERE question_id = ?', 
+        // The answer of selected question 
+        [answer.question_id] 
+      );
+      if (answer.answer_id != mcCorrectAnswers[0].answer_id){
+        incorrectAnswers.push({
+          question_id: answer.question_id,
+          answer_id: answer.answer_id,
+          answer_text: answer.answer_text, 
+          question_text: questionData.question_text
+        });
+      }
+      if (answer.answer_id == mcCorrectAnswers[0].answer_id){
+        correctAnswers.push({
+          question_id: answer.question_id,
+          answer_id: answer.answer_id,
+          answer_text: answer.answer_text, 
+          question_text: questionData.question_text
+        });
         answerCount++;
-        // Mark Question Correct, save result into User data using Insert
-        // INSERT INTO RESULTS, TESTATTEMPTS
       }
     }
-    // Frontend Redirects to Results tab
+    console.log(correctAnswers);
+    // answerCount / 10 = Final Result of Quiz
+    // Frontend needs to Redirect to Results tab
   }
 })
 module.exports = router;

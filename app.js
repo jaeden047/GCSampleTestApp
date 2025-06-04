@@ -10,7 +10,7 @@ const express = require('express');
 const app = express();
 const routes = require('./routes');
 const usersRouter = require('./routes/users');
-const formRouter = require('./routes/form');
+const quizRouter = require('./routes/quiz');
 
 app.use(express.json()); // for parsing JSON request bodies
 app.use('/api', routes); // all routes are under /api prefix
@@ -40,7 +40,7 @@ app.use(session({
 app.use('/users', usersRouter);
 //  // usersRouter : /users as req -> strips '/users' to '/' -> usersRouter checks router.get('/')
 //  // Express strips only when prefix more than / in app.use().
-app.use('/form', formRouter); 
+app.use('/quiz', quizRouter); 
 //  // formRouter : /form as req -> strips '/form' -> formRouter checks through router commands.
 
 // catch 404 and forward to error handler

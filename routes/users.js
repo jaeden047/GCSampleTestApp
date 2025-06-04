@@ -9,6 +9,7 @@ const db = require('../db');// Review for later
  */
   // TODO: Create sessions in order to fetch and display user info
 
+  // Error checking (what if session made pre-emptively, how to stop random link upload, how to hard-code transitions between backend)
 router.post('/', async (req, res) => { // asynchronously because route wait for the database to finish before responding to the user
   const { Name, Email, Phone } = req.body;
   console.log(Name);
