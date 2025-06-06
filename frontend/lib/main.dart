@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'api_service.dart';
+import 'home.dart'; // navigate our home page screen
 
 void main() {
   runApp(MyApp());
@@ -27,6 +28,18 @@ class MyApp extends StatelessWidget {
 
               print('Status: ${response.statusCode}');
               print('Body: ${response.body}');
+
+              if (response.statusCode == 200) {
+                // Navigate to Home page
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const Home()),
+                );
+              } else {
+                // Show error
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Login failed: ${response.statusCode}')),
+                );
+              }
             },
             child: Text('Login'),
           ),

@@ -2,22 +2,22 @@
 // Then run npm start to test the backend.
 var createError = require('http-errors');
 var path = require('path');
-var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-const session = require('express-session');
 
+require('dotenv').config(); // Load env variables
 const express = require('express');
-const app = express();
-const routes = require('./routes');
-const usersRouter = require('./routes/users');
-const quizRouter = require('./routes/quiz');
+const session = require('express-session');
+const cookieParser = require('cookie-parser');
 
-app.listen(3000, 'localhost', () => {
-  console.log('Server running on http://localhost:3000');
+const indexRouter = require('./routes');
+
+const app = express();
+
+app.listen(3000, '0.0.0.0', () => {
+  console.log('Server running on http://0.0.0.0:3000');
 });
 
 app.use(express.json()); // for parsing JSON request bodies
-app.use('/api', routes); // all routes are under /api prefix
 
 require('./db'); // needed to open & access database file
 
@@ -32,20 +32,15 @@ app.use(cookieParser()); // read parser
 app.use(express.static(path.join(__dirname, 'public'))); // serves files from public folder
 
 app.use(session({
-  secret: process.env.SESSION_SECRET, // should be stored in env variable
+  secret: process.env.SESSION_SECRET || 'fallback',
   resave: false,
   saveUninitialized: true,
   cookie: { secure: false } // set to true if using HTTPS
 }));
 
-//app.use('/', indexRouter); 
-// // indexRouter : '/' as req -> no strip occur -> indexRouter checks router.get('/') 
-// // i.e. indexRouter receives '/about' -> no strip occur -> indexRouter checks /routes/index -> indexRouter checks router.get('/about') -> Match
-app.use('/users', usersRouter);
-//  // usersRouter : /users as req -> strips '/users' to '/' -> usersRouter checks router.get('/')
-//  // Express strips only when prefix more than / in app.use().
-app.use('/quiz', quizRouter); 
-//  // formRouter : /form as req -> strips '/form' -> formRouter checks through router commands.
+//******  MIGHT ONLY ONE OF THEM */
+app.use('/api', indexRouter); // all routes are under /api prefix
+app.use('/', indexRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

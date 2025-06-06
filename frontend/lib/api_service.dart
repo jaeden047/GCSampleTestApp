@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http; // for making HTTP requests
 
 // define a class to handle API-related functionality
 class ApiService {
-  final String baseUrl = 'http://localhost:3000'; // or replace with your Mac's IP
+  final String baseUrl = 'http://localhost:3001'; // or replace with your Mac's IP
   // DON'T POST THIS
 
   Future<http.Response> loginUser(String name, String email, String phone) async {

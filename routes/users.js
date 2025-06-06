@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');// Review for later
+const db = require('../db');
 
 /**
  * Route: /users
@@ -21,8 +21,7 @@ router.post('/', async (req, res) => { // asynchronously because route wait for 
       'SELECT * FROM Users WHERE email = ?',
       [Email]
     );
-    console.log("Reaches 1.");
-    let user;
+    let user; // Variable later use to store in session
     if (existingUser.length > 0) {
       user = existingUser[0];
       console.log('User exists:', user);
