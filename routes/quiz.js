@@ -10,22 +10,54 @@ const router = express.Router();
  * GET /quiz
  * - Get list of quiz topics
  * - Used to show options for the user to choose from
- * - TODO: Query the topics from DB
+ * - Deal with submission logic
  */
-// All x-www-urlencoded are string literals
-router.post('/', async (req, res) => { // Get Grade, User selects a quiz
-  const grade = req.body.grade; // Select a quiz from frontend
+
+// Setting up a quiz according to the selected Grade
+router.post('/', async (req, res) => { 
+  const Grade = req.body.grade; // This is the Topic/Grade selected by the user
   if (req.session.user){
-    req.session.user.grade = grade;
-    // <-- HERE Frontend redirects to quiz page
-  const [tableQuestions] = await db.query( // Quiz loads with questions
+    const userId = req.session.user.id;
+    // req.session.user.grade = grade; we're not using this global variable
+
+    // Load the quiz with 10 questions
+    const [tableQuestions] = await db.query(
       'SELECT * FROM Questions WHERE topic_id = ? ORDER BY RAND() LIMIT 10',
-      [grade]
+      [Grade]
     );
-  res.json({ questions: tableQuestions })// Sends all the available questions of Grade, to Quiz
-  }
-  else{
-    console.log("User did not fill out contact info / selected quiz.")
+
+    const questionIds = []; // Stores question lists to TestAttempts db
+    const answerOrder = []; // Stores answer lists to TestAttempts db
+
+    // Acquire the multiple choice options
+    for (let question of tableQuestions) {
+      const [tableAnswers] = await db.query(
+        'SELECT * FROM Answers WHERE question_id = ? ORDER BY RAND() LIMIT 4',
+        [question.question_id] 
+      );
+      question.answers = tableAnswers; // Load answers to frontend
+      questionIds.push(question.question_id); // Load questions for database
+      answerOrder.push(tableAnswers.map(ans => ans.answer_id)); // Load answers for database
+    }
+
+    // Insert into TestAttempts with current user ID
+    await db.query(
+      `INSERT INTO TestAttempts (user_id, question_list, answer_order, selected_answers, score)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        userId,
+        JSON.stringify(questionIds),
+        JSON.stringify(answerOrder),
+        JSON.stringify([]), // selected_answers empty for now
+        0 // score sets 0
+      ]
+    );
+
+    // Send the questions with their randomized answers back to frontend
+    res.json({ questions: tableQuestions });
+  } else {
+    console.log("User not logged in.");
+    res.status(401).json({ message: 'Unauthorized' });
   }
 });
 // Must call users before quiz **
