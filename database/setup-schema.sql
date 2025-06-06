@@ -34,11 +34,10 @@ CREATE TABLE IF NOT EXISTS Answers (
 CREATE TABLE IF NOT EXISTS TestAttempts (
   attempt_id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
-  test_date DATE NOT NULL,
-  test_time TIME NOT NULL,
+  test_datetime DATETIME DEFAULT CURRENT_TIMESTAMP,
   question_list JSON, -- list of 10 questions that was randomly selected
   answer_order JSON, -- list of multiple choice answers in its displayed order e.q. "[[21,19,23,20],[24,25,26,27],..." 
   selected_answers JSON, -- the 10 answers that was selected by the user
-  score INT NOT NULL,
+  score INT,
   FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
 );
