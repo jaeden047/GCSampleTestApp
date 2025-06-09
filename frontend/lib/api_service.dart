@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http; // for making HTTP requests
 // define a class to handle API-related functionality
 class ApiService {
   // Never push your IP here
-  final String baseUrl = "http://[IP]:3000";
+  final String baseUrl = "http://10.62.1.190:3000";
 
   Future<http.Response> loginUser(String name, String email, String phone) async {
     final url = Uri.parse('$baseUrl/api/users');

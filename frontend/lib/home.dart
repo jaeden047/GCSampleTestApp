@@ -1,5 +1,8 @@
 // home.dart
 import 'package:flutter/material.dart';
+import 'package:frontend/math_grades.dart';
+import 'package:frontend/env_topics.dart';
+import 'package:frontend/results.dart';
 
 class Home extends StatelessWidget {
   const Home({super.key});
@@ -15,23 +18,35 @@ class Home extends StatelessWidget {
           children: [
             ElevatedButton(
               onPressed: () {
-                // TODO: Connect to Quiz page
+                // Navigate to view math grades selections
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => MathGrades()),
+                );
               },
-              child: Text('Take a Quiz'),
+              child: Text('Take a Quiz (Math)'),
+            ),
+            SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                // TODO: Navigate to view environments selections
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => EnvTopics()),
+                );
+              },
+              child: Text('Take a Quiz (Math)'),
             ),
             SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
                 // TODO: Connect to View Past Results
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => Results()),
+                );
               },
               child: Text('View Past Results'),
-            ),
-            SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                // TODO: Connect to Settings or Profile
-              },
-              child: Text('Settings'),
             ),
           ],
         ),
