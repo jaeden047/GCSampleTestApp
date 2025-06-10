@@ -6,7 +6,6 @@ var logger = require('morgan');
 
 require('dotenv').config(); // Load env variables
 const express = require('express');
-const session = require('express-session');
 const cookieParser = require('cookie-parser');
 
 const indexRouter = require('./routes');
@@ -31,15 +30,10 @@ app.use(express.urlencoded({ extended: true })); // if form sends data -> put da
 app.use(cookieParser()); // read parser 
 app.use(express.static(path.join(__dirname, 'public'))); // serves files from public folder
 
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'fallback',
-  resave: false,
-  saveUninitialized: true,
-  cookie: { secure: false } // set to true if using HTTPS
-}));
+const verifyJWT = require('./verifyJWT'); // Your JWT verification middleware
 
 //******  MIGHT ONLY ONE OF THEM */
-app.use('/api', indexRouter); // all routes are under /api prefix
+app.use('/api', verifyJWT, indexRouter); // All routes under /api now require JWT
 app.use('/', indexRouter);
 
 // catch 404 and forward to error handler

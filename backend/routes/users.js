@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-
+const jwt = require('jsonwebtoken');
+// const verifyToken = require('../middleware/auth');
 /**
  * Route: /users
  * - POST request user access and initializes session data.
@@ -35,17 +36,18 @@ router.post('/', async (req, res) => { // asynchronously because route wait for 
       user = { id: userId, name: Name, email: Email, phone: Phone}; // User data collects from Database
       console.log('New user created:', user); // Declaring the user's new entry
     }
+    // 3. Create JWT token
+    const token = jwt.sign(
+      { id: user.id, name: user.name }, // Payload
+      process.env.JWT_SECRET || 'secret-key', // Replace with env var in real app
+      { expiresIn: '1h' }
+    );
 
-    // 3. Store in session
-    req.session.user = { // Global session declared
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-    };
-    // Frontend then pushes you to the quizzes page you selected. Backend redirect not necessary. Else, if failed prior:
-    // 4. Respond with success (Frontend can later redirect to dashboard)
-    res.status(200).json({ message: 'Login successful' });
+      // 4. Send token back to frontend
+    // 4. Send token back to frontend
+    res.status(200).json({ token });
+    // res.json({ token });
+    // res.status(200).json({ message: 'Login successful' });
 
   } catch (err) {
     console.error('Error handling user:', err);

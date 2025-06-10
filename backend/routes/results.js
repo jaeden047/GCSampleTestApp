@@ -1,12 +1,14 @@
 var express = require('express');
 var router = express.Router();
 const db = require('../db');// Review for later
+const verifyToken = require('../middleware/auth');
 /**
  * GET /pastAttempts
  * - Fetch previous attempt or saved answers
  */
-router.get('/pastAttempts', async (req, res) => {
-  const userId = req.session.userId;
+router.get('/pastAttempts', verifyToken, async (req, res) => {
+  // const userId = req.session.userId;
+  const userId = req.user.id; // pulled from token
   
   if (!userId) {
     return res.status(401).json({ error: 'Not authenticated' });
