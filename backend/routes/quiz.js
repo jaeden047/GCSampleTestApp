@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const router = express.Router();
+const verifyToken = require('../middleware/auth');
 // LOGIC TREE
 // From users main menu, finish contact info, session declaration -> Go to Quizzes Page -> Select a Quiz
 // -> Backend Receives Grade from Quiz Selected -> Fetch Questions from Database based on Grade
@@ -14,10 +15,11 @@ const router = express.Router();
  */
 
 // Setting up a quiz according to the selected Grade
-router.post('/', async (req, res) => { 
+router.post('/', verifyToken, async (req, res) => { 
   const Grade = req.body.grade; // This is the Topic/Grade selected by the user
-  if (req.session.user){
-    const userId = req.session.user.id;
+  const userId = req.user.id; // pulled from token
+  console.log(req.user.id);
+  
     // req.session.user.grade = grade; we're not using this global variable
 
     // Load the quiz with 10 questions
@@ -59,25 +61,21 @@ router.post('/', async (req, res) => {
     // Store like this on the frontend
     // const { attempt_id, questions } = await api.post('/api/quiz', { grade });
 
-  } else {
-    console.log("User not logged in.");
-    res.status(401).json({ message: 'Unauthorized' });
-  }
+
+    // console.log("User not logged in.");
+    // console.log(req.session.user);
+    // res.status(401).json({ message: 'Unauthorized' });
+  
 });
 
 // Post quiz score calculation
-router.post('/submit', async (req, res) => {
+router.post('/submit', verifyToken, async (req, res) => {
   const { attempt_id, selected_answers} = req.body;
   // selected_answers is expected to be a list of 10 answer_id
 
   // For testing: make sure we get 10 answers from frontend
   if (!Array.isArray(selected_answers) || selected_answers.length !== 10) {
     return res.status(400).json({ message: 'Invalid answer format.' });
-  }
-
-  // Ensure user is authenticated
-  if (!req.session.user) {
-    return res.status(401).json({ message: 'Unauthorized' });
   }
 
   // Score calculation from selected answers
