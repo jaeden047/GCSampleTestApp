@@ -1,8 +1,9 @@
 // home.dart
 import 'package:flutter/material.dart';
-import 'package:frontend/math_grades.dart';
-import 'package:frontend/env_topics.dart';
-import 'package:frontend/results.dart';
+import 'math_grades.dart';
+import 'env_topics.dart';
+import 'results.dart';
+// Home dashboard: Math quiz, Environmental quiz, Past Results
 
 class Home extends StatelessWidget {
   const Home({super.key});
@@ -29,18 +30,18 @@ class Home extends StatelessWidget {
             SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
-                // TODO: Navigate to view environments selections
+                // Navigate to view environments selections
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => EnvTopics()),
                 );
               },
-              child: Text('Take a Quiz (Math)'),
+              child: Text('Take a Quiz (Environment)'),
             ),
             SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
-                // TODO: Connect to View Past Results
+                // Connect to View Past Results
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => Results()),

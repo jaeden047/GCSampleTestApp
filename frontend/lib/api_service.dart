@@ -1,12 +1,20 @@
 import 'dart:convert'; // convert Dart map to JSON string
 import 'package:http/http.dart' as http; // for making HTTP requests
+import 'package:shared_preferences/shared_preferences.dart'; // token storage
 
-// define a class to handle API-related functionality
+// handle API-related functionality
 class ApiService {
-  // Never push your IP here
-  final String baseUrl = "http://10.62.1.190:3000";
+  // *** NEVER PUSH IP HERE
+  static final String baseUrl = "http://[IP]:3000";
 
-  Future<http.Response> loginUser(String name, String email, String phone) async {
+  // Retrieve the JWT token from SharedPreferences
+  static Future<String?> getToken() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('jwt_token'); // Get the saved JWT token
+  }
+
+  // Logs in or register by sending user info to backend
+  Future<String> loginUser(String name, String email, String phone) async {
     final url = Uri.parse('$baseUrl/api/users');
 
     try {
@@ -20,11 +28,70 @@ class ApiService {
         }),
       );
       print("Response status: ${response.statusCode}");
-      print("Response body: ${response.body}");
-      return response;
+      final responseBody = json.decode(response.body);
+      if (responseBody.containsKey('token')) {
+        return responseBody['token'];
+      } else {
+        throw Exception('Token not found in the response');
+      }
     } catch (e) {
       print("Error occurred: $e");
       rethrow;
     }
   }
+
+  // Fetch quiz questions and multiple choice
+  // Todo: change int grade to a topic (consider environments aren't grades)
+  static Future<Map<String, dynamic>?> postQuiz(int grade, String token) async {
+    final token = await getToken(); 
+
+    final url = Uri.parse('$baseUrl/api/quiz');
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'grade': grade}),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        print('Failed to fetch quiz: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      print("Error fetching quiz: $e");
+      return null;
+    }
+  }
+
+  // Still under review
+  static Future<Map<String, dynamic>?> submitQuiz(int attemptId, List<int?> selectedAnswers) async {
+    final url = Uri.parse('$baseUrl/api/quiz/submit');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'attempt_id': attemptId,
+          'selected_answers': selectedAnswers,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        print('Failed to submit quiz: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      print("Error submitting quiz: $e");
+      return null;
+    }
+  }
+
 }
