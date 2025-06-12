@@ -1,8 +1,9 @@
-// login_screen.dart
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // JWT Authentication Token
 import 'api_service.dart';
 import 'home.dart';
 
+// Student Access Login Page
 class LoginScreen extends StatelessWidget {
   LoginScreen({super.key});
   final ApiService api = ApiService();
@@ -15,22 +16,24 @@ class LoginScreen extends StatelessWidget {
         child: ElevatedButton(
           onPressed: () async {
             print('Sending request...');
-            final response = await api.loginUser(
-              'Test User',
-              'test@example.com',
-              '1234567890',
-            );
 
-            print('Status: ${response.statusCode}');
-            print('Body: ${response.body}');
+            try {
+              final token = await api.loginUser(
+                'Test User',
+                'test@example.com',
+                '1234567890',
+              );
+              // Store the JWT token in SharedPreferences
+              SharedPreferences prefs = await SharedPreferences.getInstance();
+              await prefs.setString('jwt_token', token);  // Save token
+              print('Token: $token');
 
-            if (response.statusCode == 200) {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (context) => const Home()),
               );
-            } else {
+            } catch (error){
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Login failed')),
+              SnackBar(content: Text('Login failed')),
               );
             }
           },

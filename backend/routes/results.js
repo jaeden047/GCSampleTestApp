@@ -1,7 +1,7 @@
 var express = require('express');
 var router = express.Router();
 const db = require('../db');// Review for later
-const verifyToken = require('../middleware/auth');
+const verifyToken = require('../middleware/verifyJWT');
 /**
  * GET /pastAttempts
  * - Fetch previous attempt or saved answers

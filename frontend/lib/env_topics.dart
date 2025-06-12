@@ -11,12 +11,7 @@ class EnvTopics extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('Environmental Topics'),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context); // Goes back to previous screen
-          },
-        ),
+        
       ),
       body: Center(
         child: Text(
