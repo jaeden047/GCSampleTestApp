@@ -19,46 +19,47 @@ const verifyToken = require('../middleware/verifyJWT'); // verify JWT and extrac
 router.post('/', verifyToken, async (req, res) => { 
   const Grade = req.body.grade; // This is the Topic/Grade selected by the user
   const userId = req.user.id; // pulled from token
+  console.log('Grade: ', Grade);
 
-    // Load the quiz with 10 questions
-    const [tableQuestions] = await db.query(
-      'SELECT * FROM Questions WHERE topic_id = ? ORDER BY RAND() LIMIT 10',
-      [Grade]
+  // Load the quiz with 10 questions
+  const [tableQuestions] = await db.query(
+    'SELECT q.* FROM Questions q JOIN Topics t ON q.topic_id = t.topic_id WHERE t.topic_name = ? ORDER BY RAND() LIMIT 10',
+    [Grade]
+  );
+
+  const questionIds = []; // Stores question lists to TestAttempts db
+  const answerOrder = []; // Stores answer lists to TestAttempts db
+
+  // Acquire the multiple choice options
+  for (let question of tableQuestions) {
+    const [tableAnswers] = await db.query(
+      'SELECT * FROM Answers WHERE question_id = ? ORDER BY RAND() LIMIT 4',
+      [question.question_id]
     );
+    question.answers = tableAnswers; // Load answers to frontend
+    questionIds.push(question.question_id); // Load questions for database
+    answerOrder.push(tableAnswers.map(ans => ans.answer_id)); // Load answers for database
+  }
 
-    const questionIds = []; // Stores question lists to TestAttempts db
-    const answerOrder = []; // Stores answer lists to TestAttempts db
+  // Insert into TestAttempts with current user ID
+  const [result] = await db.query(
+    `INSERT INTO TestAttempts (user_id, question_list, answer_order, selected_answers, score)
+      VALUES (?, ?, ?, ?, ?)`,
+    [
+      userId,
+      JSON.stringify(questionIds),
+      JSON.stringify(answerOrder),
+      JSON.stringify([]), // selected_answers empty for now
+      0 // score sets 0
+    ]
+  );
+  const attemptId = result.insertId; // get the attempt_id
 
-    // Acquire the multiple choice options
-    for (let question of tableQuestions) {
-      const [tableAnswers] = await db.query(
-        'SELECT * FROM Answers WHERE question_id = ? ORDER BY RAND() LIMIT 4',
-        [question.question_id] 
-      );
-      question.answers = tableAnswers; // Load answers to frontend
-      questionIds.push(question.question_id); // Load questions for database
-      answerOrder.push(tableAnswers.map(ans => ans.answer_id)); // Load answers for database
-    }
+  // Send the questions with their randomized answers back to frontend
+  res.json({ attempt_id: attemptId, questions: tableQuestions });  
+  // Store like this on the frontend
+  // const { attempt_id, questions } = await api.post('/api/quiz', { grade });
 
-    // Insert into TestAttempts with current user ID
-    const [result] = await db.query(
-      `INSERT INTO TestAttempts (user_id, question_list, answer_order, selected_answers, score)
-       VALUES (?, ?, ?, ?, ?)`,
-      [
-        userId,
-        JSON.stringify(questionIds),
-        JSON.stringify(answerOrder),
-        JSON.stringify([]), // selected_answers empty for now
-        0 // score sets 0
-      ]
-    );
-    const attemptId = result.insertId; // get the attempt_id
-
-    // Send the questions with their randomized answers back to frontend
-    res.json({ attempt_id: attemptId, questions: tableQuestions });  
-    // Store like this on the frontend
-    // const { attempt_id, questions } = await api.post('/api/quiz', { grade });
-  
 });
 
 // Post quiz score calculation
