@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'api_service.dart';
+import 'home.dart';
 
 class QuizPage extends StatefulWidget {
   final int attemptId;
   final List<dynamic> questions;
-  final int grade; // Optional: for display
+  final String topicName; // Changed from int grade
 
   const QuizPage({
     super.key,
     required this.attemptId,
     required this.questions,
-    required this.grade,
+    required this.topicName,
   });
 
   @override
@@ -26,22 +27,9 @@ class _QuizPageState extends State<QuizPage> {
   @override
   void initState() {
     super.initState();
-    _loadQuiz();
-  }
-
-  Future<void> _loadQuiz() async {
-    final token = await ApiService.getToken();
-    final response = await ApiService.postQuiz(widget.grade, token!); // POST /quiz
-    print('Route hit');
-    if (response != null) {
-      setState(() {
-        _attemptId = response['attempt_id'];
-        _questions = response['questions'];
-        _loading = false;
-      });
-    } else {
-      // Handle error
-    }
+    _attemptId = widget.attemptId;
+    _questions = widget.questions;
+    _loading = false;
   }
 
   Future<void> _submitQuiz() async {
@@ -60,7 +48,10 @@ class _QuizPageState extends State<QuizPage> {
     final response = await ApiService.submitQuiz(_attemptId!, selected);
 
     if (response != null) {
-      Navigator.pushReplacementNamed(context, '/results'); // or pass result page
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const Home()),
+      );
     }
   }
 
@@ -71,7 +62,7 @@ class _QuizPageState extends State<QuizPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text('Quiz - Grade ${widget.grade}')),
+      appBar: AppBar(title: Text('Quiz - ${widget.topicName}')),
       body: ListView.builder(
         padding: EdgeInsets.all(16),
         itemCount: _questions.length,

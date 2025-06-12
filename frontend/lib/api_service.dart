@@ -42,7 +42,7 @@ class ApiService {
 
   // Fetch quiz questions and multiple choice
   // Todo: change int grade to a topic (consider environments aren't grades)
-  static Future<Map<String, dynamic>?> postQuiz(int grade, String token) async {
+  static Future<Map<String, dynamic>?> postQuiz(String topic, String token) async {
     final token = await getToken(); 
 
     final url = Uri.parse('$baseUrl/api/quiz');
@@ -53,7 +53,7 @@ class ApiService {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({'grade': grade}),
+        body: jsonEncode({'grade': topic}),
       );
 
       if (response.statusCode == 200) {
@@ -70,12 +70,16 @@ class ApiService {
 
   // Still under review
   static Future<Map<String, dynamic>?> submitQuiz(int attemptId, List<int?> selectedAnswers) async {
+    final token = await getToken(); 
     final url = Uri.parse('$baseUrl/api/quiz/submit');
 
     try {
       final response = await http.post(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
         body: jsonEncode({
           'attempt_id': attemptId,
           'selected_answers': selectedAnswers,

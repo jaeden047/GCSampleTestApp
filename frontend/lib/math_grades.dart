@@ -4,26 +4,24 @@ import 'api_service.dart';
 // MathGrades page
 // Showcase all mathematics grades for the users to select
 // This page should lead users to quiz page
-
 class MathGrades extends StatelessWidget {
   const MathGrades({super.key});
 
-
-  void _startQuiz(BuildContext context, int grade) async {
-    // Retrieve the token
+  // Updated to accept topic name instead of grade number
+  void _startQuiz(BuildContext context, String topicName) async {
     final token = await ApiService.getToken();
     
     if (token == null) {
-      // Handle the case where no token is available (e.g., prompt the user to log in again)
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Token not found, please log in again.')),
       );
       return;
     }
 
-    final response = await ApiService.postQuiz(grade, token);
+    // Updated API call with topicName
+    final response = await ApiService.postQuiz(topicName, token);
 
-    if (!context.mounted) return; // Safely check if context is still valid
+    if (!context.mounted) return;
 
     if (response != null) {
       Navigator.pushReplacement(
@@ -32,7 +30,7 @@ class MathGrades extends StatelessWidget {
           builder: (_) => QuizPage(
             attemptId: response['attempt_id'],
             questions: response['questions'],
-            grade: grade,
+            topicName: topicName, // Changed from grade
           ),
         ),
       );
@@ -45,7 +43,7 @@ class MathGrades extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final grades = [7, 8, 9, 10, 11, 12];
+    final topics = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
 
     return Scaffold(
       appBar: AppBar(title: Text('Math Quizzes')),
@@ -53,12 +51,12 @@ class MathGrades extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: grades.map((grade) {
+          children: topics.map((topic) {
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: ElevatedButton(
-                onPressed: () => _startQuiz(context, grade),
-                child: Text('Grade $grade'),
+                onPressed: () => _startQuiz(context, topic),
+                child: Text(topic),
               ),
             );
           }).toList(),
@@ -67,3 +65,4 @@ class MathGrades extends StatelessWidget {
     );
   }
 }
+

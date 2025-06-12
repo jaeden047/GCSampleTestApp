@@ -1,9 +1,9 @@
-// login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // JWT Authentication Token
 import 'api_service.dart';
 import 'home.dart';
 
+// Student Access Login Page
 class LoginScreen extends StatelessWidget {
   LoginScreen({super.key});
   final ApiService api = ApiService();
