@@ -60,3 +60,55 @@ VALUES
   (5, '6x^3y^5', FALSE),
   (5, '5x^4y^5', FALSE),
   (5, '5x^3y^5', FALSE);
+
+-- Question 6
+INSERT INTO Questions (topic_id, question_text)
+VALUES (2, 'How many degrees does the term -5x3y2 have?');
+INSERT INTO Answers (question_id, answer_text, is_correct)
+VALUES 
+  (6, '1', FALSE),
+  (6, '2', FALSE),
+  (6, '3', FALSE),
+  (6, '5', TRUE);
+
+-- Question 7
+INSERT INTO Questions (topic_id, question_text)
+VALUES (2, 'What type of Polynomial is 11x4+2x3+2x2+3x+8?');
+INSERT INTO Answers (question_id, answer_text, is_correct)
+VALUES 
+  (7, 'linear', FALSE),
+  (7, 'quadratic', FALSE),
+  (7, 'cubic', FALSE),
+  (7, 'quartic', TRUE);
+
+-- Question 8
+INSERT INTO Questions (topic_id, question_text)
+VALUES (2, 'What type of Polynomial is -2x3+x2-x+2?');
+INSERT INTO Answers (question_id, answer_text, is_correct)
+VALUES 
+  (8, 'linear', FALSE),
+  (8, 'quadratic', FALSE),
+  (8, 'cubic', TRUE),
+  (8, 'quartic', FALSE);
+
+-- Question 9
+INSERT INTO Questions (topic_id, question_text)
+VALUES (2, 'What type of Polynomial is x2+3x+8?');
+INSERT INTO Answers (question_id, answer_text, is_correct)
+VALUES 
+  (9, 'linear', FALSE),
+  (9, 'quadratic', TRUE),
+  (9, 'cubic', FALSE),
+  (9, 'quartic', FALSE);
+
+-- Question 10
+INSERT INTO Questions (topic_id, question_text)
+VALUES (2, 'What type of Polynomial is 3x+8?');
+INSERT INTO Answers (question_id, answer_text, is_correct)
+VALUES 
+  (10, 'linear', TRUE),
+  (10, 'quadratic', FALSE),
+  (10, 'cubic', FALSE),
+  (10, 'quartic', FALSE);
+
+
