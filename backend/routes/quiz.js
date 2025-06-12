@@ -65,6 +65,7 @@ router.post('/', verifyToken, async (req, res) => {
 // Post quiz score calculation
 router.post('/submit', verifyToken, async (req, res) => {
   const { attempt_id, selected_answers} = req.body;
+  const userId = req.user.id; // pulled from token
   // selected_answers is expected to be a list of 10 answer_id
 
   // For testing: make sure we get 10 answers from frontend
@@ -89,7 +90,7 @@ router.post('/submit', verifyToken, async (req, res) => {
       JSON.stringify(selected_answers), // these are a list of answer_id
       score,
       attempt_id,
-      req.session.user.id // extra safety check
+      userId,
     ]
   );
 
