@@ -26,9 +26,9 @@ INSERT INTO Questions (topic_id, question_text)
 VALUES (2, 'If f(x) = 2x² - 3x + 1, what is f(-2)?');
 INSERT INTO Answers (question_id, answer_text, is_correct)
 VALUES 
-  (2, '11', TRUE),
+  (2, '11', FALSE),
   (2, '13', FALSE),
-  (2, '15', FALSE),
+  (2, '15', TRUE),
   (2, '17', FALSE);
 
 -- Question 3

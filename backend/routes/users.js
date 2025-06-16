@@ -25,7 +25,7 @@ router.post('/', async (req, res) => { // asynchronously because route wait for 
       console.log('User exists:', user);
     } else {
       // 2. Insert new user. Result Declaration
-      const result = await db.query(
+      const [result] = await db.query(
         'INSERT INTO Users (name, email, phone_number) VALUES (?, ?, ?)',
         [Name, Email, Phone]
       );
