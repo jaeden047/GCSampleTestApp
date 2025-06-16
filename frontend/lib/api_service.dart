@@ -20,15 +20,15 @@ class ApiService {
     try {
       final response = await http.post(
         url,
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+        headers: {'Content-Type': 'application/json'}, // Postman -> Body -> Raw -> Text: JSON
+        body: json.encode({ // Contains Terms for Data Input
           'Name': name,
           'Email': email,
           'Phone': phone,
         }),
       );
       print("Response status: ${response.statusCode}");
-      final responseBody = json.decode(response.body);
+      final responseBody = json.decode(response.body); // Backend will pass response.body
       if (responseBody.containsKey('token')) {
         return responseBody['token'];
       } else {

@@ -1,7 +1,7 @@
 var express = require('express');
 var router = express.Router();
 const db = require('../db');// Review for later
-const verifyToken = require('../middleware/verifyJWT');
+const verifyToken = require('../middleware/verifyJWT'); 
 /**
  * GET /pastAttempts
  * - Fetch previous attempt or saved answers
@@ -20,7 +20,7 @@ router.get('/pastAttempts', verifyToken, async (req, res) => {
       [userId]
     );
 
-    res.json({ results });
+    res.json({ results }); // Response.body, pushing from backend.
   } catch (error) {
     console.error('Error fetching results:', error);
     res.status(500).json({ error: 'Internal server error' });
