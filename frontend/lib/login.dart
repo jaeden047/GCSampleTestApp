@@ -80,7 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
+      appBar: AppBar(title: const Text('Student Access')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -102,15 +102,13 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               TextFormField(
                 controller: _phoneController,
-                decoration: const InputDecoration(labelText: 'Phone'),
+                decoration: const InputDecoration(labelText: 'Phone (Optional)'),
                 keyboardType: TextInputType.phone,
-                validator: (value) =>
-                    value!.isEmpty ? 'Enter your phone number' : null,
               ),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _handleLogin,
-                child: const Text('Login'),
+                child: const Text('Enter'),
               ),
             ],
           ),
