@@ -18,30 +18,35 @@ class Home extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            ElevatedButton(
-              onPressed: () {
-                // Navigate to view math grades selections
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => MathGrades()),
-                );
-              },
-              // child: Text('Take a Quiz (Math)'),
-              child: SvgPicture.asset(
-                'assets/images/mathImage.svg',
-                width: 200,
-                height: 200,
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                // Navigate to view environments selections
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => EnvTopics()),
-                );
-              },
-              child: Text('Take a Quiz (Environment)'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => MathGrades()),
+                    );
+                  },
+                  child: SvgPicture.asset(
+                    'assets/images/mathImage.svg',
+                    height: 250,
+                  ),
+                ),
+                SizedBox(width: 20), // spacing between the two SVGs
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => EnvTopics()),
+                    );
+                  },
+                  child: SvgPicture.asset(
+                    'assets/images/envImage.svg',
+                    height: 250,
+                  ),
+                ),
+              ],
             ),
             SizedBox(height: 16),
             ElevatedButton(
