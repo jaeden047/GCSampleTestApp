@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'math_grades.dart';
 import 'env_topics.dart';
 import 'results.dart';
+import 'package:flutter_svg/flutter_svg.dart'; // import svg image
 // Home dashboard: Math quiz, Environmental quiz, Past Results
 
 class Home extends StatelessWidget {
@@ -25,9 +26,13 @@ class Home extends StatelessWidget {
                   MaterialPageRoute(builder: (context) => MathGrades()),
                 );
               },
-              child: Text('Take a Quiz (Math)'),
+              // child: Text('Take a Quiz (Math)'),
+              child: SvgPicture.asset(
+                'assets/images/mathImage.svg',
+                width: 200,
+                height: 200,
+              ),
             ),
-            SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
                 // Navigate to view environments selections
