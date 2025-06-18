@@ -18,46 +18,79 @@ class Home extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => MathGrades()),
-                    );
-                  },
-                  child: SvgPicture.asset(
-                    'assets/images/mathImage.svg',
-                    height: 250,
+            Column(children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 10.0), // tab-style indent
+                  child: Text(
+                    'Start Learning',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-                SizedBox(width: 20), // spacing between the two SVGs
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => EnvTopics()),
-                    );
-                  },
-                  child: SvgPicture.asset(
-                    'assets/images/envImage.svg',
-                    height: 250,
+              ),
+              SizedBox(height: 5),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => MathGrades()),
+                      );
+                    },
+                    child: SvgPicture.asset(
+                      'assets/images/mathImage.svg',
+                      height: 280,
+                    ),
+                  ),
+                  SizedBox(width: 20), // spacing between the two SVGs
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => EnvTopics()),
+                      );
+                    },
+                    child: SvgPicture.asset(
+                      'assets/images/envImage.svg',
+                      height: 280,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 16),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 10.0), // tab-style indent
+                  child: Text(
+                    'Results Overview',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              ],
-            ),
-            SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                // Connect to View Past Results
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => Results()),
-                );
-              },
-              child: Text('View Past Results'),
+              ),
+              SizedBox(height: 5),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => Results()),
+                  );
+                },
+                child: SvgPicture.asset(
+                  'assets/images/pastImage.svg',
+                  height: 175,
+                ),
+              ),
+            ],
             ),
           ],
         ),
