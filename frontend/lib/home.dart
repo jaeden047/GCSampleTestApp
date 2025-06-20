@@ -7,18 +7,22 @@ import 'package:flutter_svg/flutter_svg.dart'; // import svg image
 // Home dashboard: Math quiz, Environmental quiz, Past Results
 
 class Home extends StatelessWidget {
+  // final String userName;
   const Home({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Welcome to Future Mind')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Column(children: [
+              // Text(
+              //   'Hello, $userName',
+              //   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              // ),
               Align(
                 alignment: Alignment.centerLeft,
                 child: Padding(
