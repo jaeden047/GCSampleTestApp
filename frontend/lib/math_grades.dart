@@ -24,13 +24,14 @@ class MathGrades extends StatelessWidget {
     if (!context.mounted) return;
 
     if (response != null) {
-      Navigator.pushReplacement(
+      Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => QuizPage(
             attemptId: response['attempt_id'],
             questions: response['questions'],
-            topicName: topicName, // Changed from grade
+            topicName: topicName,
+            onRedoQuiz: () => _startQuiz(context, topicName),
           ),
         ),
       );
