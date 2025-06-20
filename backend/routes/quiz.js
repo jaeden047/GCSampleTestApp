@@ -94,6 +94,12 @@ router.post('/submit', verifyToken, async (req, res) => {
     ]
   );
 
-  res.json({ message: 'Submission saved successfully.' });
+  // Send response to frontend
+  res.json({
+    message: 'Submission saved successfully.',
+    score,
+    userId,
+    attemptId: attempt_id,
+  });
 })
 module.exports = router;
