@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'api_service.dart';
-import 'home.dart';
+import 'post_quiz.dart';
+import 'results.dart';
 
 class QuizPage extends StatefulWidget {
   final int attemptId;
   final List<dynamic> questions;
-  final String topicName; // Changed from int grade
+  final String topicName;
+  final VoidCallback onRedoQuiz;
 
   const QuizPage({
     super.key,
     required this.attemptId,
     required this.questions,
     required this.topicName,
+    required this.onRedoQuiz,
   });
 
   @override
@@ -33,24 +36,43 @@ class _QuizPageState extends State<QuizPage> {
   }
 
   Future<void> _submitQuiz() async {
-    if (_selectedAnswers.length != _questions.length) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please answer all questions')),
-      );
-      return;
-    }
+    // if (_selectedAnswers.length != _questions.length) {
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     SnackBar(content: Text('Please answer all questions')),
+    //   );
+    //   return;
+    // }
 
     final selected = _questions.map((q) {
       int qid = q['question_id'];
       return _selectedAnswers[qid];
     }).toList();
 
-    final response = await ApiService.submitQuiz(_attemptId!, selected);
+    final result = await ApiService.submitQuiz(_attemptId!, selected);
+    if (result != null) {
+      final int score = result['score'];
+      // final int userId = result['userId'];
+      // final int attemptId = result['attemptId'];
 
-    if (response != null) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const Home()),
+        MaterialPageRoute(
+          builder: (_) => PostQuiz(
+            score: score,
+            onRedoQuiz: widget.onRedoQuiz,
+            onViewAnswers: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => Results(),//attemptId: attemptId),
+              ),
+            ),
+          ),
+        ),
+      );
+
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to submit quiz')),
       );
     }
   }
