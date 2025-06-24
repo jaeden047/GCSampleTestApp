@@ -9,10 +9,18 @@ require('dotenv').config(); // Load env variables
 // Express
 const express = require('express');
 const cookieParser = require('cookie-parser');
+const cors = require('cors');
 const app = express();
 
 // Router for handling API requests
 const indexRouter = require('./routes');
+
+// Enable CORS globally
+app.use(cors({
+  origin: "*", // You can change this to your specific web app domain in production
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 
 // Database connection
 require('./db'); // needed to open & access database file
