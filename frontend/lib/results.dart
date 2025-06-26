@@ -1,25 +1,36 @@
 import 'package:flutter/material.dart';
+
 // Results page
-// This page should start fetching data from backend
-// Display our past quiz results
+class Results extends StatefulWidget { // Results is a type of widget (Class) 
+// StatefulWidget => Changeable Widget during Runtime. StatelessWidget => Static Widget. extends Stateful => copy fields to Results
+  const Results({super.key}); // Results() is constructor for class
+  // Constructor; applies super.key to a class key field. Key field
+  @override
+  State<Results> createState() => _ResultsState(); //
+}
 
-class Results extends StatelessWidget {
-  const Results({super.key});
-
+class _ResultsState extends State<Results> { // 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Past Results'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: const Center(
-        child: Text(
-          'Coming Soon',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+      body: Center(
+        child: Container(
+          width: double.infinity,
+          height: 300,
+          child: Card(
+            shadowColor: Colors.black,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(20)),
+            ),
+            margin: EdgeInsets.all(32),
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text(
+                'Attempt ...',
+                style: TextStyle(fontSize: 30),
+              ),
+            ),
+          ),
         ),
       ),
     );

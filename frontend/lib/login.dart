@@ -28,9 +28,11 @@ class _LoginScreenState extends State<LoginScreen> {
         SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setString('jwt_token', token);
         Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => Home()));
-      } catch (error) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Login failed')),
+      } catch (error, stackTrace) {
+          debugPrint('Login error: $error');
+          debugPrint('Stack trace: $stackTrace');
+          ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Login failed: $error')), // ✅ No `const` here
         );
       }
     }

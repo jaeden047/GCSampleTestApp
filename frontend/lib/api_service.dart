@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart'; // token storage
 // handle API-related functionality
 class ApiService {
   // *** NEVER PUSH IP HERE
-  static final String baseUrl = "http://[IP]:3000";
+  static final String baseUrl = "http://localhost:3000";
 
   // Retrieve the JWT token from SharedPreferences
   static Future<String?> getToken() async {
