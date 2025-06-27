@@ -60,8 +60,9 @@ router.post('/', verifyToken, async (req, res) => {
 
 // Post quiz score calculation
 router.post('/submit', verifyToken, async (req, res) => {
-  const { attempt_id, selected_answers} = req.body;
+  const { attempt_id, selected_answers } = req.body;
   const userId = req.user.id; // pulled from token
+
   // selected_answers is expected to be a list of 10 answer_id
 
   // For testing: make sure we get 10 answers from frontend
@@ -72,18 +73,18 @@ router.post('/submit', verifyToken, async (req, res) => {
   // Score calculation from selected answers
   const [rows] = await db.query(
     `SELECT COUNT(*) AS score FROM Answers 
-    WHERE answer_id IN (?) AND is_correct = TRUE`,
-    [selected_answers]
-  ); // Select the rows where answer_id is correct. Count and store in .score
+    WHERE answer_id = ANY($1) AND is_correct = TRUE`, // Using PostgreSQL's ANY() for array comparison
+    [selected_answers] // Array will be passed as a parameter
+  );
   const score = rows[0].score; // out of 10
 
   // Update TestAttempts with user's answers and score
   await db.query(
     `UPDATE TestAttempts
-     SET selected_answers = ?, score = ?
-     WHERE attempt_id = ? AND user_id = ?`,
+     SET selected_answers = $1, score = $2
+     WHERE attempt_id = $3 AND user_id = $4`,
     [
-      JSON.stringify(selected_answers), // these are a list of answer_id
+      selected_answers, // No need to JSON.stringify since it's already an array
       score,
       attempt_id,
       userId,
@@ -97,5 +98,5 @@ router.post('/submit', verifyToken, async (req, res) => {
     userId,
     attemptId: attempt_id,
   });
-})
+});
 module.exports = router;
