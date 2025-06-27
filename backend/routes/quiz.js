@@ -23,7 +23,7 @@ router.post('/', verifyToken, async (req, res) => {
 
   // Load the quiz with 10 questions
   const [tableQuestions] = await db.query(
-    'SELECT q.* FROM Questions q JOIN Topics t ON q.topic_id = t.topic_id WHERE t.topic_name = ? ORDER BY RAND() LIMIT 10',
+    'SELECT q.* FROM Questions q JOIN Topics t ON q.topic_id = t.topic_id WHERE t.topic_name = ? ORDER BY RANDOM() LIMIT 10',
     [Grade]
   );
 
@@ -33,7 +33,7 @@ router.post('/', verifyToken, async (req, res) => {
   // Acquire the multiple choice options
   for (let question of tableQuestions) {
     const [tableAnswers] = await db.query(
-      'SELECT * FROM Answers WHERE question_id = ? ORDER BY RAND() LIMIT 4',
+      'SELECT * FROM Answers WHERE question_id = ? ORDER BY RANDOM() LIMIT 4',
       [question.question_id]
     );
     question.answers = tableAnswers; // Load answers to frontend
@@ -44,22 +44,18 @@ router.post('/', verifyToken, async (req, res) => {
   // Insert into TestAttempts with current user ID
   const [result] = await db.query(
     `INSERT INTO TestAttempts (user_id, question_list, answer_order, selected_answers, score)
-      VALUES (?, ?, ?, ?, ?)`,
+      VALUES (?, ARRAY[?], ARRAY[?], ARRAY[]::INTEGER[], ?)`, // Using array syntax for PostgreSQL
     [
       userId,
-      JSON.stringify(questionIds),
-      JSON.stringify(answerOrder),
-      JSON.stringify([]), // selected_answers empty for now
-      0 // score sets 0
+      questionIds.join(','), // Convert to a string to represent the array
+      answerOrder.map(ans => `{${ans.join(',')}}`).join(','), // Convert to a 2D array format
+      0 // score sets to 0
     ]
   );
-  const attemptId = result.insertId; // get the attempt_id
+  const attemptId = result.insertId; // Get the attempt_id
 
   // Send the questions with their randomized answers back to frontend
   res.json({ attempt_id: attemptId, questions: tableQuestions });  
-  // Store like this on the frontend
-  // const { attempt_id, questions } = await api.post('/api/quiz', { grade });
-
 });
 
 // Post quiz score calculation
