@@ -2,7 +2,7 @@
 -- Table order and constraints may not be valid for execution.
 
 CREATE TABLE public.Answers (
-  answer_id smallint NOT NULL,
+  answer_id smallint GENERATED ALWAYS AS IDENTITY NOT NULL,
   question_id integer NOT NULL,
   answer_text text NOT NULL,
   is_correct boolean NOT NULL DEFAULT false,
@@ -20,7 +20,7 @@ CREATE TABLE public.TestAttempts (
   attempt_id integer NOT NULL DEFAULT nextval('testattempts_attempt_id_seq'::regclass),
   user_id uuid NOT NULL,
   test_datetime timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-  question_list ARRAY, -- list of 10 questions that was randomly selected
+  question_list ARRAY,-- list of 10 questions that was randomly selected
   answer_order ARRAY, -- list of multiple choice answers in its displayed order e.q. "[[21,19,23,20],[24,25,26,27],..." 
   selected_answers ARRAY, -- the 10 answers that was selected by the user
   score numeric,
@@ -30,6 +30,6 @@ CREATE TABLE public.TestAttempts (
 -- each topic has a book of questions where we randomly select 10 for the quiz
 CREATE TABLE public.Topics (
   topc_id smallint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  topic_name text NOT NULL,-- e.q. grade 7, grade 8 or environmental topics
+  topic_name text NOT NULL, -- e.q. grade 7, grade 8 or environmental topics
   CONSTRAINT Topics_pkey PRIMARY KEY (topc_id)
 );
