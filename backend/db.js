@@ -1,23 +1,23 @@
-// db.js loads dotenv file, creates connection to database using env data, and makes that connection available 
-// to the rest of the code using module.exports
+// db.js - Set up PostgreSQL connection using `pg` library
 require('dotenv').config();
-const mysql = require('mysql2');
+const { Client } = require('pg');
 
-const connection = mysql.createConnection({
+// Create a new PostgreSQL client instance
+const client = new Client({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASS,
   database: process.env.DB_NAME,
-  port: process.env.DB_PORT,
-  multipleStatements: true
+  port: process.env.DB_PORT || 5432,  // Default PostgreSQL port
+  ssl: { rejectUnauthorized: false }  // SSL for Supabase connection
 });
 
-connection.connect(err => {
-  if (err) {
-    console.error('MySQL connection error:', err.stack);
-    return;
+// Connect to PostgreSQL database
+async function connectDb() {
+  if (!client._connected) {
+    await client.connect();
   }
-  console.log('Connected to MySQL as id ' + connection.threadId);
-});
+  return client;
+}
 
-module.exports = connection.promise();
+module.exports = connectDb;
