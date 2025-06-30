@@ -13,9 +13,9 @@ CREATE TABLE public.profiles (
 );
 CREATE TABLE public.topics (
   topic_id smallint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  topic_name text NOT NULL,
+  topic_name text NOT NULL,-- e.q. grade 7, grade 8 or environmental topics
   CONSTRAINT topics_pkey PRIMARY KEY (topic_id)
-);
+);-- each topic has a book of questions where we randomly select 10 for the quiz
 CREATE TABLE public.questions (
   question_id smallint GENERATED ALWAYS AS IDENTITY NOT NULL,
   topic_id smallint NOT NULL DEFAULT '1'::smallint,
@@ -35,9 +35,9 @@ CREATE TABLE public.test_attempts (
   attempt_id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
   user_id uuid NOT NULL,
   test_datetime timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-  question_list ARRAY,
-  answer_order ARRAY,
-  selected_answers ARRAY,
+  question_list ARRAY, -- list of 10 questions that was randomly selected
+  answer_order ARRAY, -- list of multiple choice answers in its displayed order e.q. "[[21,19,23,20],[24,25,26,27],..." 
+  selected_answers ARRAY, -- the 10 answers that was selected by the user
   score numeric,
   CONSTRAINT test_attempts_pkey PRIMARY KEY (attempt_id),
   CONSTRAINT testattempts_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
