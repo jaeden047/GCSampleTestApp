@@ -1,78 +1,80 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // JWT Authentication Token
-import 'api_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; // supabase flutter sdk
 import 'home.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-  final ApiService api = ApiService();
-  final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
+class _LoginPageState extends State<LoginPage> {
+  // Controller to access the text input
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  // Supabase client instance for performing auth and database operations
+  final supabase = Supabase.instance.client;
 
-  Future<void> _handleLogin() async {
-    if (_formKey.currentState!.validate()) {
-      final name = _nameController.text;
-      final email = _emailController.text;
-      final phone = _phoneController.text;
+  // Attempts to log in the user using email and password from the input fields
+  Future<void> login() async {
+    // Retrieve and trim the email input
+    final email = emailController.text.trim();
+    final password = passwordController.text;
 
-      try {
-        final token = await api.loginUser(name, email, phone);
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString('jwt_token', token);
-        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => Home()));
-      } catch (error, stackTrace) {
-          debugPrint('Login error: $error');
-          debugPrint('Stack trace: $stackTrace');
-          ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Login failed: $error')), // ✅ No `const` here
+    try {
+      // Attempt to sign in with Supabase using provided credentials
+      final response = await supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+      if (response.user != null) {
+        // If the login is successful and a user object is returned
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Logged in as ${response.user!.email}')), // Confirmation messagge
+        );
+        // Navigate to home
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => Home()),
         );
       }
+    } on AuthException catch (e) {
+      // Login fails
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Student Access')),
+      appBar: AppBar(title: const Text('Login')),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
-                validator: (value) => value!.isEmpty ? 'Enter your name' : null,
-              ),
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
-                keyboardType: TextInputType.emailAddress,
-                validator: (value) =>
-                    value!.isEmpty ? 'Enter your email' : null,
-              ),
-              TextFormField(
-                controller: _phoneController,
-                decoration: const InputDecoration(labelText: 'Phone (Optional)'),
-                keyboardType: TextInputType.phone,
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _handleLogin,
-                child: const Text('Enter'),
-              ),
-            ],
-          ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextField(
+              // Input field for user to enter their email
+              controller: emailController,
+              decoration: const InputDecoration(labelText: 'Email'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              // Input field for user to enter their password
+              controller: passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'Password'),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              // Button to trigger login using entered email and password
+              onPressed: login,
+              child: const Text('Login'),
+            ),
+          ],
         ),
       ),
     );
