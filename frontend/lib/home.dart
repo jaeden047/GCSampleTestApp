@@ -1,11 +1,14 @@
-// home.dart
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; // supabase flutter sdk
+import 'package:flutter_svg/flutter_svg.dart'; // import svg image
+
+// navigated pages
 import 'math_grades.dart';
 import 'env_topics.dart';
 import 'results.dart';
-import 'package:flutter_svg/flutter_svg.dart'; // import svg image
-// Home dashboard: Math quiz, Environmental quiz, Past Results
+import 'login.dart';
 
+// Home dashboard: Math quiz, Environmental quiz, Past Results
 class Home extends StatelessWidget {
   // final String userName;
   const Home({super.key});
@@ -19,6 +22,17 @@ class Home extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Column(children: [
+              // temporary sign out button, will enhance better
+              ElevatedButton(
+                onPressed: () async {
+                  await Supabase.instance.client.auth.signOut();
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => LoginPage()),
+                  );
+                },
+                child: const Text('Logout'),
+              ),
               // Text(
               //   'Hello, $userName',
               //   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
