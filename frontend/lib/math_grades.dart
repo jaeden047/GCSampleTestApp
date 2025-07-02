@@ -1,46 +1,65 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; //supabase flutter sdk
 import 'quiz.dart';
-import 'api_service.dart';
-// MathGrades page
-// Showcase all mathematics grades for the users to select
-// This page should lead users to quiz page
+
 class MathGrades extends StatelessWidget {
   const MathGrades({super.key});
 
-  // Updated to accept topic name instead of grade number
-  void _startQuiz(BuildContext context, String topicName) async {
-    final token = await ApiService.getToken();
-    
-    if (token == null) {
+  // Start a new quiz: create an attempt and fetch questions
+  Future<void> _startQuiz(BuildContext context, String topicName) async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+
+    if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Token not found, please log in again.')),
+        const SnackBar(content: Text('User not logged in.')),
       );
       return;
     }
 
-    // Updated API call with topicName
-    final response = await ApiService.postQuiz(topicName, token);
+    try {
+      // 1. Generate 10 question IDs for the quiz
+      final questions = await supabase.rpc('generate_questions', params: {
+        'topic_input': topicName,
+      });
 
-    if (!context.mounted) return;
+      if (questions is List) {
+        final questionIds = questions.cast<int>();
+        print('Got 10 question IDs: $questionIds');
 
-    if (response != null) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => QuizPage(
-            attemptId: response['attempt_id'],
-            questions: response['questions'],
-            topicName: topicName,
-            onRedoQuiz: () => _startQuiz(context, topicName),
-          ),
-        ),
-      );
-    } else {
+        // 2. Create the quiz and generate an ID
+        final response = await supabase.rpc('create_quiz', params: {
+          'p_user_id': user.id,
+          'p_question_list': questionIds,
+        });
+        
+        print('attempt_id is $response');
+        // 3. Navigate to quiz page if the attempt ID is returned
+        if (response is int) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => QuizPage(
+                attemptId: response,
+                questions: [],
+                topicName: topicName,
+                onRedoQuiz: () => _startQuiz(context, topicName),
+              ),
+            ),
+          );
+        } else {
+          print('Failed to create quiz: $response');
+        }
+      } else {
+        print('Unexpected response: $questions');
+      }
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load quiz.')),
+        SnackBar(content: Text('Error starting quiz: $e')),
       );
     }
-  }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -66,4 +85,3 @@ class MathGrades extends StatelessWidget {
     );
   }
 }
-

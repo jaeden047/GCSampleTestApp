@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'api_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; // supabase flutter sdk
+// import 'api_service.dart';
 import 'post_quiz.dart';
 import 'results.dart';
+
 
 class QuizPage extends StatefulWidget {
   final int attemptId;
@@ -36,24 +38,37 @@ class _QuizPageState extends State<QuizPage> {
   }
 
   Future<void> _submitQuiz() async {
-    // if (_selectedAnswers.length != _questions.length) {
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     SnackBar(content: Text('Please answer all questions')),
-    //   );
-    //   return;
-    // }
+    final supabase = Supabase.instance.client;
 
-    final selected = _questions.map((q) {
-      int qid = q['question_id'];
-      return _selectedAnswers[qid];
-    }).toList();
+    try {
+      // Insert each answer into the quiz_answers table
+      for (final question in _questions) {
+        final questionId = question['question_id'];
+        final answerId = _selectedAnswers[questionId];
 
-    final result = await ApiService.submitQuiz(_attemptId!, selected);
-    if (result != null) {
-      final int score = result['score'];
-      // final int userId = result['userId'];
-      // final int attemptId = result['attemptId'];
+        if (answerId == null) continue;
 
+        await supabase.from('quiz_answers').insert({
+          'attempt_id': _attemptId,
+          'question_id': questionId,
+          'answer_id': answerId,
+        });
+      }
+
+      // Example: calculate score in client (you could also use a Supabase RPC/Edge Function)
+      int score = 0;
+      for (final question in _questions) {
+        final correctId = question['correct_answer_id']; // Make sure this is included
+        final selectedId = _selectedAnswers[question['question_id']];
+        if (correctId == selectedId) score++;
+      }
+
+      // Update the score in the quiz_attempts table
+      await supabase.from('quiz_attempts').update({
+        'score': score,
+      }).eq('id', _attemptId!);
+
+      // Navigate to PostQuiz
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -63,16 +78,15 @@ class _QuizPageState extends State<QuizPage> {
             onViewAnswers: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => Results(),//attemptId: attemptId),
+                builder: (_) => Results(), // pass attemptId if needed
               ),
             ),
           ),
         ),
       );
-
-    } else {
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to submit quiz')),
+        SnackBar(content: Text('Failed to submit quiz: $e')),
       );
     }
   }
