@@ -28,7 +28,7 @@ class MathGrades extends StatelessWidget {
         print('Got 10 question IDs: $questionIds');
 
         // 2. Create the quiz and generate an ID
-        final response = await supabase.rpc('create_quiz', params: {
+        final response = await supabase.rpc('create_new_quiz', params: {
           'p_user_id': user.id,
           'p_question_list': questionIds,
         });
