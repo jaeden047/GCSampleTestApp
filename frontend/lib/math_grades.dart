@@ -28,27 +28,37 @@ class MathGrades extends StatelessWidget {
         print('Got 10 question IDs: $questionIds');
 
         // 2. Create the quiz and generate an ID
-        final response = await supabase.rpc('create_new_quiz', params: {
+        final quiz_attempt = await supabase.rpc('create_new_quiz', params: {
           'p_user_id': user.id,
           'p_question_list': questionIds,
         });
-        
-        print('attempt_id is $response');
-        // 3. Navigate to quiz page if the attempt ID is returned
-        if (response is int) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => QuizPage(
-                attemptId: response,
-                questions: [],
-                topicName: topicName,
-                onRedoQuiz: () => _startQuiz(context, topicName),
+        print('attempt_id is $quiz_attempt');
+
+        if (quiz_attempt is int) {
+          // 3. Retrive the questions
+          final quizQuestions = await supabase.rpc('retrieve_questions', params: {
+            'attempt_id': quiz_attempt,  // Pass the attempt_id
+          });
+
+          if (quizQuestions is List) {
+            final questionsWithAnswers = quizQuestions.cast<Map<String, dynamic>>();
+            // 4. Navigate to quiz page if the attempt ID is returned
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => QuizPage(
+                  attemptId: quiz_attempt,
+                  questions: questionsWithAnswers,
+                  topicName: topicName,
+                  onRedoQuiz: () => _startQuiz(context, topicName),
+                ),
               ),
-            ),
-          );
+            );
+          } else{
+            print('Failed to retrieve questions');
+          }
         } else {
-          print('Failed to create quiz: $response');
+          print('Failed to create quiz: $quiz_attempt');
         }
       } else {
         print('Unexpected response: $questions');
