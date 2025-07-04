@@ -37,7 +37,7 @@ class MathGrades extends StatelessWidget {
         if (quiz_attempt is int) {
           // 3. Retrive the questions
           final quizQuestions = await supabase.rpc('retrieve_questions', params: {
-            'attempt_id': quiz_attempt,  // Pass the attempt_id
+            'input_attempt_id': quiz_attempt,  // Pass the attempt_id
           });
 
           if (quizQuestions is List) {
