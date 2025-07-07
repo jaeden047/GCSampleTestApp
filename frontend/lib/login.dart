@@ -12,6 +12,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+  final nameController = TextEditingController();
   final phoneController = TextEditingController();
   final supabase = Supabase.instance.client;
 
@@ -39,17 +40,28 @@ class _LoginPageState extends State<LoginPage> {
         }
       } else {
         // Sign Up
+        final phone = phoneController.text.trim();
         final response = await supabase.auth.signUp(
           email: email,
           password: password,
+          // phone: phone,
           data:{
-            'phone': phoneController.text.trim() // Saved as metadata, because phone can't interfere with login.
+            'phone': phone // Saved as metadata, because phone can't interfere with login.
           }
         );
         if (response.user != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Sign up successful. Please verify your email.')),
           );
+          // Insert to profiles table
+          final userId = response.user?.id;
+          await supabase.from('profiles').insert({
+            'id': userId,
+            'name': nameController.text.trim(),
+            'email': email,
+            'phone': phone,
+          });
+
         }
       }
     } on AuthException catch (e) {
@@ -68,6 +80,13 @@ class _LoginPageState extends State<LoginPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            if (_isLogin == false)...[
+              const SizedBox(height: 12),
+              TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: 'Name'),
+              ),
+            ],
             TextField(
               controller: emailController,
               decoration: const InputDecoration(labelText: 'Email'),
