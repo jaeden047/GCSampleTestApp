@@ -42,6 +42,7 @@ class _QuizPageState extends State<QuizPage> {
     try {
       final score = await supabase.rpc('calculate_score', params: {
         'selected_answers': _selectedAnswers,
+        'input_attempt_id': _attemptId,
       });
 
       if (mounted) {
