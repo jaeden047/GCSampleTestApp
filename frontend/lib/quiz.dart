@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; // supabase flutter sdk
-// import 'api_service.dart';
 import 'post_quiz.dart';
 import 'results.dart';
-
+// import 'dart:convert'; // Import jsonEncode
 
 class QuizPage extends StatefulWidget {
   final int attemptId;
@@ -25,7 +24,7 @@ class QuizPage extends StatefulWidget {
 
 class _QuizPageState extends State<QuizPage> {
   List<dynamic> _questions = [];
-  final Map<int, int> _selectedAnswers = {}; // question_id -> answer_id
+  final Map<String, int> _selectedAnswers = {}; // question_id -> answer_id (as String keys)
   int? _attemptId;
   bool _loading = true;
 
@@ -41,55 +40,36 @@ class _QuizPageState extends State<QuizPage> {
     final supabase = Supabase.instance.client;
 
     try {
-      // Insert each answer into the quiz_answers table
-      for (final question in _questions) {
-        final questionId = question['question_id'];
-        final answerId = _selectedAnswers[questionId];
+      final score = await supabase.rpc('calculate_score', params: {
+        'selected_answers': _selectedAnswers,
+      });
 
-        if (answerId == null) continue;
-
-        await supabase.from('quiz_answers').insert({
-          'attempt_id': _attemptId,
-          'question_id': questionId,
-          'answer_id': answerId,
-        });
-      }
-
-      // Example: calculate score in client (you could also use a Supabase RPC/Edge Function)
-      int score = 0;
-      for (final question in _questions) {
-        final correctId = question['correct_answer_id']; // Make sure this is included
-        final selectedId = _selectedAnswers[question['question_id']];
-        if (correctId == selectedId) score++;
-      }
-
-      // Update the score in the quiz_attempts table
-      await supabase.from('quiz_attempts').update({
-        'score': score,
-      }).eq('id', _attemptId!);
-
-      // Navigate to PostQuiz
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => PostQuiz(
-            score: score,
-            onRedoQuiz: widget.onRedoQuiz,
-            onViewAnswers: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => Results(), // pass attemptId if needed
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PostQuiz(
+              score: score,
+              onRedoQuiz: widget.onRedoQuiz,
+              onViewAnswers: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => Results(),
+                ),
               ),
             ),
           ),
-        ),
-      );
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to submit quiz: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to submit quiz: $e')),
+        );
+      }
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -118,10 +98,10 @@ class _QuizPageState extends State<QuizPage> {
                   ...answers.map((ans) => RadioListTile(
                         title: Text(ans['answer_text']),
                         value: ans['answer_id'],
-                        groupValue: _selectedAnswers[question['question_id']],
+                        groupValue: _selectedAnswers[question['question_id'].toString()],
                         onChanged: (val) {
                           setState(() {
-                            _selectedAnswers[question['question_id']] = val as int;
+                            _selectedAnswers[question['question_id'].toString()] = val as int;
                           });
                         },
                       )),
