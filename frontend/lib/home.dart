@@ -3,10 +3,10 @@ import 'package:supabase_flutter/supabase_flutter.dart'; // supabase flutter sdk
 import 'package:flutter_svg/flutter_svg.dart'; // import svg image
 
 // navigated pages
+import 'profile.dart';
 import 'math_grades.dart';
 import 'env_topics.dart';
 import 'results.dart';
-import 'login.dart';
 
 // Home dashboard: Math quiz, Environmental quiz, Past Results
 class Home extends StatefulWidget {
@@ -69,20 +69,29 @@ class _HomeState extends State<Home> {
                 mainAxisAlignment: MainAxisAlignment.start, // Align the items to the left
                 crossAxisAlignment: CrossAxisAlignment.center, // Vertically center the content in the row
                 children: [
-                  // Profile Circle with the first letter of the user's name
-                  Container(
-                    width: 50, // Circle width
-                    height: 50, // Circle height
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle, // Makes the container circular
-                      border: Border.all(color: Color(0xFF2A262A), width: 2), // Border around the circle
-                    ),
-                    child: Center(
-                      child: Text(
-                        userName != null ? userName![0].toUpperCase() : '', // First letter of the user's name
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
+                  GestureDetector(
+                    onTap: () {
+                      // Navigate to Profile Page when the circle is tapped
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => ProfilePage()),
+                      );
+                    },
+                    // Profile Circle with the first letter of the user's name
+                    child: Container(
+                      width: 50, // Circle width
+                      height: 50, // Circle height
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle, // Makes the container circular
+                        border: Border.all(color: Color(0xFF2A262A), width: 2), // Border around the circle
+                      ),
+                      child: Center(
+                        child: Text(
+                          userName != null ? userName![0].toUpperCase() : '', // First letter of the user's name
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
