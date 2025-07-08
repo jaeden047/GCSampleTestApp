@@ -76,7 +76,7 @@ class MathGrades extends StatelessWidget {
     final topics = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
 
     return Scaffold(
-      appBar: AppBar(title: Text('Math Quizzes')),
+      appBar: AppBar(title: Text('Math Problems')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
