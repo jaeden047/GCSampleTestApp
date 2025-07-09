@@ -20,7 +20,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'My Supabase App',
+      title: 'Future Mind Challenges',
       // App Theme
       theme: ThemeData(
         scaffoldBackgroundColor: bgColor,
