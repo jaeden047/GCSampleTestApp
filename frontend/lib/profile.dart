@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; // Import for Supabase
+import 'package:flutter_svg/flutter_svg.dart'; // import svg image
+
 import 'login.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -16,6 +18,9 @@ class _ProfilePageState extends State<ProfilePage> {
   String phone = '';
   String country = '';
   String school = '';
+  final phoneController = TextEditingController();
+  final schoolController = TextEditingController();
+  final countryController = TextEditingController();
 
   @override
   void initState() {
@@ -30,7 +35,7 @@ class _ProfilePageState extends State<ProfilePage> {
       setState(() {
         name = profile['name'];
         email = profile['email'];
-        phone = profile['phone'] ?? 'Not provided';
+        phone = profile['phone_number'] ?? 'Not provided';
         country = profile['country'] ?? 'Not provided';
         school = profile['school'] ?? 'Not provided';
       });
@@ -47,10 +52,38 @@ class _ProfilePageState extends State<ProfilePage> {
           .select('name, email, phone_number, school, country')
           .eq('id', user.id)
           .single();
-
+      // pre set the info to the text field
+      setState(() {
+        phoneController.text = response['phone_number'] ?? '';
+        countryController.text = response['country'] ?? '';
+        schoolController.text = response['school'] ?? '';
+      });
       return response;
     }
     return null;  // Return null if no user is logged in
+  }
+
+  // Function to update the user profile information
+  Future<void> updateUserProfile() async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+    if (user != null) {
+      final phone = phoneController.text.trim();
+      final country = countryController.text.trim();
+      final school = schoolController.text.trim();
+
+      final response = await supabase.from('profiles').update({
+        'phone_number': phone.isEmpty ? null : phone,
+        'school': school.isEmpty ? null : school,
+        'country': country.isEmpty ? null : country,
+      }).eq('id', user.id);
+
+      if (response == null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Profile updated successfully')));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error updating profile: ${response.error!.message}')));
+      }
+    }
   }
 
   // Function to sign out
@@ -101,40 +134,58 @@ class _ProfilePageState extends State<ProfilePage> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 20),
+                  SizedBox(height: 30),
+                  // Display user profile data here
                   Text(
-                    'Profile Info', 
+                    'Personal Info', 
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                  SizedBox(height: 10),
+                  TextField(
+                    controller: phoneController,
+                    decoration: InputDecoration(labelText: 'Phone'),
+                  ),
+                  SizedBox(height: 20),
+                  TextField(
+                    controller: schoolController,
+                    decoration: InputDecoration(labelText: 'Country'),
+                  ),
+                  SizedBox(height: 20),
+                  TextField(
+                    controller: countryController,
+                    decoration: InputDecoration(labelText: 'School'),
+                  ),
                 ],
               ),
             ),
-            // Display user profile data here
-            Text('Phone: $phone', style: TextStyle(fontSize: 18)),
-            SizedBox(height: 8),
-            Text('Country: $country', style: TextStyle(fontSize: 18)),
-            SizedBox(height: 8),
-            Text('School: $school', style: TextStyle(fontSize: 18)),
-
             // Buttons for Edit Profile and Sign Out
             SizedBox(height: 20),
             // Edit Profile Button
             ElevatedButton(
-              onPressed: () {
-                // Implement Edit Profile functionality (optional)
-                // You can navigate to an edit profile page here
-              },
-              child: Text('Edit Profile'),
+              onPressed: updateUserProfile,
+              child: SvgPicture.asset(
+                'assets/images/update_button.svg', // Your SVG file for the "Update Profile" button
+                // height: 30,  // Set the height of the SVG icon
+              ),
             ),
             SizedBox(height: 10), // Add space between buttons
 
             // Sign Out Button
             ElevatedButton(
               onPressed: signOut,
-              child: const Text('Sign Out'),
+              style: ElevatedButton.styleFrom(
+                // primary: Colors.transparent, // Remove the background color
+                backgroundColor: Colors.transparent, // Remove the shadow (elevation)
+                shadowColor: Colors.transparent,
+                // onSurface: Colors.transparent, // Set surface color to transparent
+              ),
+              child: SvgPicture.asset(
+                'assets/images/signout_button.svg', // Your SVG file for the "Update Profile" button
+                // height: 30,  // Set the height of the SVG icon
+              ),
             ),
           ],
         ),
