@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'home.dart';
 
 class PostQuiz extends StatelessWidget {
@@ -22,6 +23,11 @@ class PostQuiz extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            SvgPicture.asset(
+              'assets/images/stars.svg',
+              height: 110,
+            ),
+            const SizedBox(height: 24),
             Text(
               'Your Score: $score/10',
               style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
@@ -31,31 +37,54 @@ class PostQuiz extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                ElevatedButton.icon(
-                  onPressed: () {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      onRedoQuiz();
-                    });
-                  },
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Try Again'),
+                Column(
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          onRedoQuiz();
+                        });
+                      },
+                      child: SvgPicture.asset(
+                        'assets/images/redo_button.svg',
+                        height: 60,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text('Redo', style: TextStyle(fontSize: 14)),
+                  ],
                 ),
-
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (_) => const Home()),
-                      (route) => false,
-                    );
-                  },
-                  icon: const Icon(Icons.home),
-                  label: const Text('Home'),
+                Column(
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (_) => const Home()),
+                          (route) => false,
+                        );
+                      },
+                      child: SvgPicture.asset(
+                        'assets/images/home_button.svg',
+                        height: 60,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text('Home', style: TextStyle(fontSize: 14)),
+                  ],
                 ),
-                ElevatedButton.icon(
-                  onPressed: onViewAnswers,
-                  icon: const Icon(Icons.visibility),
-                  label: const Text('Answers'),
+                Column(
+                  children: [
+                    GestureDetector(
+                      onTap: onViewAnswers,
+                      child: SvgPicture.asset(
+                        'assets/images/results_button.svg',
+                        height: 60,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text('Answers', style: TextStyle(fontSize: 14)),
+                  ],
                 ),
               ],
             ),

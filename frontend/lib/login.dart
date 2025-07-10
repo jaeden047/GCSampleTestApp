@@ -59,7 +59,7 @@ class _LoginPageState extends State<LoginPage> {
             'id': userId,
             'name': nameController.text.trim(),
             'email': email,
-            'phone': phone,
+            'phone_number': phone,
           });
 
         }
