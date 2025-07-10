@@ -162,29 +162,24 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
             // Buttons for Edit Profile and Sign Out
-            SizedBox(height: 20),
-            // Edit Profile Button
-            ElevatedButton(
-              onPressed: updateUserProfile,
-              child: SvgPicture.asset(
-                'assets/images/update_button.svg', // Your SVG file for the "Update Profile" button
-                // height: 30,  // Set the height of the SVG icon
-              ),
-            ),
-            SizedBox(height: 10), // Add space between buttons
-
-            // Sign Out Button
-            ElevatedButton(
-              onPressed: signOut,
-              style: ElevatedButton.styleFrom(
-                // primary: Colors.transparent, // Remove the background color
-                backgroundColor: Colors.transparent, // Remove the shadow (elevation)
-                shadowColor: Colors.transparent,
-                // onSurface: Colors.transparent, // Set surface color to transparent
-              ),
-              child: SvgPicture.asset(
-                'assets/images/signout_button.svg', // Your SVG file for the "Update Profile" button
-                // height: 30,  // Set the height of the SVG icon
+            Center(
+              child: Column(
+                children: [
+                  const SizedBox(height: 20),
+                  GestureDetector(
+                    onTap: updateUserProfile,
+                    child: SvgPicture.asset(
+                      'assets/images/update_button.svg',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  GestureDetector(
+                    onTap: signOut,
+                    child: SvgPicture.asset(
+                      'assets/images/signout_button3.svg',
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
