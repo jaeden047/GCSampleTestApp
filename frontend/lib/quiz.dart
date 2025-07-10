@@ -46,7 +46,7 @@ class _QuizPageState extends State<QuizPage> {
       });
 
       if (mounted) {
-        Navigator.pushReplacement(
+        Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => PostQuiz(
@@ -79,7 +79,7 @@ class _QuizPageState extends State<QuizPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text('Quiz - ${widget.topicName}')),
+      appBar: AppBar(title: Text('Quiz - ${widget.topicName}'), automaticallyImplyLeading: false),
       body: ListView.builder(
         padding: EdgeInsets.all(16),
         itemCount: _questions.length,

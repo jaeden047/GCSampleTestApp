@@ -17,7 +17,7 @@ class PostQuiz extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Quiz Complete')),
+      appBar: AppBar(title: const Text('Quiz Complete'), automaticallyImplyLeading: false),
       body: Padding(
         padding: const EdgeInsets.all(32.0),
         child: Column(
@@ -40,11 +40,7 @@ class PostQuiz extends StatelessWidget {
                 Column(
                   children: [
                     GestureDetector(
-                      onTap: () {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          onRedoQuiz();
-                        });
-                      },
+                      onTap: onRedoQuiz, // Call onRedoQuiz directly
                       child: SvgPicture.asset(
                         'assets/images/redo_button.svg',
                         height: 60,
