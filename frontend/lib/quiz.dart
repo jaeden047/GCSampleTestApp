@@ -81,6 +81,7 @@ class _QuizPageState extends State<QuizPage> {
             builder: (_) => PostQuiz(
               score: score,
               onRedoQuiz: widget.onRedoQuiz,
+              topicName: widget.topicName,
               onViewAnswers: () => Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -120,10 +121,10 @@ class _QuizPageState extends State<QuizPage> {
         children: [
           // Timer at the top
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(5.0),
             child: Text(
               'Time Left: $timerText',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
           ),
           Expanded(
@@ -136,6 +137,7 @@ class _QuizPageState extends State<QuizPage> {
 
                 return Card(
                   margin: EdgeInsets.only(bottom: 16),
+                  color: Color(0xFFEDF1E6),  // Set the background color of the card
                   child: Padding(
                     padding: EdgeInsets.all(12),
                     child: Column(
