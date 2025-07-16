@@ -82,7 +82,7 @@ class MathGrades extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final topics = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+    final topics = ['Grade 5 and Grade 6', 'Mock Quiz'];
 
     return Scaffold(
       appBar: AppBar(title: Text('Math Problems')),
