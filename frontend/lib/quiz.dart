@@ -66,7 +66,6 @@ class _QuizPageState extends State<QuizPage> {
   Future<void> _submitQuiz() async {
     final supabase = Supabase.instance.client;
     int timePast = 1800 - _timeLeft; // calculate how many seconds it took to finish the quiz
-
     try {
       final score = await supabase.rpc('calculate_score', params: {
         'input_time': timePast,

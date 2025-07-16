@@ -28,10 +28,25 @@ class TestAttempt { // Here we create a custom type (i.e. String is a type)
   });
 }
 
+class Answers {
+  final int answerID;
+  final int questionID;
+  final String answerText;
+  final bool isCorrect;
+
+  Answers({
+    required this.answerID,
+    required this.questionID,
+    required this.answerText,
+    required this.isCorrect,
+  });
+}
+
 class _ResultsState extends State<Results> { // 
   final supabase = Supabase.instance.client; // Supabase Object connected to Client
   int numRows = 0; 
   List<TestAttempt> testList = []; // List of Test Attempt Data
+  List<Answers> answerList = []; // List of Test Attempt Data
 
   @override // Overriding the initState function
   void initState() { // Function called before screen loads
@@ -39,8 +54,10 @@ class _ResultsState extends State<Results> { //
     fetchTestAttempts(); // Now, fetchTestAttempts will be apart of the function
   }
   Future<void> fetchTestAttempts() async {
-    final testRawData = await supabase.from('testAttempts').select().eq('user_id', supabase.auth.currentUser!.id); 
+    final testRawData = await supabase.from('test_attempts').select().eq('user_id', supabase.auth.currentUser!.id); 
     // Retrieve Raw Data Rows ONLY from currently signed in user_id from testRawData
+    final questionAnswers = await supabase.from('answers').select(); 
+    // questionAnswers pulls all rows from the answers table 
     setState(() { // Rebuild UI
       numRows = testRawData.length;
       testList = testRawData.map<TestAttempt>((row) { // Each 'row' is now a separate function.
@@ -48,14 +65,23 @@ class _ResultsState extends State<Results> { //
       // Collect all TestAttempt Objects and save it in List<TestAttempt>: testList
         return TestAttempt( 
           dateTime: row['test_datetime']?.toString() ?? 'No Date',
-          questionList: List.from(row['question_list'] ?? []), // Make a List from row or leave empty
-          answerOrder: List.from(row['answer_order'] ?? []),
-          selectedAnswers: List.from(row['selected_answers'] ?? []),
+          questionList: List<dynamic>.from(row['question_list'] ?? []), // Make a List from row or leave empty
+          answerOrder: List<dynamic>.from(row['answer_order'] ?? []),
+          selectedAnswers: List<dynamic>.from(row['selected_answers'] ?? []),
           score: row['score'] ?? 0,
         );
         // ?.toString => Is not null: Keep value, Is null: "null"
         // ?? 'No Date' => left side: "null" => switch to 'No Date' text, else, keep. 
       }).toList(); // Converts to List<TestAttempt>.
+
+      answerList = questionAnswers.map<Answers>((row) {
+        return Answers(
+          answerID: row['answer_id'],
+          questionID: row['question_id'],
+          answerText: row['answer_text'],
+          isCorrect: row['is_correct'],
+        );
+      }).toList();
       // numRows = number of user's testattempts
     });
   }
@@ -68,6 +94,30 @@ class _ResultsState extends State<Results> { //
         // itemCount and itemBuilder are directly related. Number of itemCount = affects index of itemBuilder
           itemCount: numRows,
           itemBuilder: (context, index){
+          List<int> correctAnswers = [];
+          List<bool> allAnswers = List.filled(testList[index].questionList.length, false);
+          for (int i = 0; i < testList[index].selectedAnswers.length; i++){ 
+            // For each selected answer in our testAttempt selectedAnswers for the current attempt
+            int answerSelected = testList[index].selectedAnswers[i]; 
+            for (final answer in answerList){ // for each answer block in answerList
+              if (answer.answerID == answerSelected){ // if the answerID = the selected Answer from our TestAtmpt
+                if (answer.isCorrect == true){ // check if it's true
+                  correctAnswers.add(answer.questionID);
+                }
+              }
+            }
+          }
+          for (int j = 0; j < testList[index].questionList.length; j++){
+            int questionSelected = testList[index].questionList[j];
+            for (final correctAnswer in correctAnswers){
+              if (correctAnswer == questionSelected){ 
+                // when Question ID matches a Correct Answer - we flag it. 
+                // That questionSelected is now "true".
+                allAnswers[j] = true;
+              } 
+              // question on questionList is now mapped to true/false
+            }
+          }
             return Container( // Every itembuilder needs to return a widget - container is that widget
               width: double.infinity,
               height: 300,
@@ -82,15 +132,30 @@ class _ResultsState extends State<Results> { //
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start, // Left-aligns the text
                     children: [
-                      Text('Attempt ${index + 1}', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                      Text(
+                        'Attempt ${index + 1}',
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      ),
                       SizedBox(height: 10),
-                      Text('Date: ${testList[index].dateTime}', style: TextStyle(fontSize: 18)),
-                      Text('Score: ${testList[index].score}', style: TextStyle(fontSize: 18)),
+                      Text(
+                        'Date: ${testList[index].dateTime}',
+                        style: TextStyle(fontSize: 18),
+                      ),
+                        Text(
+                          'Score: ${testList[index].score}',
+                          style: TextStyle(fontSize: 18),
+                        ),
                       SizedBox(height: 10),
-                      // .join(', ') combines the text items in the string without brackets.
-                      Text('Selected Answers: ${testList[index].selectedAnswers.join(', ')}', style: TextStyle(fontSize: 16)),
-                      Text('Question List: ${testList[index].questionList.join(', ')}', style: TextStyle(fontSize: 16)),
-                      Text('Answer Order: ${testList[index].answerOrder.join(', ')}', style: TextStyle(fontSize: 16)),
+                      ...List.generate(
+                        testList[index].questionList.length,
+                        (i) => Text( // For each question list item generate a text box
+                          'Question ${i + 1}: ${allAnswers[i] ? 'Correct' : 'Incorrect'}',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: allAnswers[i] ? Colors.green : Colors.red,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -98,6 +163,19 @@ class _ResultsState extends State<Results> { //
         );}
       ),
     );
-  }
-  
+  } 
 }
+
+/*
+ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const Home()),
+                      (route) => false,
+                    );
+                  },
+                  icon: const Icon(Icons.home),
+                  label: const Text('Home'),
+                ),
+                */
