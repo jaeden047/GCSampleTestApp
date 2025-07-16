@@ -17,6 +17,14 @@ class MathGrades extends StatelessWidget {
       return;
     }
 
+    final topicResponse = await supabase
+        .from('topics')
+        .select('topic_id')
+        .eq('topic_name', topicName)
+        .single();
+
+    final topicId = topicResponse['topic_id'];
+
     try {
       // 1. Generate 10 question IDs for the quiz
       final questions = await supabase.rpc('generate_questions', params: {
@@ -31,6 +39,7 @@ class MathGrades extends StatelessWidget {
         final quiz_attempt = await supabase.rpc('create_new_quiz', params: {
           'p_user_id': user.id,
           'p_question_list': questionIds,
+          'p_topic_id': topicId
         });
         print('attempt_id is $quiz_attempt');
 
@@ -83,10 +92,17 @@ class MathGrades extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: topics.map((topic) {
             return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: 10),
               child: ElevatedButton(
                 onPressed: () => _startQuiz(context, topic),
                 child: Text(topic),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFFEDF1E6), // Custom color (green)
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10), // Rounded corners
+                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 30, vertical: 12), // Adjust padding
+                ),
               ),
             );
           }).toList(),
