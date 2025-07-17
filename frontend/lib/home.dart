@@ -46,7 +46,7 @@ class _HomeState extends State<Home> {
         }
       } catch (e) {
         // Handle error if fetching profile fails
-        print("Error fetching user data: $e");
+        // print("Error fetching user data: $e");
       }
     }
     
@@ -118,7 +118,7 @@ class _HomeState extends State<Home> {
               child: Padding(
                 padding: const EdgeInsets.only(left: 10.0), // tab-style indent
                 child: Text(
-                  'Start Learning',
+                  'Competition',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
