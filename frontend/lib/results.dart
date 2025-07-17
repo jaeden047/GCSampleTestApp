@@ -19,6 +19,7 @@ class TestAttempt { // Here we create a custom type (i.e. String is a type)
   final List<dynamic> answerOrder;
   final List<dynamic> selectedAnswers;
   final int score;
+  final int topicId;
 
   TestAttempt({ // Model for Constructor for the class: To create an object - this is what you require
     required this.dateTime,
@@ -26,6 +27,7 @@ class TestAttempt { // Here we create a custom type (i.e. String is a type)
     required this.answerOrder,
     required this.selectedAnswers,
     required this.score,
+    required this.topicId,
   });
 }
 
@@ -84,6 +86,7 @@ class _ResultsState extends State<Results> { //
           answerOrder: List<dynamic>.from(row['answer_order'] ?? []),
           selectedAnswers: List<dynamic>.from(row['selected_answers'] ?? []),
           score: row['score'] ?? 0,
+          topicId: row['topic_id'] ?? 0,
         );
         // ?.toString => Is not null: Keep value, Is null: "null"
         // ?? 'No Date' => left side: "null" => switch to 'No Date' text, else, keep. 
@@ -110,7 +113,19 @@ class _ResultsState extends State<Results> { //
   }
 @override
 Widget build(BuildContext context) {
-  return Scaffold(
+    return Scaffold(
+      appBar: AppBar(
+      title: Text('Past Results', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w300, color: const Color.fromARGB(255, 36, 36, 36),),),
+      centerTitle: true,
+      backgroundColor: Color(0xFFE7ECE2), // match your screen background if needed
+      elevation: 0,
+      leading: IconButton(
+        icon: Icon(Icons.arrow_back, color: Colors.black),
+        onPressed: () {
+          Navigator.pop(context); // navigate back
+        },
+      ),
+    ),
     body: numRows == 0
         ? const Center(child: Text('No attempts yet...'))
         : ListView.builder(
@@ -152,7 +167,7 @@ Widget build(BuildContext context) {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Attempt ${index + 1}',
+                        'Attempt ${index + 1} • Grade ${testList[index].topicId}',
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87),
                       ),
                       SizedBox(height: 6),
@@ -224,16 +239,34 @@ Widget build(BuildContext context) {
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
-                                        color: allAnswers[i] ? Colors.green: Colors.black,
                                       ),
                                     ),
                                     SizedBox(height: 4), // Gap between questiontext and answertext  
                                     ...answerOptions.map((row) {
+                                      bool isSelected = testList[index].selectedAnswers.contains(row.answerID); 
+                                      // Is answer a selected answer ; T/F
+                                      bool isCorrect = row.isCorrect;
+                                      // Is answer a correct answer ; T/F
+                                      Icon iconChosen = Icon(Icons.check_circle_outline);
+                                      Color colorChosen = Colors.black;
+                                      if (isSelected && isCorrect) { // if Selected and Right
+                                        iconChosen = Icon(Icons.circle, color: Color(0xFF628B35));
+                                        colorChosen = Color(0xFF628B35);
+                                      } else if (isSelected && !isCorrect) { // if Selected but Wrong
+                                        iconChosen = Icon(Icons.circle, color: Color(0xFFBD433E));
+                                        colorChosen = Color(0xFFBD433E);
+                                      } else if (!isSelected && isCorrect) { // if Not Selected but Right
+                                        iconChosen = Icon(Icons.circle_outlined, color: Color(0xFF628B35));
+                                        colorChosen = Color(0xFF628B35);
+                                      } else if (!isSelected && !isCorrect) { // If Not Selected but Wrong
+                                        iconChosen = Icon(Icons.circle_outlined); 
+                                        colorChosen = Colors.black;
+                                      }
                                         return Row( // Each row of the answerOptions for the question gets displayed with:
                                           children: [
-                                            Icon(Icons.circle_outlined), 
-                                            SizedBox(width: 4),
-                                            Text(row.answerText),
+                                            iconChosen,
+                                            SizedBox(width: 6),
+                                            Text(row.answerText, style: TextStyle(color: colorChosen)),
                                           ],
                                         );
                                     }) // elipses (...) is a spread operator used to insert a list of widgets into another list of widgets, i.e. Column
