@@ -26,7 +26,7 @@ class MathGrades extends StatelessWidget {
     final topicId = topicResponse['topic_id'];
 
     // Check if the user has already attempted the "Grade 5 and Grade 6" quiz
-    if (topicName == 'Mock Quiz') {
+    if (topicName == 'Grade 5 and Grade 6') {
       try{
         final response = await supabase.rpc('check_user_attempt', params: {
           'p_user_id': user.id,  // Current user ID
