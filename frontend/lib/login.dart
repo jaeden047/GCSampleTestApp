@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; // supabase flutter sdk
 import 'home.dart';
 
@@ -106,9 +107,11 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ],
             const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: submit,
-              child: Text(_isLogin ? 'Login' : 'Sign Up'),
+            GestureDetector(
+              onTap: submit,
+              child: SvgPicture.asset(
+                _isLogin ? 'assets/images/login_button.svg' : 'assets/images/signup_button.svg',
+              ),
             ),
             const SizedBox(height: 12),
             TextButton(
