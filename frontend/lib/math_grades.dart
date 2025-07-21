@@ -109,110 +109,135 @@ class MathGrades extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final topics = [
-      {'title': 'Sample Quiz', 'description': 'The mock quiz consists of 10 questions and must be completed within 30 minutes. Students have unlimited attempts to practice.'},
-      {'title': 'Grade 5 and 6', 'description': 'The quiz consists of 10 questions and must be completed within 30 minutes. Each student is allowed only one attempt.'},
-      {'title': 'Grade 7 and 8', 'description': 'The quiz consists of 10 questions and must be completed within 30 minutes. Each student is allowed only one attempt.'},
-      {'title': 'Grade 9 and 10', 'description': 'The quiz consists of 10 questions and must be completed within 30 minutes. Each student is allowed only one attempt.'},
-      {'title': 'Grade 11 and 12', 'description': 'The quiz consists of 10 questions and must be completed within 30 minutes. Each student is allowed only one attempt.'}
+      {'title': 'Sample Quiz', 'description': 'The sample quiz consists of 10 questions and must be completed within 30 minutes. Students have unlimited attempts to practice.'},
+      {'title': 'Grade 5 and 6', 'description': 'The quiz consists of 15 questions and must be completed within 30 minutes. Each student is allowed only ONE attempt.'},
+      {'title': 'Grade 7 and 8', 'description': 'The quiz consists of 15 questions and must be completed within 30 minutes. Each student is allowed only ONE attempt.'},
+      {'title': 'Grade 9 and 10', 'description': 'The quiz consists of 15 questions and must be completed within 30 minutes. Each student is allowed only ONE attempt.'},
+      {'title': 'Grade 11 and 12', 'description': 'The quiz consists of 15 questions and must be completed within 30 minutes. Each student is allowed only ONE attempt.'}
     ];
 
     return Scaffold(
-      appBar: AppBar(title: Text('Math Problems')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,  // Align items at the top
-          crossAxisAlignment: CrossAxisAlignment.center, // Align content to the left (if needed)
-          children: [
-            Container(
-              width: double.infinity, // Ensures the button spans the full width
-              margin: const EdgeInsets.only(bottom: 16, left: 15, right: 15), // Adjust side margin here (left and right)
-              padding: EdgeInsets.all(16.0), // Padding inside the box
-              decoration: BoxDecoration(
-                color: Color(0xFFFFFDF5), // Background color (light green)
-                borderRadius: BorderRadius.circular(10), // Rounded corners
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 5,
-                    offset: Offset(0, 3), // Shadow offset
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    "Global Competition and Challenge",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
+      appBar: AppBar(),
+      body: SingleChildScrollView(  // Make the content scrollable
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,  // Align items at the top
+            crossAxisAlignment: CrossAxisAlignment.center, // Align content to the left (if needed)
+            children: [
+              Container(
+                width: double.infinity, // Ensures the button spans the full width
+                margin: const EdgeInsets.only(bottom: 16, left: 15, right: 15), // Adjust side margin (removed bottom margin)
+                padding: EdgeInsets.all(16.0), // Padding inside the box
+                decoration: BoxDecoration(
+                  color: Color(0xFFFFFDF5), // Background color (light green)
+                  borderRadius: BorderRadius.circular(10), // Rounded corners
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 5,
+                      offset: Offset(0, 3), // Shadow offset
                     ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    "Math Series 2025",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  SizedBox(height: 8), // Space between the title and the text
-                  Text(
-                    "in partnership with Saddle River Day School, New Jersey, USA",
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[700],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // The list of quiz buttons
-            ...topics.map((topic) {
-              return Container(
-                margin: const EdgeInsets.only(bottom: 16, left: 15, right: 15), // Adjust side margin here (left and right)
-                child: SizedBox(
-                  width: double.infinity, // Ensures the button spans the full width
-                  child: ElevatedButton(
-                    onPressed: () => _startQuiz(context, topic['title']!),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFFEDF1E6), // Custom color (green)
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10), // Rounded corners
-                      ),
-                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10), // Padding inside the button
-                      minimumSize: Size(double.infinity, 80), // Minimum height for consistency
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0), // Padding inside button content
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start, // Align texts to the left
-                        children: [
-                          Text(
-                            topic['title']!,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18, // Adjust size as needed
-                            ),
-                          ),
-                          SizedBox(height: 4), // Spacing between title and description
-                          Text(
-                            topic['description']!,
-                            style: TextStyle(
-                              color: Colors.grey[700],
-                              fontSize: 14, // Adjust size as needed
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  ],
                 ),
-              );
-            }).toList(),
-          ],
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Global Competition and Challenge",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      "Math Series 2025",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    SizedBox(height: 8), // Space between the title and the text
+                    Text(
+                      "In partnership with Saddle River Day School, New Jersey, USA",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    SizedBox(height: 8), // Space between the title and the text
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Row to display two images side by side
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center, // Centers the images horizontally
+                          children: [
+                            // First Image
+                            Image.asset(
+                              'assets/images/gc_logo.jpg', // Replace with your first PNG image path
+                              height: 50, // Adjust height as needed
+                            ),
+                            SizedBox(width: 16), // Space between the two images
+                            // Second Image
+                            Image.asset(
+                              'assets/images/school_logo.png', // Replace with your second PNG image path
+                              height: 50, // Adjust height as needed
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // The list of quiz buttons
+              ...topics.map((topic) {
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 16, left: 15, right: 15), // Adjust side margin here (left and right)
+                  child: SizedBox(
+                    width: double.infinity, // Ensures the button spans the full width
+                    child: ElevatedButton(
+                      onPressed: () => _startQuiz(context, topic['title']!),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFFEDF1E6), // Custom color (green)
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10), // Rounded corners
+                        ),
+                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10), // Padding inside the button
+                        minimumSize: Size(double.infinity, 80), // Minimum height for consistency
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0), // Padding inside button content
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start, // Align texts to the left
+                          children: [
+                            Text(
+                              topic['title']!,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18, // Adjust size as needed
+                              ),
+                            ),
+                            SizedBox(height: 4), // Spacing between title and description
+                            Text(
+                              topic['description']!,
+                              style: TextStyle(
+                                color: Colors.grey[700],
+                                fontSize: 14, // Adjust size as needed
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ],
+          ),
         ),
       ),
     );

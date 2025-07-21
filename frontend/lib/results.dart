@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 
@@ -133,19 +134,32 @@ class _ResultsState extends State<Results> { //
 Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-      title: Text('Past Results', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w300, color: const Color.fromARGB(255, 36, 36, 36),),),
-      centerTitle: true,
-      backgroundColor: Color(0xFFE7ECE2), // match your screen background if needed
-      elevation: 0,
-      leading: IconButton(
-        icon: Icon(Icons.arrow_back, color: Colors.black),
-        onPressed: () {
-          Navigator.pop(context); // navigate back
-        },
-      ),
-    ),
-    body: numRows == 0
-        ? const Center(child: Text('No attempts yet...'))
+          title: Text('Past Results'),
+        ),
+      body: numRows == 0
+        ?  Center( // empty results look
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center, // Vertically center the content
+          crossAxisAlignment: CrossAxisAlignment.center, // Horizontally center the content
+          children: [
+            // SVG Image
+            SvgPicture.asset(
+              'assets/images/grey_results.svg',
+              height: 100,
+            ),
+            SizedBox(height: 20), // Space between the image and the text
+            // Text message
+            Text(
+              'Empty History',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              'Try a quiz before coming back',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      )
         : ListView.builder(
             itemCount: numRows,
             itemBuilder: (context, index) {
