@@ -56,7 +56,7 @@ class PostQuiz extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              'Your Score: $score/10',
+              'Your Score: $score%',
               style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),

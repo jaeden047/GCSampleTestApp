@@ -16,8 +16,8 @@ class _ProfilePageState extends State<ProfilePage> {
   String name = '';
   String email = '';
   String phone = '';
-  String country = '';
   String school = '';
+  String country = '';
   final phoneController = TextEditingController();
   final schoolController = TextEditingController();
   final countryController = TextEditingController();
@@ -36,8 +36,8 @@ class _ProfilePageState extends State<ProfilePage> {
         name = profile['name'];
         email = profile['email'];
         phone = profile['phone_number'] ?? 'Not provided';
-        country = profile['country'] ?? 'Not provided';
         school = profile['school'] ?? 'Not provided';
+        country = profile['country'] ?? 'Not provided';
       });
     }
   }
@@ -55,8 +55,8 @@ class _ProfilePageState extends State<ProfilePage> {
       // pre set the info to the text field
       setState(() {
         phoneController.text = response['phone_number'] ?? '';
-        countryController.text = response['country'] ?? '';
         schoolController.text = response['school'] ?? '';
+        countryController.text = response['country'] ?? '';
       });
       return response;
     }
@@ -69,8 +69,8 @@ class _ProfilePageState extends State<ProfilePage> {
     final user = supabase.auth.currentUser;
     if (user != null) {
       final phone = phoneController.text.trim();
-      final country = countryController.text.trim();
       final school = schoolController.text.trim();
+      final country = countryController.text.trim();
 
       final response = await supabase.from('profiles').update({
         'phone_number': phone.isEmpty ? null : phone,
@@ -151,12 +151,12 @@ class _ProfilePageState extends State<ProfilePage> {
                   SizedBox(height: 20),
                   TextField(
                     controller: schoolController,
-                    decoration: InputDecoration(labelText: 'Country'),
+                    decoration: InputDecoration(labelText: 'School'),
                   ),
                   SizedBox(height: 20),
                   TextField(
                     controller: countryController,
-                    decoration: InputDecoration(labelText: 'School'),
+                    decoration: InputDecoration(labelText: 'Country'),
                   ),
                 ],
               ),

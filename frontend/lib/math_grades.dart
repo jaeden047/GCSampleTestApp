@@ -122,49 +122,97 @@ class MathGrades extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,  // Align items at the top
-          crossAxisAlignment: CrossAxisAlignment.start, // Align content to the left (if needed)
-          children: topics.map((topic) {
-            return Container(
+          crossAxisAlignment: CrossAxisAlignment.center, // Align content to the left (if needed)
+          children: [
+            Container(
+              width: double.infinity, // Ensures the button spans the full width
               margin: const EdgeInsets.only(bottom: 16, left: 15, right: 15), // Adjust side margin here (left and right)
-              child: SizedBox(
-                width: double.infinity, // Ensures the button spans the full width
-                child: ElevatedButton(
-                  onPressed: () => _startQuiz(context, topic['title']!),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFFEDF1E6), // Custom color (green)
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10), // Rounded corners
-                    ),
-                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10), // Padding inside the button
-                    minimumSize: Size(double.infinity, 80), // Minimum height for consistency
+              padding: EdgeInsets.all(16.0), // Padding inside the box
+              decoration: BoxDecoration(
+                color: Color(0xFFFFFDF5), // Background color (light green)
+                borderRadius: BorderRadius.circular(10), // Rounded corners
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 5,
+                    offset: Offset(0, 3), // Shadow offset
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0), // Padding inside button content
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start, // Align texts to the left
-                      children: [
-                        Text(
-                          topic['title']!,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18, // Adjust size as needed
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    "Global Competition and Challenge",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    "Math Series 2025",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  SizedBox(height: 8), // Space between the title and the text
+                  Text(
+                    "in partnership with Saddle River Day School, New Jersey, USA",
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // The list of quiz buttons
+            ...topics.map((topic) {
+              return Container(
+                margin: const EdgeInsets.only(bottom: 16, left: 15, right: 15), // Adjust side margin here (left and right)
+                child: SizedBox(
+                  width: double.infinity, // Ensures the button spans the full width
+                  child: ElevatedButton(
+                    onPressed: () => _startQuiz(context, topic['title']!),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFFEDF1E6), // Custom color (green)
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10), // Rounded corners
+                      ),
+                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10), // Padding inside the button
+                      minimumSize: Size(double.infinity, 80), // Minimum height for consistency
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0), // Padding inside button content
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start, // Align texts to the left
+                        children: [
+                          Text(
+                            topic['title']!,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18, // Adjust size as needed
+                            ),
                           ),
-                        ),
-                        SizedBox(height: 4), // Spacing between title and description
-                        Text(
-                          topic['description']!,
-                          style: TextStyle(
-                            color: Colors.grey[700],
-                            fontSize: 14, // Adjust size as needed
+                          SizedBox(height: 4), // Spacing between title and description
+                          Text(
+                            topic['description']!,
+                            style: TextStyle(
+                              color: Colors.grey[700],
+                              fontSize: 14, // Adjust size as needed
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            );
-          }).toList(),
+              );
+            }).toList(),
+          ],
         ),
       ),
     );
