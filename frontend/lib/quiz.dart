@@ -67,12 +67,14 @@ class _QuizPageState extends State<QuizPage> {
     final supabase = Supabase.instance.client;
     int timePast = 1800 - _timeLeft; // calculate how many seconds it took to finish the quiz
     try {
-      final score = await supabase.rpc('calculate_score', params: {
+      final scoreRaw = await supabase.rpc('calculate_score', params: {
         'input_time': timePast,
         'selected_answers': _selectedAnswers,
         'input_attempt_id': _attemptId,
       });
-
+      print(scoreRaw);
+      final double score = (scoreRaw as num).toDouble();
+      print (score);
       if (mounted) {
         Navigator.push(
           context,

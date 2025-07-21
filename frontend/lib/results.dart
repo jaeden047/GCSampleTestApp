@@ -56,12 +56,23 @@ class Questions {
   });
 }
 
+class Topics {
+  final int topicId2;
+  final String topicName;
+
+  Topics({
+    required this.topicId2,
+    required this.topicName,
+  });
+}
+
 class _ResultsState extends State<Results> { // 
   final supabase = Supabase.instance.client; // Supabase Object connected to Client
   int numRows = 0; 
   List<TestAttempt> testList = []; // List of Test Attempt Data
   List<Answers> answerList = []; // List of Test Attempt Data
   List<Questions> questionList = []; // List of Test Attempt Data
+  List<Topics> topicList = [];
 
   @override // Overriding the initState function
   void initState() { // Function called before screen loads
@@ -73,6 +84,7 @@ class _ResultsState extends State<Results> { //
     // Retrieve Raw Data Rows ONLY from currently signed in user_id from testRawData
     final questionAnswers = await supabase.from('answers').select(); 
     final questionData = await supabase.from('questions').select();
+    final topicData = await supabase.from('topics').select();
     // questionAnswers pulls all rows from the answers table 
     setState(() { // Rebuild UI
       numRows = testRawData.length;
@@ -108,6 +120,13 @@ class _ResultsState extends State<Results> { //
         );
       }).toList();
       // numRows = number of user's testattempts
+
+      topicList = topicData.map<Topics>((row) {
+        return Topics(
+          topicId2: row['topic_id'],
+          topicName: row['topic_name'],
+        );
+      }).toList(); 
     });
   }
 @override
@@ -166,7 +185,7 @@ Widget build(BuildContext context) {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Attempt ${index + 1} • Grade ${testList[index].topicId}',
+                        'Attempt ${index + 1} • ${topicList.firstWhere((t) => t.topicId2 == testList[index].topicId, orElse: () => Topics(topicId2: 0, topicName: 'Unknown')).topicName}',
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87),
                       ),
                       SizedBox(height: 6),
@@ -177,14 +196,13 @@ Widget build(BuildContext context) {
                           Text(formattedDate, style: TextStyle(fontSize: 14, color: const Color.fromARGB(137, 36, 36, 36),)),
                           Spacer(), // takes all available space ~ pushes score widget on the far right
                           SizedBox( // Fixed width
-                            width: 125,
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(Icons.star, color: Colors.amber),
                                 SizedBox(width: 6), // controls width spacing between any widget
                                 Text(
-                                  'Score: $scoreNumber%',
+                                  'Score: ${scoreNumber.toStringAsFixed(1)}%',
                                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87)
                                 )
                              ],

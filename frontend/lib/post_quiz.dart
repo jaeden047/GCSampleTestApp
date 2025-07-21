@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart'; // supabase flutter sdk
 import 'home.dart';
 
 class PostQuiz extends StatelessWidget {
-  final int score;
+  final double score;
   final VoidCallback onRedoQuiz;
   final String topicName;
   final VoidCallback onViewAnswers;
@@ -56,7 +56,7 @@ class PostQuiz extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              'Your Score: $score%',
+              'Your Score: ${score}%',
               style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
