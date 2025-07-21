@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'home.dart';
 import 'package:intl/intl.dart';
 
 // Results page
@@ -18,7 +17,7 @@ class TestAttempt { // Here we create a custom type (i.e. String is a type)
   final List<dynamic> questionList;
   final List<dynamic> answerOrder;
   final List<dynamic> selectedAnswers;
-  final int score;
+  final double score;
   final int topicId;
 
   TestAttempt({ // Model for Constructor for the class: To create an object - this is what you require
@@ -152,7 +151,7 @@ Widget build(BuildContext context) {
               }
               DateTime parsedDate = DateTime.parse(testList[index].dateTime); // parses raw ISO Date into a DateTime Variable
               String formattedDate = DateFormat('MM/dd/yyyy h:mma').format(parsedDate);;
-              int scoreNumber = testList[index].score * 10; 
+              double scoreNumber = testList[index].score; 
               return Card(
                 color: Colors.green[50], // Color of the Attempt {} Card
                 shadowColor: Colors.black, // Attempt {} - Shadow Underlayer

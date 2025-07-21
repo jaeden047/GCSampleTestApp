@@ -25,8 +25,11 @@ class MathGrades extends StatelessWidget {
 
     final topicId = topicResponse['topic_id'];
 
-    // Check if the user has already attempted the "Grade 5 and Grade 6" quiz
-    if (topicName == 'Grade 5 and Grade 6') {
+    // List of quizzes that are restricted to a single attempt only
+    List<String> oneTryTopics = ['Grade 5 and 6', 'Grade 7 and 8', 'Grade 9 and 10', 'Grade 11 and 12'];
+
+    // Check if the user has already attempted the specific quizzes
+    if (oneTryTopics.contains(topicName)) {
       try{
         final response = await supabase.rpc('check_user_attempt', params: {
           'p_user_id': user.id,  // Current user ID
@@ -106,8 +109,11 @@ class MathGrades extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final topics = [
-      {'title': 'Mock Quiz', 'description': 'The mock quiz consists of 10 questions and must be completed within 30 minutes. Students have unlimited attempts to practice.'},
-      {'title': 'Grade 5 and Grade 6', 'description': 'The quiz consists of 10 questions and must be completed within 30 minutes. Each student is allowed only one attempt.'}
+      {'title': 'Sample Quiz', 'description': 'The mock quiz consists of 10 questions and must be completed within 30 minutes. Students have unlimited attempts to practice.'},
+      {'title': 'Grade 5 and 6', 'description': 'The quiz consists of 10 questions and must be completed within 30 minutes. Each student is allowed only one attempt.'},
+      {'title': 'Grade 7 and 8', 'description': 'The quiz consists of 10 questions and must be completed within 30 minutes. Each student is allowed only one attempt.'},
+      {'title': 'Grade 9 and 10', 'description': 'The quiz consists of 10 questions and must be completed within 30 minutes. Each student is allowed only one attempt.'},
+      {'title': 'Grade 11 and 12', 'description': 'The quiz consists of 10 questions and must be completed within 30 minutes. Each student is allowed only one attempt.'}
     ];
 
     return Scaffold(
