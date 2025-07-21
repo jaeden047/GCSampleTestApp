@@ -76,58 +76,61 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(_isLogin ? 'Login' : 'Sign Up')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset(
-              'assets/images/gcFuture.png',
-            ),
-            if (_isLogin == false)...[
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset(
+                'assets/images/gcFuture.png',
+                height: 120,
+              ),
+              if (_isLogin == false)...[
+                const SizedBox(height: 12),
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'Name'),
+                ),
+              ],
+              TextField(
+                controller: emailController,
+                decoration: const InputDecoration(labelText: 'Email'),
+              ),
               const SizedBox(height: 12),
               TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Name'),
+                controller: passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'Password'),
               ),
-            ],
-            TextField(
-              controller: emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'Password'),
-            ),
-            if (_isLogin == false)...[
+              if (_isLogin == false)...[
+                const SizedBox(height: 12),
+                TextField(
+                  controller: phoneController,
+                  obscureText: true,
+                  decoration: const InputDecoration(labelText: 'Phone Number (Optional)'),
+                ),
+              ],
+              const SizedBox(height: 20),
+              GestureDetector(
+                onTap: submit,
+                child: SvgPicture.asset(
+                  _isLogin ? 'assets/images/login_button.svg' : 'assets/images/signup_button.svg',
+                ),
+              ),
               const SizedBox(height: 12),
-              TextField(
-              controller: phoneController,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'Phone Number (Optional)'),
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _isLogin = !_isLogin;
+                  });
+                },
+                child: Text(_isLogin
+                    ? "Don't have an account? Sign up"
+                    : "Already have an account? Login"),
               ),
             ],
-            const SizedBox(height: 20),
-            GestureDetector(
-              onTap: submit,
-              child: SvgPicture.asset(
-                _isLogin ? 'assets/images/login_button.svg' : 'assets/images/signup_button.svg',
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  _isLogin = !_isLogin;
-                });
-              },
-              child: Text(_isLogin
-                  ? "Don't have an account? Sign up"
-                  : "Already have an account? Login"),
-            ),
-          ],
+          ),
         ),
       ),
     );
