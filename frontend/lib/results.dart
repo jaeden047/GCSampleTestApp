@@ -163,25 +163,6 @@ Widget build(BuildContext context) {
         : ListView.builder(
             itemCount: numRows,
             itemBuilder: (context, index) {
-              List<int> correctQuestionIDs = [];
-              List<bool> allAnswers = List.filled(testList[index].questionList.length, false);
-              for (int i = 0;i < testList[index].selectedAnswers.length;i++) {
-                int answerSelected = testList[index].selectedAnswers[i];
-                for (final answer in answerList) {
-                  if (answer.answerID == answerSelected &&
-                      answer.isCorrect == true) {
-                    correctQuestionIDs.add(answer.questionID);
-                  }
-                }
-              }
-              for (int j = 0;j < testList[index].questionList.length; j++) {
-                int questionSelected = testList[index].questionList[j];
-                for (final correctAnswer in correctQuestionIDs) {
-                  if (correctAnswer == questionSelected) {
-                    allAnswers[j] = true;
-                  }
-                }
-              }
               DateTime parsedDate = DateTime.parse(testList[index].dateTime); // parses raw ISO Date into a DateTime Variable
               String formattedDate = DateFormat('MM/dd/yyyy h:mma').format(parsedDate);;
               double scoreNumber = testList[index].score; 
@@ -227,7 +208,7 @@ Widget build(BuildContext context) {
                     ]
                   ),
                   children: [ // When you click on tile, this is what is displayed
-                    Padding( // Padding ???
+                    Padding( 
                       padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0), // 16 pixels left/right in space, 8 pixes up/down in space
                       child: Container(
                         width: double.infinity,
@@ -236,8 +217,8 @@ Widget build(BuildContext context) {
                         children: [
                           SizedBox(height: 8),
                           ...List.generate(
-                            testList[index].questionList.length,
-                            (i) {                              
+                            testList[index].questionList.length, 
+                            (i) {
                               int questionID = testList[index].questionList[i];
                               List<Answers> answerOptions = answerList.where((a) => a.questionID == questionID).toList();
                               return Container(
