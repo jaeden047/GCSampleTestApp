@@ -6,7 +6,8 @@ class MathGrades extends StatelessWidget {
   const MathGrades({super.key});
 
   // Start a new quiz: create an attempt and fetch questions
-  Future<void> _startQuiz(BuildContext context, String topicName) async {
+  Future<void> _startQuiz(BuildContext context, String topicName) async { // Asynchronous function named _startQuiz, 
+  // topicName - Grade Chosen, context: our page/location in the app
     final supabase = Supabase.instance.client;
     final user = supabase.auth.currentUser;
 
