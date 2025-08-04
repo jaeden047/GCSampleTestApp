@@ -3,10 +3,16 @@ import 'package:flutter_svg/svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; // supabase flutter sdk
 import 'home.dart';
 
-// Null issue
-// The fact you can back out during a one-attempt quiz -> resolve that
-// "Are you sure?" check - verifying all blanks are filled
-// Profile check
+// Known Errors:
+// --
+// Null issue - Resolved (Needs tests)
+// The fact you can back out during a one-attempt quiz - Resolved
+// "Are you sure?" check - verifying all blanks are filled - Resolved
+// Profile check - Unnecessary/Resolved
+// --
+// README.txt
+// Rewrite comments for clarity
+// Package, deploy, finish.
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});

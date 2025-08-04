@@ -219,8 +219,17 @@ Widget build(BuildContext context) {
                           ...List.generate(
                             testList[index].questionList.length, 
                             (i) {
-                              int questionID = testList[index].questionList[i];
-                              List<Answers> answerOptions = answerList.where((a) => a.questionID == questionID).toList();
+                              int questionID = testList[index].questionList[i]; 
+                              //List<Answers> answerOptions = answerList.where((a) => a.questionID == questionID).toList();
+                              int start = i * 4; // Start index: i = 0 : 0 * 4 = 0, 1 * 4 = 4
+                              int end = start + 4; // End index: 8
+                              // 0 - 4 : Question 1, 4 - 8 : Question 2,
+                              List<int> correctAnswerOrder = testList[index].answerOrder.sublist(start, end).cast<int>();
+                              // We loop through each question, i = question number.
+                              // i = 1, loop through answer-order 4-8. This is the list of answer IDs for Question 1 (i), in the correct order.
+                              List<Answers> answerOptions = correctAnswerOrder.map((id) => answerList.firstWhere((a) => a.answerID == id)).toList();
+                              // id = the id of each question in the correctAnswerOrder list. a.answerID (answerID of answer Object) mapped to id (answerID in List<int> - correctAnswerOrder)
+                              // 28 (correctAnswerOrder) -> find the corresponding answer object -> "Answer B" - QID: 28 -> add to list
                               return Container(
                                 //width: 360,
                                 margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8), // space outside card
