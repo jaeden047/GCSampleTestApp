@@ -263,7 +263,7 @@ Widget build(BuildContext context) {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                       Text( // questionList i = answer questionID -> answerText, allAnswers[i] = correct/wrong
-                                      '${i + 1}: ${(questionList.firstWhere((q) => q.questionID == questionID).questionText)}', 
+                                      '${i + 1}. ${(questionList.firstWhere((q) => q.questionID == questionID).questionText)}', 
                                       //'${answerOptions.map((a) => '- ${a.answerText}').join('\n')}',
                                       // .map turns each answerOptions object into a String
                                       // .join puts each on it's own line
@@ -293,13 +293,19 @@ Widget build(BuildContext context) {
                                         iconChosen = Icon(Icons.circle_outlined); 
                                         colorChosen = Colors.black;
                                       }
-                                        return Row( // Each row of the answerOptions for the question gets displayed with:
-                                          children: [
-                                            iconChosen,
-                                            SizedBox(width: 6),
-                                            Text(row.answerText, style: TextStyle(color: colorChosen)),
-                                          ],
-                                        );
+                                      return Row(
+                                        children: [
+                                          iconChosen,
+                                          SizedBox(width: 6),
+                                          Flexible(
+                                            child: Text(
+                                              row.answerText,
+                                              style: TextStyle(color: colorChosen),
+                                              softWrap: true,
+                                            ),
+                                          ),
+                                        ],
+                                      );
                                     }) // elipses (...) is a spread operator used to insert a list of widgets into another list of widgets, i.e. Column
                                   ]
                                 )

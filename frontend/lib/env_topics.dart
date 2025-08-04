@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; //supabase flutter sdk
 import 'quiz.dart';
 
@@ -116,7 +115,7 @@ class EnvTopics extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final topics = [
-      {'title': 'Plastic Pollution Focus', 'description': 'The quiz consists of 15 questions and must be completed within 30 minutes. Each student is allowed only ONE attempt. The quiz is about what you learned during the Moore Institute Plastic Pollution Presentation.'}
+      {'title': 'Plastic Pollution Focus', 'description': 'The quiz consists of 15 questions and must be completed within 30 minutes. Each student is allowed only ONE attempt.'}
     ];
 
     return Scaffold(
@@ -155,7 +154,7 @@ class EnvTopics extends StatelessWidget {
                     ),
                     SizedBox(height: 4),
                     Text(
-                      "Plastic Pollution Series 2025",
+                      "Environment Series 2025",
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
