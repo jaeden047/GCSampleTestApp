@@ -3,6 +3,11 @@ import 'package:flutter_svg/svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; // supabase flutter sdk
 import 'home.dart';
 
+// Null issue
+// The fact you can back out during a one-attempt quiz -> resolve that
+// "Are you sure?" check - verifying all blanks are filled
+// Profile check
+
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -32,7 +37,7 @@ class _LoginPageState extends State<LoginPage> {
         );
         if (response.user != null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Logged in as ${response.user!.email}')),
+            SnackBar(content: Text('Logged in as ${response.user?.email}')),
           );
           Navigator.pushReplacement(
             context,
@@ -83,6 +88,7 @@ class _LoginPageState extends State<LoginPage> {
           children: [
             Image.asset(
               'assets/images/gcFuture.png',
+              height: 140,
             ),
             if (_isLogin == false)...[
               const SizedBox(height: 12),
