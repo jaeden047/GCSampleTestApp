@@ -99,7 +99,7 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 12),
               TextField(
               controller: nameController,
-              decoration: const InputDecoration(labelText: 'Name'),
+              decoration: const InputDecoration(labelText: 'Full Name'),
               ),
             ],
             TextField(

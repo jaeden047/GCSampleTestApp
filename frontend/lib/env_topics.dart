@@ -87,11 +87,11 @@ class EnvTopics extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => QuizPage(
+                builder: (context) => QuizPage( // INTO QUIZPAGE
                   attemptId: quizAttempt,
-                  questions: questionsWithAnswers,
+                  questions: questionsWithAnswers, // ✅ QUESTIONS PASSED HERE
                   topicName: topicName,
-                  onRedoQuiz: () => _startQuiz(context, topicName),
+                  onRedoQuiz: () => _startQuiz(context, topicName), // “when Redo is pressed, run _startQuiz from this file, with this context and this topicName.”
                 ),
               ),
             );
