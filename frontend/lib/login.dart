@@ -52,6 +52,15 @@ class _LoginPageState extends State<LoginPage> {
         }
       } else {
         // Sign Up
+        final name = nameController.text.trim();
+        if (name.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Full Name is required.')),
+          );
+          return;
+        }
+        // : if the “final name” is empty, do not continue.
+
         final phone = phoneController.text.trim();
         final response = await supabase.auth.signUp(
           email: email,
