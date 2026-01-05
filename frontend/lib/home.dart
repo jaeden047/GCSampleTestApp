@@ -89,7 +89,8 @@ class _HomeState extends State<Home> {
                       ),
                       child: Center(
                         child: Text(
-                          userName != null ? userName![0].toUpperCase() : '', // First letter of the user's name
+                          (userName != null && userName!.trim().isNotEmpty) ? userName!.trim()[0].toUpperCase() : '',
+ // First letter of the user's name
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,

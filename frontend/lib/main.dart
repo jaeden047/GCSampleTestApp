@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; // supabase flutter sdk
 import 'home.dart';
+import 'reset_password.dart';
 import 'login.dart';
 
 void main() async{
@@ -48,7 +49,11 @@ class MyApp extends StatelessWidget {
           onSurface: Color(0xFF2A262A),
         ),
       ),
-      home: AuthGate(),
+      initialRoute: '/',
+      routes: {
+        '/': (_) => const AuthGate(),
+        '/reset-password': (_) => const ResetPasswordPage(),
+      },
       debugShowCheckedModeBanner: false,
     );
   }
