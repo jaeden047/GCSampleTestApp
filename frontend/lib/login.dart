@@ -87,7 +87,8 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(_isLogin ? 'Login' : 'Sign Up')),
-      body: Padding(
+      body: SingleChildScrollView(
+      child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -140,6 +141,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

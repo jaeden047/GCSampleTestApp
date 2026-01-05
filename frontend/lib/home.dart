@@ -59,7 +59,8 @@ class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Padding(
+      body: SingleChildScrollView(
+      child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
@@ -186,6 +187,7 @@ class _HomeState extends State<Home> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
