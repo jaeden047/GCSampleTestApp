@@ -70,21 +70,24 @@ class _LoginPageState extends State<LoginPage> {
       return 'Password is required';
     }
     
-    if (password.length < 8) {
-      return 'Password must be at least 8 characters';
-    }
-
-    final specialCharRegex = RegExp(r'[!@#$%^&*(),.?":{}|<>]');
-    if (!specialCharRegex.hasMatch(password)) {
-      return r'Password must contain at least one special character: [!@#$%^&*(),.?":{}|<>]';
-    }
-    
+    // Complex password requirements only apply to sign up, not log in
     if (!_isLogin) {
+      if (password.length < 8) {
+        return 'Password must be at least 8 characters';
+      }
+
+      final specialCharRegex = RegExp(r'[!@#$%^&*(),.?":{}|<>]');
+      if (!specialCharRegex.hasMatch(password)) {
+        return r'Password must contain at least one special character: [!@#$%^&*(),.?":{}|<>]';
+      }
+      
+      // Name is required for signup
       final name = nameController.text.trim();
       if (name.isEmpty) {
         return 'Name is required';
       }
     }
+    
     
     return null; // when all validations passed
   }
