@@ -1,0 +1,336 @@
+import 'package:flutter/material.dart';
+import '../main.dart';
+import 'signup_data.dart';
+import 'signup_screen3.dart';
+
+// Screen 2: Additional Details
+class SignupScreen2 extends StatefulWidget {
+  final SignupData data;
+  
+  const SignupScreen2({super.key, required this.data});
+
+  @override
+  State<SignupScreen2> createState() => _SignupScreen2State();
+}
+
+class _SignupScreen2State extends State<SignupScreen2> {
+  final _addressController = TextEditingController();
+  final _institutionController = TextEditingController();
+  final _countryController = TextEditingController();
+  final _referenceCodeController = TextEditingController();
+  
+  final tealBackground = MyApp.loginTealBackground;
+  final pinkTitle = MyApp.loginPinkTitle;
+  final darkNavyButton = MyApp.loginDarkNavyButton;
+  final greySubtitle = MyApp.loginGreySubtitle;
+  
+  @override
+  void initState() {
+    super.initState();
+    _addressController.text = widget.data.address ?? '';
+    _institutionController.text = widget.data.institutionSchool ?? '';
+    _countryController.text = widget.data.residentialCountry ?? '';
+    _referenceCodeController.text = widget.data.referenceCode ?? '';
+  }
+  
+  @override
+  void dispose() {
+    _addressController.dispose();
+    _institutionController.dispose();
+    _countryController.dispose();
+    _referenceCodeController.dispose();
+    super.dispose();
+  }
+  
+  String? _validateInputs() {
+    if (_addressController.text.trim().isEmpty) {
+      return 'Address is required';
+    }
+    if (_institutionController.text.trim().isEmpty) {
+      return 'Institution/School name is required';
+    }
+    if (_countryController.text.trim().isEmpty) {
+      return 'Residential country is required';
+    }
+    // Reference code is optional, so no validation needed
+    return null;
+  }
+  
+  void _goToNext() {
+    final validationError = _validateInputs();
+    if (validationError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(validationError)),
+      );
+      return;
+    }
+    
+    final updatedData = widget.data.copyWith(
+      address: _addressController.text.trim(),
+      institutionSchool: _institutionController.text.trim(),
+      residentialCountry: _countryController.text.trim(),
+      referenceCode: _referenceCodeController.text.trim().isEmpty 
+          ? null 
+          : _referenceCodeController.text.trim(),
+    );
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => SignupScreen3(data: updatedData)),
+    );
+  }
+  
+  void _goBack() {
+    Navigator.pop(context);
+  }
+  
+  Widget _buildStarDecoration() {
+    return Container(
+      width: 20,
+      height: 20,
+      decoration: BoxDecoration(
+        color: pinkTitle,
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Icon(
+          Icons.star,
+          size: 12,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isMobile = screenWidth < 600;
+    final horizontalPadding = isMobile ? 24.0 : 40.0;
+    final verticalPadding = isMobile ? 32.0 : 48.0;
+    
+    return Scaffold(
+      backgroundColor: tealBackground,
+      body: SafeArea(
+        child: Center(
+          child: ScrollConfiguration(
+            behavior: _NoScrollbarScrollBehavior(),
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding,
+                vertical: verticalPadding,
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: isMobile ? double.infinity : 500,
+                  minHeight: screenHeight - (verticalPadding * 2) - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
+                ),
+                child: Stack(
+                  children: [
+                    // Decorative stars - more scattered and natural
+                    Positioned(
+                      top: screenHeight * 0.08,
+                      left: screenWidth * 0.12,
+                      child: _buildStarDecoration(),
+                    ),
+                    Positioned(
+                      top: screenHeight * 0.18,
+                      right: screenWidth * 0.15,
+                      child: _buildStarDecoration(),
+                    ),
+                    Positioned(
+                      top: screenHeight * 0.32,
+                      left: screenWidth * 0.20,
+                      child: _buildStarDecoration(),
+                    ),
+                    Positioned(
+                      top: screenHeight * 0.42,
+                      right: screenWidth * 0.10,
+                      child: _buildStarDecoration(),
+                    ),
+                    // Main content
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Title
+                        Text(
+                          "We just a few more details!",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: isMobile ? 32 : 40,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'serif',
+                          ),
+                        ),
+                        SizedBox(height: isMobile ? 16 : 20),
+                        // Instruction text
+                        Text(
+                          'Your name must match your passport to avoid verification issues.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: greySubtitle,
+                            fontSize: isMobile ? 14 : 16,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        SizedBox(height: isMobile ? 32 : 40),
+                        // Address field
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: TextField(
+                            controller: _addressController,
+                            style: TextStyle(fontSize: isMobile ? 14 : 16),
+                            decoration: InputDecoration(
+                              hintText: 'Your Address',
+                              hintStyle: TextStyle(color: greySubtitle, fontSize: isMobile ? 14 : 16),
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: isMobile ? 16 : 18,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: isMobile ? 16 : 20),
+                        // Institution/School field
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: TextField(
+                            controller: _institutionController,
+                            style: TextStyle(fontSize: isMobile ? 14 : 16),
+                            decoration: InputDecoration(
+                              hintText: 'Institution/School Name',
+                              hintStyle: TextStyle(color: greySubtitle, fontSize: isMobile ? 14 : 16),
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: isMobile ? 16 : 18,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: isMobile ? 16 : 20),
+                        // Residential Country field
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: TextField(
+                            controller: _countryController,
+                            style: TextStyle(fontSize: isMobile ? 14 : 16),
+                            decoration: InputDecoration(
+                              hintText: 'Residential Country',
+                              hintStyle: TextStyle(color: greySubtitle, fontSize: isMobile ? 14 : 16),
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: isMobile ? 16 : 18,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: isMobile ? 16 : 20),
+                        // Reference code field (optional)
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: TextField(
+                            controller: _referenceCodeController,
+                            style: TextStyle(fontSize: isMobile ? 14 : 16),
+                            decoration: InputDecoration(
+                              hintText: 'Reference code (optional)',
+                              hintStyle: TextStyle(color: greySubtitle, fontSize: isMobile ? 14 : 16),
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: isMobile ? 16 : 18,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: isMobile ? 32 : 40),
+                        // Next button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _goToNext,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: darkNavyButton,
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(
+                                vertical: isMobile ? 16 : 18,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: Text(
+                              'Next',
+                              style: TextStyle(
+                                fontSize: isMobile ? 16 : 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: isMobile ? 24 : 32),
+                        // Back link
+                        Center(
+                          child: GestureDetector(
+                            onTap: _goBack,
+                            child: Text(
+                              'back',
+                              style: TextStyle(
+                                color: greySubtitle,
+                                fontSize: isMobile ? 13 : 14,
+                                fontFamily: 'serif',
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Custom ScrollBehavior to hide scrollbars
+class _NoScrollbarScrollBehavior extends ScrollBehavior {
+  @override
+  Widget buildScrollbar(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    return child;
+  }
+
+  @override
+  Widget buildOverscrollIndicator(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    return child;
+  }
+}

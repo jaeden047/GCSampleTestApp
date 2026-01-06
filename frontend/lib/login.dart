@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; // supabase flutter sdk
 import 'home.dart';
 import 'main.dart';
+import 'signup/signup_screen1.dart';
 
 // Known Errors:
 // --
@@ -45,15 +46,12 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-  final nameController = TextEditingController();
-  final phoneController = TextEditingController();
   final supabase = Supabase.instance.client;
 
-  bool _isLogin = true; // true = Login, false = Sign Up
   bool _isLoading = false; // Prevent multiple submissions
   bool _passwordVisible = false; // Password visibility toggle
 
-  // Input validation function
+  // Input validation function (login only)
   String? _validateInputs() {
     final email = emailController.text.trim();
     final password = passwordController.text;
@@ -69,25 +67,6 @@ class _LoginPageState extends State<LoginPage> {
     if (password.isEmpty) {
       return 'Password is required';
     }
-    
-    // Complex password requirements only apply to sign up, not log in
-    if (!_isLogin) {
-      if (password.length < 8) {
-        return 'Password must be at least 8 characters';
-      }
-
-      final specialCharRegex = RegExp(r'[!@#$%^&*(),.?":{}|<>]');
-      if (!specialCharRegex.hasMatch(password)) {
-        return r'Password must contain at least one special character: [!@#$%^&*(),.?":{}|<>]';
-      }
-      
-      // Name is required for signup
-      final name = nameController.text.trim();
-      if (name.isEmpty) {
-        return 'Name is required';
-      }
-    }
-    
     
     return null; // when all validations passed
   }
@@ -116,91 +95,30 @@ class _LoginPageState extends State<LoginPage> {
     final password = passwordController.text;
 
     try {
-      if (_isLogin) {
-        // LOGIN FLOW
-        final response = await supabase.auth.signInWithPassword(
-          email: email,
-          password: password,
+      // LOGIN FLOW
+      final response = await supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+      
+      // Check if widget is still mounted
+      if (!mounted) return;
+      
+      // Validate response.user is not null
+      if (response.user != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Logged in as ${response.user?.email ?? email}')),
         );
-        
-        // Check if widget is still mounted
-        if (!mounted) return;
-        
-        // Validate response.user is not null
-        if (response.user != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Logged in as ${response.user?.email ?? email}')),
-          );
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => Home()),
-          );
-        } else {
-          // This shouldn't happen, but handle it gracefully
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Login failed. Please try again.')),
-          );
-        }
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => Home()),
+        );
       } else {
-        // SIGNUP FLOW
-        final phone = phoneController.text.trim();
-        final name = nameController.text.trim();
-        
-        final response = await supabase.auth.signUp(
-          email: email,
-          password: password,
-          data: {
-            'phone': phone.isEmpty ? null : phone, // Saved as metadata, because phone can't interfere with login.
-          },
-        );
-        
-        // Check if widget is still mounted
+        // This shouldn't happen, but handle it gracefully
         if (!mounted) return;
-        
-        // Validate response.user and response.user.id before using
-        if (response.user != null && response.user?.id != null) {
-          final userId = response.user!.id; 
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Sign up successful. Please verify your email.')),
-          );
-          
-          // Wrap profile insert in separate try-catch
-          try {
-            await supabase.from('profiles').insert({
-              'id': userId,
-              'name': name,
-              'email': email,
-              'phone_number': phone.isEmpty ? null : phone,
-            });
-            
-            // Profile insert succeeded - user can proceed
-          } catch (profileError) {
-            // Profile insert failed - handle gracefully
-            if (!mounted) return;
-            
-            // Log the error (for debugging)
-            print('Profile insert failed: $profileError');
-            
-            // Show user-friendly message
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Account created, but profile setup failed. Please contact support or try updating your profile later.'),
-                duration: Duration(seconds: 5),
-              ),
-            );
-            
-            // User is still authenticated, they can update profile later
-            // Navigation can proceed since auth succeeded
-          }
-        } else {
-          // Signup succeeded but user is null (unlikely but possible)
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Sign up completed, but user data is missing. Please try logging in.')),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Login failed. Please try again.')),
+        );
       }
     } on AuthException catch (e) {
       // Supabase authentication errors
@@ -211,7 +129,7 @@ class _LoginPageState extends State<LoginPage> {
     } catch (e) {
       // Catch any other unexpected errors
       if (!mounted) return;
-      print('Unexpected error during ${_isLogin ? "login" : "signup"}: $e');
+      print('Unexpected error during login: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('An error occurred. Please try again.'),
@@ -233,8 +151,6 @@ class _LoginPageState extends State<LoginPage> {
     // Clean up controllers to prevent memory leaks
     emailController.dispose();
     passwordController.dispose();
-    nameController.dispose();
-    phoneController.dispose();
     super.dispose();
   }
 
@@ -287,7 +203,7 @@ class _LoginPageState extends State<LoginPage> {
                         SizedBox(height: isMobile ? 32 : 40),
                         // Title
                         Text(
-                          _isLogin ? 'Login to your account!' : 'Sign up for your account!',
+                          'Login to your account!',
                           style: TextStyle(
                             color: pinkTitle,
                             fontSize: titleFontSize,
@@ -306,28 +222,6 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                         SizedBox(height: isMobile ? 32 : 40),
-                        // Name field (only for signup)
-                        if (!_isLogin) ...[
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: TextField(
-                              controller: nameController,
-                              decoration: InputDecoration(
-                                hintText: 'Full Name',
-                                hintStyle: TextStyle(color: greySubtitle, fontSize: isMobile ? 14 : 16),
-                                border: InputBorder.none,
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: isMobile ? 16 : 18,
-                                ),
-                              ),
-                            ),
-                          ),
-                          SizedBox(height: isMobile ? 16 : 20),
-                        ],
                         // Email/Student ID field
                         Container(
                           decoration: BoxDecoration(
@@ -384,30 +278,6 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ),
                         ),
-                        // Phone field (only for signup)
-                        if (!_isLogin) ...[
-                          SizedBox(height: isMobile ? 16 : 20),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: TextField(
-                              controller: phoneController,
-                              keyboardType: TextInputType.phone,
-                              style: TextStyle(fontSize: isMobile ? 14 : 16),
-                              decoration: InputDecoration(
-                                hintText: 'Phone Number (Optional)',
-                                hintStyle: TextStyle(color: greySubtitle, fontSize: isMobile ? 14 : 16),
-                                border: InputBorder.none,
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: isMobile ? 16 : 18,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
                         SizedBox(height: isMobile ? 32 : 40),
                         // Loading spinner (when loading)
                         if (_isLoading) ...[
@@ -439,7 +309,7 @@ class _LoginPageState extends State<LoginPage> {
                             child: Text(
                               _isLoading
                                   ? 'processing..'
-                                  : (_isLogin ? 'Login' : 'Sign Up'),
+                                  : 'Login',
                               style: TextStyle(
                                 fontSize: isMobile ? 16 : 18,
                                 fontWeight: FontWeight.bold,
@@ -448,20 +318,20 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                         SizedBox(height: isMobile ? 24 : 32),
-                        // Toggle between login and signup
+                        // Navigate to signup
                         Center(
                           child: TextButton(
                             onPressed: _isLoading
                                 ? null
                                 : () {
-                                    setState(() {
-                                      _isLogin = !_isLogin;
-                                    });
+                                    // Navigate to first signup screen
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (_) => SignupScreen1()),
+                                    );
                                   },
                             child: Text(
-                              _isLogin
-                                  ? "Don't have an account? Sign up"
-                                  : "Already have an account? Login",
+                              "Don't have an account? Sign up",
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: isMobile ? 13 : 14,
