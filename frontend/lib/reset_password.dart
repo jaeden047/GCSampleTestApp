@@ -30,27 +30,40 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       return;
     }
     // If no error, then setState matches to loading => true, state transition.
+
     setState(() => loading = true);
+
     try {
-      await Supabase.instance.client.auth.updateUser( // User updated
-        UserAttributes(password: newPass),
+    // IMPORTANT: ensure we actually have a session
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session == null) {
+      throw Exception(
+        'No recovery session. This usually means your app did not process the reset link into a session.',
       );
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password updated. Please log in.')),
-      );
-
-      Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Reset failed: $e')),
-      );
-    } finally {
-      if (mounted) setState(() => loading = false);
     }
+    await Supabase.instance.client.auth.updateUser(
+      UserAttributes(password: newPass),
+    );
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Password updated. Please log in.')),
+    );
+    Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
+  } on AuthException catch (e) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Auth error: ${e.message}')),
+    );
+  } catch (e) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Reset failed: $e')),
+    );
+  } finally {
+    if (mounted) setState(() => loading = false);
   }
+}
 
   @override
   void dispose() {

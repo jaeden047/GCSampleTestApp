@@ -103,10 +103,12 @@ class _LoginPageState extends State<LoginPage> {
   } // Makes sure the user puts in an email before clicking forgot password
 
   try {
+    print('FORGOT: about to send reset with redirectTo=http://localhost:50520/#/reset-password');
     await supabase.auth.resetPasswordForEmail(
       email,
-      redirectTo: 'https://future-minds-challenge.web.app/#/reset-password',
+      redirectTo: 'http://localhost:50520/#/reset-password',
     ); 
+    print('FORGOT: request sent');
     /*
     Supabase receives a request to initiate a password reset flow for that email.
     If the email exists, Supabase sends a password-reset email.

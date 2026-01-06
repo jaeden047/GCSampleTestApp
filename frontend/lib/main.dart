@@ -49,7 +49,6 @@ class MyApp extends StatelessWidget {
           onSurface: Color(0xFF2A262A),
         ),
       ),
-      initialRoute: '/',
       routes: {
         '/': (_) => const AuthGate(),
         '/reset-password': (_) => const ResetPasswordPage(),
@@ -64,6 +63,11 @@ class AuthGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print("START PATH: ${Uri.base.path}  FULL: ${Uri.base}");
+    if (Uri.base.path == '/reset-password') {
+    return const ResetPasswordPage();
+    }
+    
     final session = Supabase.instance.client.auth.currentSession;
 
     if (session != null) {
