@@ -14,6 +14,27 @@ import 'main.dart';
 // Rewrite comments for clarity
 // Package, deploy, finish.
 
+// Custom ScrollBehavior to hide scrollbars
+class _NoScrollbarScrollBehavior extends ScrollBehavior {
+  @override
+  Widget buildScrollbar(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    return child; // Return child without scrollbar
+  }
+
+  @override
+  Widget buildOverscrollIndicator(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    return child; // Return child without overscroll indicator
+  }
+}
+
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -236,11 +257,13 @@ class _LoginPageState extends State<LoginPage> {
       backgroundColor: tealBackground,
       body: SafeArea(
         child: Center(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(
-              horizontal: horizontalPadding,
-              vertical: verticalPadding,
-            ),
+          child: ScrollConfiguration(
+            behavior: _NoScrollbarScrollBehavior(),
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding,
+                vertical: verticalPadding,
+              ),
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 maxWidth: isMobile ? double.infinity : 500,
@@ -450,6 +473,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
             ),
+          ),
     );
   }
 }

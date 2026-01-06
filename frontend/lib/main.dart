@@ -17,10 +17,10 @@ class MyApp extends StatelessWidget {
   final Color txColor = const Color(0xFF2A262A); // #2A262A
 
   // Login page colors (from Figma design - testing phase)
-  static const Color loginTealBackground = Color(0xFF4A9B8E); // Teal background
-  static const Color loginPinkTitle = Color(0xFFFF6B9D); // Pink title
-  static const Color loginDarkNavyButton = Color(0xFF1A1F3A); // Dark navy button
-  static const Color loginGreySubtitle = Color(0xFF6B6B6B); // Grey subtitle
+  static const Color loginTealBackground = Color(0xFF439D93); // Teal background
+  static const Color loginPinkTitle = Color(0xFFFFBEF4); // Pink title
+  static const Color loginDarkNavyButton = Color(0xFF14172D); // Dark navy button
+  static const Color loginGreySubtitle = Color(0xFFC8C8C8); // Grey subtitle
   static const Color loginLightGreyHeader = Color(0xFFF5F5F5); // Light grey header
 
   const MyApp({super.key});
