@@ -119,6 +119,7 @@ class _LoginPageState extends State<LoginPage> {
         }
       } else {
         // Sign Up
+        final phone = phoneController.text.trim();
         final name = nameController.text.trim();
         if (name.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -127,9 +128,6 @@ class _LoginPageState extends State<LoginPage> {
           return;
         }
         // : if the “final name” is empty, do not continue.
-
-        final phone = phoneController.text.trim();
-        final name = nameController.text.trim();
         
         final response = await supabase.auth.signUp(
           email: email,
