@@ -64,8 +64,7 @@ class AuthGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     print("FRAG: ${Uri.base.fragment} PATH: ${Uri.base.path}  FULL: ${Uri.base}");
-    print("APP START tab=${DateTime.now().millisecondsSinceEpoch} Uri=${Uri.base}");
-    if (Uri.base.fragment == '/reset-password') {
+    if (Uri.base.path == '/reset-password') {
     return const ResetPasswordPage();
     }
     
