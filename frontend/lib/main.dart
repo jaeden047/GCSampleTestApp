@@ -51,7 +51,8 @@ class MyApp extends StatelessWidget {
       ),
       routes: {
         '/': (_) => const AuthGate(),
-        '/reset-password': (_) => const ResetPasswordPage(),
+        '/reset-password': (_) => const AuthGate(),
+        '/login': (_) => LoginPage(),
       },
       debugShowCheckedModeBanner: false,
     );

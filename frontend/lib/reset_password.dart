@@ -13,6 +13,19 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   final confirmController = TextEditingController(); // text controller for confirmed password
   bool loading = false; // loading between states
 
+  @override
+  void initState() {
+    super.initState();
+    final code = Uri.base.queryParameters['code'];
+    print(code);
+    Supabase.instance.client.auth.exchangeCodeForSession(code.toString());
+
+    // For PKCE recovery (?code=...), the flow must be initiated and completed in the same browser storage context — practically: the same “site origin” setup you used when you started it.
+    // Basically: if you click reset from https://future-minds-challenge.web.app
+    // Then the link you should click must be reaching: https://future-minds-challenge.web.app
+    // You should not go from local -> future-minds or future-minds -> local. This is only relevant for developer.
+  }
+
   Future<void> _setNewPassword() async {
     final newPass = newPassController.text;
     final confirm = confirmController.text;
@@ -49,7 +62,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Password updated. Please log in.')),
     );
-    Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false); // Back to login page
   } on AuthException catch (e) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -77,12 +90,6 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Reset Password'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
-          },
-        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
