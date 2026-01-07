@@ -84,24 +84,6 @@ class _SignupScreen2State extends State<SignupScreen2> {
     Navigator.pop(context);
   }
   
-  Widget _buildStarDecoration() {
-    return Container(
-      width: 20,
-      height: 20,
-      decoration: BoxDecoration(
-        color: pinkTitle,
-        shape: BoxShape.circle,
-      ),
-      child: Center(
-        child: Icon(
-          Icons.star,
-          size: 12,
-          color: Colors.white,
-        ),
-      ),
-    );
-  }
-  
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -126,37 +108,13 @@ class _SignupScreen2State extends State<SignupScreen2> {
                   maxWidth: isMobile ? double.infinity : 500,
                   minHeight: screenHeight - (verticalPadding * 2) - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
                 ),
-                child: Stack(
-                  children: [
-                    // Decorative stars - more scattered and natural
-                    Positioned(
-                      top: screenHeight * 0.08,
-                      left: screenWidth * 0.12,
-                      child: _buildStarDecoration(),
-                    ),
-                    Positioned(
-                      top: screenHeight * 0.18,
-                      right: screenWidth * 0.15,
-                      child: _buildStarDecoration(),
-                    ),
-                    Positioned(
-                      top: screenHeight * 0.32,
-                      left: screenWidth * 0.20,
-                      child: _buildStarDecoration(),
-                    ),
-                    Positioned(
-                      top: screenHeight * 0.42,
-                      right: screenWidth * 0.10,
-                      child: _buildStarDecoration(),
-                    ),
-                    // Main content
-                    Column(
+                child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         // Title
                         Text(
-                          "We just a few more details!",
+                          "Just a few more to go!",
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Colors.white,
@@ -289,8 +247,8 @@ class _SignupScreen2State extends State<SignupScreen2> {
                         SizedBox(height: isMobile ? 24 : 32),
                         // Back link
                         Center(
-                          child: GestureDetector(
-                            onTap: _goBack,
+                          child: TextButton(
+                            onPressed: _goBack,
                             child: Text(
                               'back',
                               style: TextStyle(
@@ -303,8 +261,6 @@ class _SignupScreen2State extends State<SignupScreen2> {
                         ),
                       ],
                     ),
-                  ],
-                ),
               ),
             ),
           ),

@@ -328,7 +328,6 @@ class _LoginPageState extends State<LoginPage> {
                                 color: Colors.white,
                                 fontSize: isMobile ? 13 : 14,
                                 fontWeight: FontWeight.w400,
-                                decoration: TextDecoration.underline,
                               ),
                             ),
                           ),

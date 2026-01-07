@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../main.dart';
 import 'signup_data.dart';
 import 'signup_screen2.dart';
@@ -110,23 +111,6 @@ class _SignupScreen1State extends State<SignupScreen1> {
     );
   }
   
-  Widget _buildStarDecoration() {
-    return Container(
-      width: 20,
-      height: 20,
-      decoration: BoxDecoration(
-        color: pinkTitle,
-        shape: BoxShape.circle,
-      ),
-      child: Center(
-        child: Icon(
-          Icons.star,
-          size: 12,
-          color: Colors.white,
-        ),
-      ),
-    );
-  }
   
   @override
   Widget build(BuildContext context) {
@@ -135,6 +119,9 @@ class _SignupScreen1State extends State<SignupScreen1> {
     final isMobile = screenWidth < 600;
     final horizontalPadding = isMobile ? 24.0 : 40.0;
     final verticalPadding = isMobile ? 32.0 : 48.0;
+    
+    // Calculate content area position for desktop (centered with maxWidth 500)
+    final starSize = isMobile ? 18.0 : 20.0;
     
     return Scaffold(
       backgroundColor: tealBackground,
@@ -153,70 +140,40 @@ class _SignupScreen1State extends State<SignupScreen1> {
                   minHeight: screenHeight - (verticalPadding * 2) - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
                 ),
                 child: Stack(
+                  clipBehavior: Clip.none,
                   children: [
-                    // Decorative stars - more scattered and natural
-                    Positioned(
-                      top: screenHeight * 0.05,
-                      left: screenWidth * 0.15,
-                      child: _buildStarDecoration(),
-                    ),
-                    Positioned(
-                      top: screenHeight * 0.12,
-                      right: screenWidth * 0.18,
-                      child: _buildStarDecoration(),
-                    ),
-                    Positioned(
-                      top: screenHeight * 0.25,
-                      left: screenWidth * 0.08,
-                      child: _buildStarDecoration(),
-                    ),
-                    Positioned(
-                      top: screenHeight * 0.35,
-                      right: screenWidth * 0.12,
-                      child: _buildStarDecoration(),
-                    ),
-                    Positioned(
-                      top: screenHeight * 0.45,
-                      left: screenWidth * 0.22,
-                      child: _buildStarDecoration(),
-                    ),
-                    // Main content
+                    // Main content column
                     Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Title with star in the 'i'
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                        // Title broken into 2 lines, left-aligned
                         RichText(
-                          textAlign: TextAlign.center,
+                          textAlign: TextAlign.left,
                           text: TextSpan(
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: isMobile ? 32 : 40,
                               fontWeight: FontWeight.bold,
                               fontFamily: 'serif',
+                              height: 1.2,
                             ),
                             children: [
-                              const TextSpan(text: "Let's start with your "),
-                              const TextSpan(text: "details!"),
-                              WidgetSpan(
-                                child: Transform.translate(
-                                  offset: const Offset(0, -8),
-                                  child: _buildStarDecoration(),
-                                ),
-                              ),
-                             
+                              const TextSpan(text: "Let's start\n"),
+                              const TextSpan(text: "with your details!"),
                             ],
                           ),
                         ),
                         SizedBox(height: isMobile ? 16 : 20),
-                        // Instruction text
+                        // Instruction text broken into 2 lines, left-aligned
                         Text(
-                          'Your name must match your passport or valid govt. ID for verification.',
-                          textAlign: TextAlign.center,
+                          'Your name must match your passport\nor valid government ID for verification purpose.',
+                          textAlign: TextAlign.left,
                           style: TextStyle(
                             color: greySubtitle,
                             fontSize: isMobile ? 14 : 16,
                             fontWeight: FontWeight.w400,
+                            height: 1.4,
                           ),
                         ),
                         SizedBox(height: isMobile ? 32 : 40),
@@ -261,67 +218,63 @@ class _SignupScreen1State extends State<SignupScreen1> {
                             ),
                           ),
                         ),
-                        SizedBox(height: isMobile ? 8 : 12),
-                        // Email verification note
-                        Text(
-                          'we will send a verification email',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: greySubtitle,
-                            fontSize: isMobile ? 12 : 14,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
+                                            
                         SizedBox(height: isMobile ? 16 : 20),
                         // Phone number with country code dropdown
                         Row(
                           children: [
-                            // Country code dropdown
-                            Container(
-                              width: 100,
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<CountryCode>(
-                                  value: _selectedCountryCode,
-                                  isExpanded: true,
-                                  icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                  dropdownColor: Colors.red,
-                                  items: CountryCodes.codes.map((CountryCode country) {
-                                    return DropdownMenuItem<CountryCode>(
-                                      value: country,
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                            // Country code dropdown - wider with full country names
+                            Expanded(
+                              flex: 2,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.9),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButtonFormField<CountryCode>(
+                                    value: _selectedCountryCode,
+                                    isExpanded: true,
+                                    icon: Icon(Icons.arrow_drop_down, color: greySubtitle),
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: isMobile ? 14 : 16,
+                                    ),
+                                    decoration: InputDecoration(
+                                      border: InputBorder.none,
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: isMobile ? 16 : 18,
+                                      ),
+                                    ),
+                                    dropdownColor: Colors.white,
+                                    items: CountryCodes.codes.map((CountryCode country) {
+                                      return DropdownMenuItem<CountryCode>(
+                                        value: country,
                                         child: Text(
-                                          '${country.dialCode} ${country.code}',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 14,
+                                          '${country.dialCode} ${country.name}',
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: isMobile ? 14 : 16,
                                           ),
                                         ),
-                                      ),
-                                    );
-                                  }).toList(),
-                                  onChanged: (CountryCode? newValue) {
-                                    if (newValue != null) {
-                                      setState(() {
-                                        _selectedCountryCode = newValue;
-                                      });
-                                    }
-                                  },
+                                      );
+                                    }).toList(),
+                                    onChanged: (CountryCode? newValue) {
+                                      if (newValue != null) {
+                                        setState(() {
+                                          _selectedCountryCode = newValue;
+                                        });
+                                      }
+                                    },
+                                  ),
                                 ),
                               ),
                             ),
                             const SizedBox(width: 12),
-                            // Phone number field
+                            // Phone number field 
                             Expanded(
+                              flex: 3,
                               child: Container(
                                 decoration: BoxDecoration(
                                   color: Colors.white.withOpacity(0.9),
@@ -352,35 +305,40 @@ class _SignupScreen1State extends State<SignupScreen1> {
                             color: Colors.white.withOpacity(0.9),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: DropdownButtonFormField<String>(
-                            value: _selectedGender,
-                            decoration: InputDecoration(
-                              hintText: 'Select Gender',
-                              hintStyle: TextStyle(color: greySubtitle, fontSize: isMobile ? 14 : 16),
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: isMobile ? 16 : 18,
-                              ),
+                          child: Theme(
+                            data: Theme.of(context).copyWith(
+                              canvasColor: Colors.white,
                             ),
-                            items: ['Male', 'Female', 'Other', 'Prefer not to say']
-                                .map((gender) => DropdownMenuItem(
-                                      value: gender,
-                                      child: Text(gender),
-                                    ))
-                                .toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedGender = value;
-                              });
-                            },
+                            child: DropdownButtonFormField<String>(
+                              value: _selectedGender,
+                              decoration: InputDecoration(
+                                hintText: 'Select Gender',
+                                hintStyle: TextStyle(color: greySubtitle, fontSize: isMobile ? 14 : 16),
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: isMobile ? 16 : 18,
+                                ),
+                              ),
+                              items: ['Male', 'Female', 'Other', 'Prefer not to say']
+                                  .map((gender) => DropdownMenuItem(
+                                        value: gender,
+                                        child: Text(gender),
+                                      ))
+                                  .toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedGender = value;
+                                });
+                              },
+                            ),
                           ),
                         ),
                         SizedBox(height: isMobile ? 32 : 40),
                         // Already have account link
                         Center(
-                          child: GestureDetector(
-                            onTap: () {
+                          child: TextButton(
+                            onPressed: () {
                               Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(builder: (_) => LoginPage()),
@@ -433,6 +391,76 @@ class _SignupScreen1State extends State<SignupScreen1> {
                           ),
                         ),
                       ],
+                    ),
+                    // Decorative SVG stars - scattered on the right side, 2 near "start" (letter "t")
+                    // Two stars very close to "start" text, specifically near the letter "t"
+                    Positioned(
+                      top: 5.0,
+                      left: isMobile ? (screenWidth - horizontalPadding * 2) * 0.52 : 260.0,
+                      child: SvgPicture.asset(
+                        'assets/images/pinkstar.svg',
+                        width: isMobile ? starSize * 0.9 : starSize * 0.85,
+                        height: isMobile ? starSize * 0.9 * 17 / 18 : starSize * 0.85 * 17 / 18,
+                      ),
+                    ),
+                    Positioned(
+                      top: 15.0,
+                      left: isMobile ? (screenWidth - horizontalPadding * 2) * 0.55 : 275.0,
+                      child: SvgPicture.asset(
+                        'assets/images/pinkstar.svg',
+                        width: isMobile ? starSize * 1.1 : starSize * 1.15,
+                        height: isMobile ? starSize * 1.1 * 17 / 18 : starSize * 1.15 * 17 / 18,
+                      ),
+                    ),
+                    // Upper right star - scattered, smaller size
+                    Positioned(
+                      top: 10.0,
+                      right: 25.0,
+                      child: SvgPicture.asset(
+                        'assets/images/pinkstar.svg',
+                        width: isMobile ? starSize * 0.8 : starSize * 0.75,
+                        height: isMobile ? starSize * 0.8 * 17 / 18 : starSize * 0.75 * 17 / 18,
+                      ),
+                    ),
+                    // Star near "details!" - scattered position, medium size
+                    Positioned(
+                      top: 58.0,
+                      right: 20.0,
+                      child: SvgPicture.asset(
+                        'assets/images/pinkstar.svg',
+                        width: isMobile ? starSize * 1.0 : starSize * 1.05,
+                        height: isMobile ? starSize * 1.0 * 17 / 18 : starSize * 1.05 * 17 / 18,
+                      ),
+                    ),
+                    // Star to the right of "details!" - scattered, larger size
+                    Positioned(
+                      top: 75.0,
+                      left: isMobile ? (screenWidth - horizontalPadding * 2) * 0.72 : 360.0,
+                      child: SvgPicture.asset(
+                        'assets/images/pinkstar.svg',
+                        width: isMobile ? starSize * 1.2 : starSize * 1.25,
+                        height: isMobile ? starSize * 1.2 * 17 / 18 : starSize * 1.25 * 17 / 18,
+                      ),
+                    ),
+                    // Star below instruction text - scattered position, medium size
+                    Positioned(
+                      top: 120.0,
+                      right: 30.0,
+                      child: SvgPicture.asset(
+                        'assets/images/pinkstar.svg',
+                        width: isMobile ? starSize * 0.95 : starSize * 1.0,
+                        height: isMobile ? starSize * 0.95 * 17 / 18 : starSize * 1.0 * 17 / 18,
+                      ),
+                    ),
+                    // Star near "purpose" - moved further away with padding, smaller size
+                    Positioned(
+                      top: 145.0,
+                      right: 35.0,
+                      child: SvgPicture.asset(
+                        'assets/images/pinkstar.svg',
+                        width: isMobile ? starSize * 0.85 : starSize * 0.9,
+                        height: isMobile ? starSize * 0.85 * 17 / 18 : starSize * 0.9 * 17 / 18,
+                      ),
                     ),
                   ],
                 ),

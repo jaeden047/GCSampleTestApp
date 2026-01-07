@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../main.dart';
 import 'signup_data.dart';
+import 'signup_screen1.dart';
 import 'signup_screen4.dart';
 
 // Screen 3: Password Creation
@@ -16,9 +18,11 @@ class SignupScreen3 extends StatefulWidget {
 class _SignupScreen3State extends State<SignupScreen3> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final supabase = Supabase.instance.client;
   
   bool _passwordVisible = false;
   bool _confirmPasswordVisible = false;
+  bool _isLoading = false;
   
   final tealBackground = MyApp.loginTealBackground;
   final pinkTitle = MyApp.loginPinkTitle;
@@ -40,8 +44,8 @@ class _SignupScreen3State extends State<SignupScreen3> {
       return 'Password is required';
     }
     
-    if (password.length < 8) {
-      return 'Password must be at least 8 characters';
+    if (password.length < 6) {
+      return 'Password must be at least 6 characters';
     }
 
     final specialCharRegex = RegExp(r'[!@#$%^&*(),.?":{}|<>]');
@@ -72,7 +76,7 @@ class _SignupScreen3State extends State<SignupScreen3> {
     return null;
   }
   
-  void _createAccount() {
+  Future<void> _createAccount() async {
     final validationError = _validateInputs();
     if (validationError != null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -81,15 +85,100 @@ class _SignupScreen3State extends State<SignupScreen3> {
       return;
     }
     
-    final updatedData = widget.data.copyWith(
-      password: _passwordController.text,
-      confirmPassword: _confirmPasswordController.text,
-    );
+    if (_isLoading) return;
     
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => SignupScreen4(data: updatedData)),
-    );
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      // Create Supabase auth account
+      final response = await supabase.auth.signUp(
+        email: widget.data.email!,
+        password: _passwordController.text,
+        data: {
+          'phone': widget.data.phoneNumber,
+        },
+      );
+      
+      if (!mounted) return;
+      
+      if (response.user != null && response.user?.id != null) {
+        final userId = response.user!.id;
+        
+        // Save to profiles table (only old fields for now)
+        try {
+          await supabase.from('profiles').insert({
+            'id': userId,
+            'name': widget.data.fullName,
+            'email': widget.data.email,
+            'phone_number': widget.data.phoneNumber,
+            // New fields will be saved later when database is updated
+            // 'gender': widget.data.gender,
+            // 'address': widget.data.address,
+            // 'school': widget.data.institutionSchool,
+            // 'country': widget.data.residentialCountry,
+          });
+          
+          final updatedData = widget.data.copyWith(
+            password: _passwordController.text,
+            confirmPassword: _confirmPasswordController.text,
+          );
+          
+          setState(() {
+            _isLoading = false;
+          });
+          
+          // Navigate to confirmation screen
+          if (mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => SignupScreen4(data: updatedData)),
+            );
+          }
+        } catch (profileError) {
+          if (!mounted) return;
+          print('Profile insert failed: $profileError');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Account created, but profile setup failed. Please contact support.'),
+              duration: Duration(seconds: 5),
+            ),
+          );
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Sign up completed, but user data is missing. Please try logging in.')),
+        );
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      print('Unexpected error during signup: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('An error occurred. Please try again.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
   
   void _goBack() {
@@ -138,7 +227,7 @@ class _SignupScreen3State extends State<SignupScreen3> {
                     SizedBox(height: isMobile ? 16 : 20),
                     // Instruction text
                     Text(
-                      'password should have a combination of alphabet, number and special case',
+                      'Password should have a combination of alphabets, numbers, special characters, and be at least 6 characters long.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: greySubtitle,
@@ -216,37 +305,68 @@ class _SignupScreen3State extends State<SignupScreen3> {
                         ),
                       ),
                     ),
-                    SizedBox(height: isMobile ? 32 : 40),
-                    // Create account button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _createAccount,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: darkNavyButton,
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(
-                            vertical: isMobile ? 16 : 18,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
+                    SizedBox(height: isMobile ? 24 : 32),
+                    // Want to change email link
+                    Center(
+                      child: TextButton(
+                        onPressed: () {
+                          // Navigate back to screen 1 with existing data so user can edit email
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SignupScreen1(initialData: widget.data),
+                            ),
+                            (route) => route.isFirst, // Keep only the login screen
+                          );
+                        },
                         child: Text(
-                          'Create account',
+                          'Want to change the email? Click here.',
+                          textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: isMobile ? 16 : 18,
-                            fontWeight: FontWeight.bold,
+                            color: greySubtitle,
+                            fontSize: isMobile ? 13 : 14,
                           ),
                         ),
                       ),
                     ),
+                    SizedBox(height: isMobile ? 32 : 40),
+                    // Create account button (or loading)
+                    if (_isLoading)
+                      const Center(
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    else
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _createAccount,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: darkNavyButton,
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(
+                              vertical: isMobile ? 16 : 18,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            'Create account',
+                            style: TextStyle(
+                              fontSize: isMobile ? 16 : 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
                     SizedBox(height: isMobile ? 24 : 32),
                     // Back link
                     Center(
-                      child: GestureDetector(
-                        onTap: _goBack,
+                      child: TextButton(
+                        onPressed: _goBack,
                         child: Text(
                           'back',
                           style: TextStyle(
