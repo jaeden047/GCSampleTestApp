@@ -71,43 +71,6 @@ class _LoginPageState extends State<LoginPage> {
     return null; // when all validations passed
   }
 
-  Future<void> _forgotPassword() async {
-    final email = emailController.text.trim();
-
-    if (email.isEmpty) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter your email first.')),
-      );
-      return;
-    }
-
-    try {
-      await supabase.auth.resetPasswordForEmail(
-        email,
-        redirectTo: 'http://localhost:50520/#/reset-password',
-      );
-      
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "If an account exists for this email, you'll receive a reset link shortly. Check your email.",
-          ),
-        ),
-      );
-    } on AuthException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('An error occurred: $e')),
-      );
-    }
-  }
 
   Future<void> submit() async {
     // Validate inputs first
@@ -312,22 +275,6 @@ class _LoginPageState extends State<LoginPage> {
                                     _passwordVisible = !_passwordVisible;
                                   });
                                 },
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: isMobile ? 12 : 16),
-                        // Forgot password link
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: _isLoading ? null : _forgotPassword,
-                            child: Text(
-                              'Forgot password?',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: isMobile ? 13 : 14,
-                                fontWeight: FontWeight.w400,
                               ),
                             ),
                           ),
