@@ -1,18 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'; // supabase flutter sdk
+import 'api_service.dart';
 import 'home.dart';
 import 'reset_password.dart';
 import 'login.dart';
 
-void main() async{
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Supabase.initialize(
-    url: 'https://duvycvfjnirqtqvxkrxz.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1dnljdmZqbmlycXRxdnhrcnh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA5NjE5MDUsImV4cCI6MjA2NjUzNzkwNX0.YGyw8CvpQTVCADMc7EDv2ez2i2uQ0p0bT6cmI7_ZWxQ',
-  );
-  runApp(MyApp());
+  runApp(const MyApp());
 }
-
 class MyApp extends StatelessWidget {
   final Color bgColor = const Color(0xFFE5ECDF); // #E5ECDF
   final Color txColor = const Color(0xFF2A262A); // #2A262A
@@ -51,33 +46,46 @@ class MyApp extends StatelessWidget {
       ),
       routes: {
         '/': (_) => const AuthGate(),
+<<<<<<< Updated upstream
         '/reset-password': (_) => const AuthGate(),
         '/login': (_) => LoginPage(),
+=======
+>>>>>>> Stashed changes
       },
       debugShowCheckedModeBanner: false,
     );
   }
 }
 
-class AuthGate extends StatelessWidget {
+
+class AuthGate extends StatelessWidget { // “When the app starts, decide whether to show Home or Login.”
   const AuthGate({super.key});
 
   @override
   Widget build(BuildContext context) {
+<<<<<<< Updated upstream
     print("FRAG: ${Uri.base.fragment} PATH: ${Uri.base.path}  FULL: ${Uri.base}");
     if (Uri.base.path == '/reset-password') {
     return const ResetPasswordPage();
     }
     
     final session = Supabase.instance.client.auth.currentSession;
+=======
+    return FutureBuilder<String?>(
+      future: ApiService.instance.getToken(), // start reading the saved token from secure storage
+      builder: (context, snapshot) { // build the result whil token being read
+        // simple loading
+        if (snapshot.connectionState != ConnectionState.done) { // still waiting for the token read to finish
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+>>>>>>> Stashed changes
 
-    if (session != null) {
-      // User is logged in
-      return Home();
-    } else {
-      // User is not logged in
-      // Will need to add signup page
-      return LoginPage();
-    }
+        final token = snapshot.data;
+        if (token != null && token.isNotEmpty) { // if token exists, go to Home page
+          return const Home();
+        }
+        return const LoginPage(); // if no token exists, go to login page
+      },
+    );
   }
 }
