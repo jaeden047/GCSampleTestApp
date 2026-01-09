@@ -54,7 +54,6 @@ class ApiService {
       //{ "token": "XYZ" }
       //data['token'] is "XYZ" → token becomes "XYZ"
       //“Try data['token']. If that’s null, try data['access_token']. If that’s null, try data['jwt'].”
-
     if (token == null) {
       throw Exception('No token found in login response: $data');
     }
@@ -67,12 +66,10 @@ class ApiService {
     if (token == null || token.isEmpty) {
       throw Exception('No JWT saved');
     }
-
-    final res = await _dio.get(
+    final res = await _dio.get( // Retrieve data request using bearer key (token)
       '/user/profile',
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
-
     return (res.data as Map<String, dynamic>); // returns another map
   }
 }

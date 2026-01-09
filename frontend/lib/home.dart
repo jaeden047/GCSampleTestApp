@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'; // supabase flutter sdk
 import 'package:flutter_svg/flutter_svg.dart'; // import svg image
+import 'package:frontend/login.dart';
 
 // navigated pages
+import 'api_service.dart';
 import 'profile.dart';
 import 'math_grades.dart';
 import 'env_topics.dart';
@@ -29,30 +30,29 @@ class _HomeState extends State<Home> {
 
   // Fetch user data from Supabase when Home page initializes
   Future<void> _getUserData() async {
-    final user = Supabase.instance.client.auth.currentUser;
+    // We need token (for access) and field map (for UI)
+    final profile = await ApiService.instance.getProfile(); 
+    // Inside getProfile(), it first reads the saved token from storage
+    // The returned profile is only the server’s JSON response map.
+    // The token is not inside profile. It is in _storage
+    final name = profile['name']?.toString(); 
 
-    if (user != null) {
-      try {
-        final response = await Supabase.instance.client
-            .from('profiles')
-            .select('name')
-            .eq('id', user.id)
-            .single();
-
-        if (response['name'] != null) {
-          setState(() {
-            userName = response['name'];
-          });
-        }
-      } catch (e) {
-        // Handle error if fetching profile fails
-        // print("Error fetching user data: $e");
+    // If token exists in storage, the app will treat the user as logged in (or will try to).
+    if (name == null){
+      // this session is bad
+      // Remove session token, send to login page, provide error message that the user did not have a name.
+      await ApiService.instance.clearToken();
+      ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Session invalid. Please log in again.')),
+      );
+      Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
+      ); 
       }
-    }
-    
-    // Stop loading indicator once data is fetched
-    setState(() {
-      isLoading = false;
+    setState(() { // Triggers rebuild with updated fields
+    isLoading = false;
     });
   }
 
@@ -60,135 +60,141 @@ class _HomeState extends State<Home> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // Padding for the entire row (top space + left indentation)
-            Padding(
-              padding: const EdgeInsets.only(top: 60.0, left: 10.0), // Add top space and left padding
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.start, // Align the items to the left
-                crossAxisAlignment: CrossAxisAlignment.center, // Vertically center the content in the row
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      // Navigate to Profile Page when the circle is tapped
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => ProfilePage()),
-                      );
-                    },
-                    // Profile Circle with the first letter of the user's name
-                    child: Container(
-                      width: 50, // Circle width
-                      height: 50, // Circle height
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle, // Makes the container circular
-                        border: Border.all(color: Color(0xFF2A262A), width: 2), // Border around the circle
-                      ),
-                      child: Center(
-                        child: Text(
-                          (userName != null && userName!.trim().isNotEmpty) ? userName!.trim()[0].toUpperCase() : '',
- // First letter of the user's name
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              // Top header row
+              Padding(
+                padding: const EdgeInsets.only(top: 60.0, left: 10.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => ProfilePage()),
+                        );
+                      },
+                      child: Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFF2A262A),
+                            width: 2,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            userName.toString(),
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  SizedBox(width: 10), // Add space between the circle and the text
-                  // Greeting text
-                  Text(
-                    userName != null ? 'Hello, $userName' : 'Hello, User',
-                    style: const TextStyle(
-                      fontSize: 20,
+                    const SizedBox(width: 10),
+                    Text(
+                      userName != null ? 'Hello, $userName' : 'Hello, User',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 30),
+
+              // Competition section
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: EdgeInsets.only(left: 10.0),
+                  child: Text(
+                    'Competition',
+                    style: TextStyle(
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      // color: Color(0xFF2A262A), // Custom color #2A262A
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => MathGrades()),
+                      );
+                    },
+                    child: SvgPicture.asset(
+                      'assets/images/mathImage.svg',
+                      height: 280,
+                    ),
+                  ),
+                  const SizedBox(width: 20),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => EnvTopics()),
+                      );
+                    },
+                    child: SvgPicture.asset(
+                      'assets/images/envImage.svg',
+                      height: 280,
                     ),
                   ),
                 ],
               ),
-            ),
-            SizedBox(height: 30), // Space between the greeting and the rest of the content
-            
-            // Rest of the UI content
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: const EdgeInsets.only(left: 10.0), // tab-style indent
-                child: Text(
-                  'Competition',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+
+              const SizedBox(height: 25),
+
+              // Results section
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: EdgeInsets.only(left: 10.0),
+                  child: Text(
+                    'Results Overview',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
-            ),
-            SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => MathGrades()),
-                    );
-                  },
-                  child: SvgPicture.asset(
-                    'assets/images/mathImage.svg',
-                    height: 280,
-                  ),
-                ),
-                SizedBox(width: 20), // spacing between the two SVGs
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => EnvTopics()),
-                    );
-                  },
-                  child: SvgPicture.asset(
-                    'assets/images/envImage.svg',
-                    height: 280,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 25),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: const EdgeInsets.only(left: 10.0), // tab-style indent
-                child: Text(
-                  'Results Overview',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+
+              const SizedBox(height: 10),
+
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => Results()),
+                  );
+                },
+                child: SvgPicture.asset(
+                  'assets/images/pastImage.svg',
+                  height: 175,
                 ),
               ),
-            ),
-            SizedBox(height: 10),
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => Results()),
-                );
-              },
-              child: SvgPicture.asset(
-                'assets/images/pastImage.svg',
-                height: 175,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
