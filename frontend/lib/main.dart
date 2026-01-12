@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'api_service.dart';
 import 'home.dart';
-import 'reset_password.dart';
 import 'login.dart';
 
 void main() async {
@@ -46,11 +45,6 @@ class MyApp extends StatelessWidget {
       ),
       routes: {
         '/': (_) => const AuthGate(),
-<<<<<<< Updated upstream
-        '/reset-password': (_) => const AuthGate(),
-        '/login': (_) => LoginPage(),
-=======
->>>>>>> Stashed changes
       },
       debugShowCheckedModeBanner: false,
     );
@@ -63,14 +57,6 @@ class AuthGate extends StatelessWidget { // “When the app starts, decide wheth
 
   @override
   Widget build(BuildContext context) {
-<<<<<<< Updated upstream
-    print("FRAG: ${Uri.base.fragment} PATH: ${Uri.base.path}  FULL: ${Uri.base}");
-    if (Uri.base.path == '/reset-password') {
-    return const ResetPasswordPage();
-    }
-    
-    final session = Supabase.instance.client.auth.currentSession;
-=======
     return FutureBuilder<String?>(
       future: ApiService.instance.getToken(), // start reading the saved token from secure storage
       builder: (context, snapshot) { // build the result whil token being read
@@ -78,7 +64,6 @@ class AuthGate extends StatelessWidget { // “When the app starts, decide wheth
         if (snapshot.connectionState != ConnectionState.done) { // still waiting for the token read to finish
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
->>>>>>> Stashed changes
 
         final token = snapshot.data;
         if (token != null && token.isNotEmpty) { // if token exists, go to Home page
