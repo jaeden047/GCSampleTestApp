@@ -336,7 +336,7 @@ class _EnvTopicsState extends State<EnvTopics> {
                                         isMobile: isMobile,
                                         onTap: () => _startQuiz(context, topic['title']!),
                                       );
-                                    }).toList(),
+                                    }),
                                   ],
                                 ),
                               ),

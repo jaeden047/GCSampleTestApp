@@ -233,7 +233,7 @@ class _SignupScreen1State extends State<SignupScreen1> {
                                 ),
                                 child: DropdownButtonHideUnderline(
                                   child: DropdownButtonFormField<CountryCode>(
-                                    value: _selectedCountryCode,
+                                    initialValue: _selectedCountryCode,
                                     isExpanded: true,
                                     icon: Icon(Icons.arrow_drop_down, color: greySubtitle),
                                     style: TextStyle(
@@ -310,7 +310,7 @@ class _SignupScreen1State extends State<SignupScreen1> {
                               canvasColor: Colors.white,
                             ),
                             child: DropdownButtonFormField<String>(
-                              value: _selectedGender,
+                              initialValue: _selectedGender,
                               decoration: InputDecoration(
                                 hintText: 'Select Gender',
                                 hintStyle: TextStyle(color: greySubtitle, fontSize: isMobile ? 14 : 16),

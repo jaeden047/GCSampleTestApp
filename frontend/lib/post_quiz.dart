@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'; // supabase flutter sdk
+import 'package:flutter_svg/flutter_svg.dart';
 import 'home.dart';
+import 'main.dart';
+import 'leaderboard.dart';
 
 class PostQuiz extends StatelessWidget {
   final double score;
@@ -17,134 +18,430 @@ class PostQuiz extends StatelessWidget {
     required this.onViewAnswers,
   });
 
-  Future<List<Map<String, dynamic>>> fetchLeaderboard(String topicName) async {
-    final supabase = Supabase.instance.client;
+  // Check if screen is mobile
+  bool _isMobile(BuildContext context) {
+    return MediaQuery.of(context).size.width < 768;
+  }
 
-    // Step 1: Get topic_id for given topicName
-    final topicResponse = await supabase
-        .from('topics')
-        .select('topic_id')
-        .eq('topic_name', topicName)
-        .single();
-
-    final topicId = topicResponse['topic_id'];
-
-    // Step 2: Get top 10 test_attempts joined with users, sorted
-    final attemptsResponse = await supabase
-      .from('test_attempts')
-      .select('score, duration_seconds, profiles(name)')  // Fetching 'name' from 'profiles' table
-      .eq('topic_id', topicId)
-      .order('score', ascending: false)  // Highest score first
-      .order('duration_seconds', ascending: true)  // Shortest duration first
-      .limit(10);
-
-    return List<Map<String, dynamic>>.from(attemptsResponse);
+  // Build decorative white clouds and stars around content
+  List<Widget> _buildDecorativeElements(double screenWidth, double screenHeight, bool isMobile) {
+    final elements = <Widget>[];
+    
+    // Top area decorations (around clipboard)
+    elements.add(
+      Positioned(
+        left: screenWidth * 0.05,
+        top: 50,
+        child: SvgPicture.asset(
+          'assets/images/white_star.svg',
+          width: isMobile ? 12.0 : 18.0,
+          height: isMobile ? 11.3 : 17.0,
+        ),
+      ),
+    );
+    
+    elements.add(
+      Positioned(
+        right: screenWidth * 0.05,
+        top: 60,
+        child: SvgPicture.asset(
+          'assets/images/white_cloud.svg',
+          width: isMobile ? 35 : 48,
+          height: isMobile ? 24 : 33,
+        ),
+      ),
+    );
+    
+    elements.add(
+      Positioned(
+        left: screenWidth * 0.08,
+        top: 120,
+        child: SvgPicture.asset(
+          'assets/images/white_cloud.svg',
+          width: isMobile ? 40 : 55,
+          height: isMobile ? 28 : 38,
+        ),
+      ),
+    );
+    
+    elements.add(
+      Positioned(
+        right: screenWidth * 0.08,
+        top: 140,
+        child: SvgPicture.asset(
+          'assets/images/white_star.svg',
+          width: isMobile ? 14.0 : 20.0,
+          height: isMobile ? 13.2 : 18.9,
+        ),
+      ),
+    );
+    
+    elements.add(
+      Positioned(
+        left: screenWidth * 0.02,
+        top: 200,
+        child: SvgPicture.asset(
+          'assets/images/white_cloud.svg',
+          width: isMobile ? 28 : 40,
+          height: isMobile ? 19 : 27,
+        ),
+      ),
+    );
+    
+    elements.add(
+      Positioned(
+        left: screenWidth * 0.04,
+        top: 280,
+        child: SvgPicture.asset(
+          'assets/images/white_cloud.svg',
+          width: isMobile ? 32 : 45,
+          height: isMobile ? 22 : 31,
+        ),
+      ),
+    );
+    
+    // Middle area decorations (around text)
+    elements.add(
+      Positioned(
+        left: screenWidth * 0.03,
+        top: screenHeight * 0.45,
+        child: SvgPicture.asset(
+          'assets/images/white_star.svg',
+          width: isMobile ? 11.0 : 16.0,
+          height: isMobile ? 10.4 : 15.1,
+        ),
+      ),
+    );
+    
+    elements.add(
+      Positioned(
+        left: screenWidth * 0.12,
+        top: screenHeight * 0.42,
+        child: SvgPicture.asset(
+          'assets/images/white_star.svg',
+          width: isMobile ? 10.0 : 14.0,
+          height: isMobile ? 9.5 : 13.2,
+        ),
+      ),
+    );
+    
+    elements.add(
+      Positioned(
+        right: screenWidth * 0.03,
+        top: screenHeight * 0.48,
+        child: SvgPicture.asset(
+          'assets/images/white_cloud.svg',
+          width: isMobile ? 32 : 45,
+          height: isMobile ? 22 : 31,
+        ),
+      ),
+    );
+    
+    elements.add(
+      Positioned(
+        right: screenWidth * 0.12,
+        top: screenHeight * 0.50,
+        child: SvgPicture.asset(
+          'assets/images/white_star.svg',
+          width: isMobile ? 12.0 : 17.0,
+          height: isMobile ? 11.3 : 16.1,
+        ),
+      ),
+    );
+    
+    elements.add(
+      Positioned(
+        left: screenWidth * 0.15,
+        top: screenHeight * 0.55,
+        child: SvgPicture.asset(
+          'assets/images/white_star.svg',
+          width: isMobile ? 9.0 : 13.0,
+          height: isMobile ? 8.5 : 12.3,
+        ),
+      ),
+    );
+    
+    elements.add(
+      Positioned(
+        right: screenWidth * 0.15,
+        top: screenHeight * 0.58,
+        child: SvgPicture.asset(
+          'assets/images/white_star.svg',
+          width: isMobile ? 11.0 : 15.0,
+          height: isMobile ? 10.4 : 14.2,
+        ),
+      ),
+    );
+    
+    // Bottom area decorations (above navigation) 
+    elements.add(
+      Positioned(
+        left: screenWidth * 0.06,
+        top: screenHeight * 0.75,
+        child: SvgPicture.asset(
+          'assets/images/white_star.svg',
+          width: isMobile ? 13.0 : 18.0,
+          height: isMobile ? 12.3 : 17.0,
+        ),
+      ),
+    );
+    
+    elements.add(
+      Positioned(
+        right: screenWidth * 0.06,
+        top: screenHeight * 0.77,
+        child: SvgPicture.asset(
+          'assets/images/white_cloud.svg',
+          width: isMobile ? 30 : 42,
+          height: isMobile ? 20 : 28,
+        ),
+      ),
+    );
+    
+    // Additional star near bottom left
+    elements.add(
+      Positioned(
+        left: screenWidth * 0.10,
+        top: screenHeight * 0.80,
+        child: SvgPicture.asset(
+          'assets/images/white_star.svg',
+          width: isMobile ? 10.0 : 14.0,
+          height: isMobile ? 9.5 : 13.2,
+        ),
+      ),
+    );
+    
+    return elements;
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Quiz Complete'), automaticallyImplyLeading: false),
-      body: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SvgPicture.asset(
-              'assets/images/stars.svg',
-              height: 110,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Your Score: ${score}%',
-              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 40),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Column(
-                  children: [
-                    GestureDetector(
-                      onTap: onRedoQuiz, // Call onRedoQuiz directly
-                      child: SvgPicture.asset(
-                        'assets/images/redo_button.svg',
-                        height: 60,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text('Redo', style: TextStyle(fontSize: 14)),
-                  ],
-                ),
-                Column(
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(builder: (_) => const Home()),
-                          (route) => false,
-                        );
-                      },
-                      child: SvgPicture.asset(
-                        'assets/images/home_button.svg',
-                        height: 60,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text('Home', style: TextStyle(fontSize: 14)),
-                  ],
-                ),
-                Column(
-                  children: [
-                    GestureDetector(
-                      onTap: onViewAnswers,
-                      child: SvgPicture.asset(
-                        'assets/images/results_button.svg',
-                        height: 60,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text('Answers', style: TextStyle(fontSize: 14)),
-                  ],
-                ),
-              ],
-            ),
-            // LEADERBOARD SECTION
-            const SizedBox(height: 24),
-            const Text('Leaderboard', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 250,
-              child: FutureBuilder<List<Map<String, dynamic>>>(
-                future: fetchLeaderboard(topicName),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  } else if (snapshot.hasError) {
-                    return const Text('Error loading leaderboard');
-                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Text('No data found');
-                  }
+    final isMobile = _isMobile(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
 
-                  final leaderboard = snapshot.data!;
-                  return ListView.separated(
-                    itemCount: leaderboard.length,
-                    separatorBuilder: (_, __) => const Divider(),
-                    itemBuilder: (context, index) {
-                      final user = leaderboard[index];
-                      return ListTile(
-                        leading: Text('#${index + 1}'),
-                        title: Text(user['profiles']['name']),
-                        subtitle: Text('Score: ${user['score']} • Time: ${user['duration_seconds']}s'),
-                      );
-                    },
-                  );
-                },
+    return Scaffold(
+      backgroundColor: MyApp.homeTealGreen,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Decorative elements
+              ..._buildDecorativeElements(screenWidth, screenHeight, isMobile),
+              
+              // Main content
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isMobile ? 16.0 : 24.0,
+                  vertical: isMobile ? 16.0 : 24.0,
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                            SizedBox(height: isMobile ? 10 : 20),
+                            
+                            // Quiz congrats SVG (clipboard with icons)
+                            SizedBox(
+                              width: isMobile ? screenWidth * 0.4 : 200,
+                              height: isMobile ? screenWidth * 0.4 : 200,
+                              child: SvgPicture.asset(
+                                'assets/images/quiz_congrats.svg',
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                  
+                  SizedBox(height: isMobile ? 16 : 20),
+                  
+                  // Score badge with oval border and star
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isMobile ? 24 : 32,
+                      vertical: isMobile ? 8 : 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: MyApp.homeTealGreen,
+                      border: Border.all(
+                        color: MyApp.homeWhite,
+                        width: 2,
+                      ),
+                      borderRadius: BorderRadius.circular(50),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SvgPicture.asset(
+                          'assets/images/white_star.svg',
+                          width: isMobile ? 20 : 24,
+                          height: isMobile ? 18.9 : 22.7,
+                        ),
+                        SizedBox(width: isMobile ? 8 : 12),
+                        Text(
+                          '${score.toStringAsFixed(1)}%',
+                          style: TextStyle(
+                            fontSize: isMobile ? 20 : 24,
+                            fontWeight: FontWeight.bold,
+                            color: MyApp.homeWhite,
+                            fontFamily: 'serif',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  SizedBox(height: isMobile ? 20 : 24),
+                  
+                  // Congrats message
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 24 : 40),
+                    child: Text(
+                      'Congratulations!\nYou have completed the quiz.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: isMobile ? 32 : 42,
+                        fontWeight: FontWeight.bold,
+                        color: MyApp.homeWhite,
+                        fontFamily: 'serif',
+                        height: 1.2,
+                      ),
+                    ),
+                  ),
+                  
+                  SizedBox(height: isMobile ? 12 : 16),
+                  
+                  // Instructions text
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 32 : 48),
+                    child: Text(
+                      'You can now see the leaderboard or continue with another quiz to rank up in the leaderboard.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: isMobile ? 16 : 18,
+                        color: MyApp.homeWhite.withOpacity(0.9),
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                  
+                  SizedBox(height: isMobile ? 60 : 70),
+                  
+                  // Bottom navigation icons
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isMobile ? 40 : 80,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Home button
+                        Column(
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const Home()),
+                                  (route) => false,
+                                );
+                              },
+                              child: SizedBox(
+                                width: isMobile ? 60 : 80,
+                                height: isMobile ? 60 : 80,
+                                child: SvgPicture.asset(
+                                  'assets/images/home_icon.svg',
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: isMobile ? 8 : 12),
+                            Text(
+                              'Home',
+                              style: TextStyle(
+                                fontSize: isMobile ? 14 : 16,
+                                color: MyApp.homeDarkGreyText,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        
+                        SizedBox(width: isMobile ? 32 : 42),
+                        
+                        // Leaderboard button
+                        Column(
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => Leaderboard(topicName: topicName),
+                                  ),
+                                );
+                              },
+                              child: SizedBox(
+                                width: isMobile ? 60 : 80,
+                                height: isMobile ? 60 : 80,
+                                child: SvgPicture.asset(
+                                  'assets/images/leaderboard_icon.svg',
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: isMobile ? 8 : 12),
+                            Text(
+                              'Leaderboard',
+                              style: TextStyle(
+                                fontSize: isMobile ? 14 : 16,
+                                color: MyApp.homeDarkGreyText,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        
+                        SizedBox(width: isMobile ? 32 : 42),
+                        
+                        // Share button
+                        Column(
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                // Share functionality - do nothing for now
+                              },
+                              child: SizedBox(
+                                width: isMobile ? 60 : 80,
+                                height: isMobile ? 60 : 80,
+                                child: SvgPicture.asset(
+                                  'assets/images/share_icon.svg',
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: isMobile ? 8 : 12),
+                            Text(
+                              'Share',
+                              style: TextStyle(
+                                fontSize: isMobile ? 14 : 16,
+                                color: MyApp.homeDarkGreyText,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  SizedBox(height: isMobile ? 20 : 30),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

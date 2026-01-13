@@ -1546,7 +1546,7 @@ class _HoverableCardState extends State<_HoverableCard> {
           curve: Curves.easeInOut,
           transform: Matrix4.identity()
             ..scale(_isHovered ? 1.05 : 1.0),
-          child: Container(
+          child: SizedBox(
             width: widget.isMobile ? 280 : 360,
             height: widget.isMobile ? 320 : 380,
             child: Opacity(

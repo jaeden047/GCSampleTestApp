@@ -164,7 +164,7 @@ Widget build(BuildContext context) {
             itemCount: numRows,
             itemBuilder: (context, index) {
               DateTime parsedDate = DateTime.parse(testList[index].dateTime); // parses raw ISO Date into a DateTime Variable
-              String formattedDate = DateFormat('MM/dd/yyyy h:mma').format(parsedDate);;
+              String formattedDate = DateFormat('MM/dd/yyyy h:mma').format(parsedDate);
               double scoreNumber = testList[index].score; 
               return Card(
                 color: Colors.green[50], // Color of the Attempt {} Card
@@ -210,7 +210,7 @@ Widget build(BuildContext context) {
                   children: [ // When you click on tile, this is what is displayed
                     Padding( 
                       padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0), // 16 pixels left/right in space, 8 pixes up/down in space
-                      child: Container(
+                      child: SizedBox(
                         width: double.infinity,
                         child: Column(
                         crossAxisAlignment: CrossAxisAlignment.center, // align to left
