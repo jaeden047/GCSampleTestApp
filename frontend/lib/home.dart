@@ -7,6 +7,7 @@ import 'profile.dart';
 import 'math_grades.dart';
 import 'env_topics.dart';
 import 'results.dart';
+import 'leaderboard.dart';
 import 'main.dart';
 
 // Home dashboard: Math quiz, Environmental quiz, Past Results
@@ -130,37 +131,94 @@ class _HomeState extends State<Home> {
                           mainAxisAlignment: MainAxisAlignment.end,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Top right: Profile button with initials
-                            // Note: Logo is now positioned in Stack below
-                            GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (context) => ProfilePage()),
-                                );
-                              },
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: isMobile ? 12 : 16,
-                                  vertical: isMobile ? 8 : 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: MyApp.homeWhite,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: MyApp.homeDarkGreyText,
-                                    width: 1,
+                            // Top right: Leaderboard button with star icon (below profile)
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Profile button with initials
+                                GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => ProfilePage()),
+                                    );
+                                  },
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: isMobile ? 12 : 16,
+                                      vertical: isMobile ? 8 : 10,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: MyApp.homeWhite,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: MyApp.homeDarkGreyText,
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      _getUserInitials(),
+                                      style: TextStyle(
+                                        fontSize: isMobile ? 14 : 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: MyApp.homeDarkGreyText,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                                child: Text(
-                                  _getUserInitials(),
-                                  style: TextStyle(
-                                    fontSize: isMobile ? 14 : 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: MyApp.homeDarkGreyText,
+                                SizedBox(height: 8),
+                                // Leaderboard button with star icon
+                                GestureDetector(
+                                  onTap: () async {
+                                    // Get the first topic for leaderboard navigation
+                                    // In a real scenario, you might want to show a topic selection dialog
+                                    try {
+                                      final supabase = Supabase.instance.client;
+                                      final topicsResponse = await supabase
+                                          .from('topics')
+                                          .select('topic_name')
+                                          .limit(1);
+                                      
+                                      if (topicsResponse.isNotEmpty) {
+                                        final topicName = topicsResponse[0]['topic_name'] as String;
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => Leaderboard(topicName: topicName),
+                                          ),
+                                        );
+                                      } else {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('No topics available')),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Error loading leaderboard')),
+                                      );
+                                    }
+                                  },
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: isMobile ? 12 : 16,
+                                      vertical: isMobile ? 8 : 10,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: MyApp.homeWhite,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: MyApp.homeDarkGreyText,
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Icon(
+                                      Icons.star,
+                                      size: isMobile ? 14 : 16,
+                                      color: MyApp.homeDarkGreyText,
+                                    ),
                                   ),
                                 ),
-                              ),
+                              ],
                             ),
                           ],
                         ),

@@ -209,12 +209,21 @@ class _MathGradesState extends State<MathGrades> {
               builder: (context, constraints) {
                 final screenWidth = MediaQuery.of(context).size.width;
                 final screenHeight = MediaQuery.of(context).size.height;
+                
+                // Calculate estimated content height based on number of topics
+                // Header card: ~200px, Title: ~80px, Each quiz card: ~120px, spacing: ~20px
+                final numTopics = topics.length;
+                final estimatedContentHeight = 200.0 + 80.0 + (numTopics * 140.0);
+                final actualContentHeight = estimatedContentHeight > screenHeight 
+                    ? estimatedContentHeight 
+                    : screenHeight;
+                
                 return SingleChildScrollView(
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      // Decorative elements - positioned around centered content
-                      ..._buildDecorativeElements(screenWidth, screenHeight, isMobile),
+                      // Decorative elements - dynamically distributed
+                      ..._buildDecorativeElements(screenWidth, actualContentHeight, isMobile, numTopics),
                       // Main content
                       Padding(
                         padding: EdgeInsets.symmetric(
@@ -345,7 +354,7 @@ class _MathGradesState extends State<MathGrades> {
                               isMobile: isMobile,
                               onTap: () => _startQuiz(context, topic['title']!),
                             );
-                          }).toList(),
+                          }),
                         ],
                       ),
                     ),
@@ -361,8 +370,13 @@ class _MathGradesState extends State<MathGrades> {
     );
   }
 
-  // Build decorative clouds and stars around centered content
-  List<Widget> _buildDecorativeElements(double screenWidth, double screenHeight, bool isMobile) {
+  // Build decorative clouds and stars dynamically distributed along content height
+  List<Widget> _buildDecorativeElements(
+    double screenWidth,
+    double contentHeight,
+    bool isMobile,
+    int numItems,
+  ) {
     final elements = <Widget>[];
     final centerX = screenWidth / 2;
     final containerHalfWidth = 400; // Half of maxWidth 800
@@ -373,291 +387,161 @@ class _MathGradesState extends State<MathGrades> {
     final leftZone = leftBoundary - 100; // Space on the left
     final rightZone = screenWidth - rightBoundary - 100; // Space on the right
     
-    // Left side decorations (only if there's space) - more evenly distributed vertically
-    if (leftZone > 50) {
-      // Top section
-      elements.add(
-        Positioned(
-          left: screenWidth * 0.05,
-          top: screenHeight * 0.10,
-          child: SvgPicture.asset(
-            'assets/images/pinkstar.svg',
-            width: isMobile ? 12.0 : 18.0,
-            height: isMobile ? 11.3 : 17.0,
-          ),
-        ),
-      );
+    // Calculate spacing between decorations
+    // Further reduced spacing for even higher density - decorations every 60-80px vertically
+    final minSpacing = isMobile ? 60.0 : 80.0;
+    
+    // Calculate number of decoration rows needed (increased for more density)
+    final numDecorationRows = (contentHeight / minSpacing).ceil();
+    
+    // Top padding to start decorations below the header
+    final topPadding = 100.0;
+    final bottomPadding = 50.0;
+    final usableHeight = contentHeight - topPadding - bottomPadding;
+    final adjustedSpacing = usableHeight / (numDecorationRows + 1);
+    
+    // Star sizes (varied for visual interest)
+    final starSizes = [
+      {'w': isMobile ? 9.0 : 14.0, 'h': isMobile ? 8.5 : 13.2},
+      {'w': isMobile ? 10.0 : 15.0, 'h': isMobile ? 9.4 : 14.2},
+      {'w': isMobile ? 11.0 : 16.0, 'h': isMobile ? 10.4 : 15.1},
+      {'w': isMobile ? 12.0 : 17.0, 'h': isMobile ? 11.3 : 16.0},
+      {'w': isMobile ? 13.0 : 18.0, 'h': isMobile ? 12.3 : 17.0},
+      {'w': isMobile ? 14.0 : 20.0, 'h': isMobile ? 13.2 : 18.9},
+    ];
+    
+    // Cloud sizes (varied)
+    final cloudSizes = [
+      {'w': isMobile ? 28 : 40, 'h': isMobile ? 19 : 27},
+      {'w': isMobile ? 30 : 42, 'h': isMobile ? 20 : 28},
+      {'w': isMobile ? 32 : 45, 'h': isMobile ? 22 : 31},
+      {'w': isMobile ? 35 : 48, 'h': isMobile ? 24 : 33},
+      {'w': isMobile ? 38 : 52, 'h': isMobile ? 26 : 36},
+      {'w': isMobile ? 40 : 55, 'h': isMobile ? 28 : 38},
+    ];
+    
+    // Left side positions (varied for natural look)
+    final leftPositions = [0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08];
+    // Right side positions
+    final rightPositions = [0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08];
+    
+    // Track used positions separately for left and right to ensure even distribution
+    final usedPositionsLeft = <double>[];
+    final usedPositionsRight = <double>[];
+    final minDistanceBetween = 40.0; // Further reduced for higher density
+    
+    // Generate decorations dynamically - ensuring BOTH sides get decorations evenly
+    for (int i = 0; i < numDecorationRows; i++) {
+      final baseY = topPadding + (adjustedSpacing * (i + 1));
       
-      elements.add(
-        Positioned(
-          left: screenWidth * 0.08,
-          top: screenHeight * 0.18,
-          child: SvgPicture.asset(
-            'assets/images/pinkstar.svg',
-            width: isMobile ? 10.0 : 15.0,
-            height: isMobile ? 9.4 : 14.2,
-          ),
-        ),
-      );
+      // Add some randomness to Y position (±12px) to make it look more natural
+      final randomOffset = (i % 3 - 1) * 12.0; // -12, 0, or 12
+      final y = baseY + randomOffset;
       
-      elements.add(
-        Positioned(
-          left: screenWidth * 0.03,
-          top: screenHeight * 0.25,
-          child: SvgPicture.asset(
-            'assets/images/cloud.svg',
-            width: isMobile ? 40 : 55,
-            height: isMobile ? 28 : 38,
-          ),
-        ),
-      );
+      // Determine decoration type ONCE per row - ensures both sides get the same type
+      // Clouds appear less frequently: every 5th or 7th item for balance
+      final useCloud = (i % 5 == 0 || i % 7 == 0);
       
-      // Middle-top section
-      elements.add(
-        Positioned(
-          left: screenWidth * 0.06,
-          top: screenHeight * 0.35,
-          child: SvgPicture.asset(
-            'assets/images/pinkstar.svg',
-            width: isMobile ? 14.0 : 20.0,
-            height: isMobile ? 13.2 : 18.9,
-          ),
-        ),
-      );
+      // Add decoration on LEFT side (if space available)
+      if (leftZone > 50) {
+        // Check if left position is not too close to other left decorations
+        bool leftTooClose = false;
+        for (final usedY in usedPositionsLeft) {
+          if ((y - usedY).abs() < minDistanceBetween) {
+            leftTooClose = true;
+            break;
+          }
+        }
+        
+        if (!leftTooClose) {
+          usedPositionsLeft.add(y);
+          final leftPos = leftPositions[i % leftPositions.length];
+          
+          if (useCloud) {
+            final cloudSize = cloudSizes[i % cloudSizes.length];
+            elements.add(
+              Positioned(
+                left: screenWidth * leftPos,
+                top: y,
+                child: SvgPicture.asset(
+                  'assets/images/cloud.svg',
+                  width: cloudSize['w']!.toDouble(),
+                  height: cloudSize['h']!.toDouble(),
+                ),
+              ),
+            );
+          } else {
+            final starSize = starSizes[i % starSizes.length];
+            elements.add(
+              Positioned(
+                left: screenWidth * leftPos,
+                top: y,
+                child: SvgPicture.asset(
+                  'assets/images/pinkstar.svg',
+                  width: starSize['w']!,
+                  height: starSize['h']!,
+                ),
+              ),
+            );
+          }
+        }
+      }
       
-      elements.add(
-        Positioned(
-          left: screenWidth * 0.04,
-          top: screenHeight * 0.42,
-          child: SvgPicture.asset(
-            'assets/images/pinkstar.svg',
-            width: isMobile ? 11.0 : 16.0,
-            height: isMobile ? 10.4 : 15.1,
-          ),
-        ),
-      );
-      
-      // Middle section
-      elements.add(
-        Positioned(
-          left: screenWidth * 0.07,
-          top: screenHeight * 0.50,
-          child: SvgPicture.asset(
-            'assets/images/cloud.svg',
-            width: isMobile ? 35 : 48,
-            height: isMobile ? 24 : 33,
-          ),
-        ),
-      );
-      
-      elements.add(
-        Positioned(
-          left: screenWidth * 0.05,
-          top: screenHeight * 0.58,
-          child: SvgPicture.asset(
-            'assets/images/pinkstar.svg',
-            width: isMobile ? 13.0 : 19.0,
-            height: isMobile ? 12.3 : 17.9,
-          ),
-        ),
-      );
-      
-      // Middle-bottom section
-      elements.add(
-        Positioned(
-          left: screenWidth * 0.08,
-          top: screenHeight * 0.65,
-          child: SvgPicture.asset(
-            'assets/images/pinkstar.svg',
-            width: isMobile ? 10.0 : 15.0,
-            height: isMobile ? 9.4 : 14.2,
-          ),
-        ),
-      );
-      
-      elements.add(
-        Positioned(
-          left: screenWidth * 0.04,
-          top: screenHeight * 0.72,
-          child: SvgPicture.asset(
-            'assets/images/pinkstar.svg',
-            width: isMobile ? 12.0 : 17.0,
-            height: isMobile ? 11.3 : 16.0,
-          ),
-        ),
-      );
-      
-      // Bottom section
-      elements.add(
-        Positioned(
-          left: screenWidth * 0.06,
-          top: screenHeight * 0.80,
-          child: SvgPicture.asset(
-            'assets/images/cloud.svg',
-            width: isMobile ? 32 : 45,
-            height: isMobile ? 22 : 31,
-          ),
-        ),
-      );
-      
-      elements.add(
-        Positioned(
-          left: screenWidth * 0.03,
-          top: screenHeight * 0.88,
-          child: SvgPicture.asset(
-            'assets/images/pinkstar.svg',
-            width: isMobile ? 11.0 : 16.0,
-            height: isMobile ? 10.4 : 15.1,
-          ),
-        ),
-      );
+      // Add decoration on RIGHT side (if space available) - use SAME type as left for balance
+      if (rightZone > 50) {
+        // Use slightly different Y position for right side to avoid exact mirroring
+        final rightY = y + ((i % 2 == 0) ? 8.0 : -8.0);
+        
+        // Check if right side position is not too close to other right decorations
+        bool rightTooClose = false;
+        for (final usedY in usedPositionsRight) {
+          if ((rightY - usedY).abs() < minDistanceBetween) {
+            rightTooClose = true;
+            break;
+          }
+        }
+        
+        if (!rightTooClose) {
+          usedPositionsRight.add(rightY);
+          final rightPos = rightPositions[i % rightPositions.length];
+          
+          // Use the SAME decoration type as left side to ensure perfect balance
+          if (useCloud) {
+            final cloudSize = cloudSizes[(i + 1) % cloudSizes.length];
+            elements.add(
+              Positioned(
+                right: screenWidth * rightPos,
+                top: rightY,
+                child: SvgPicture.asset(
+                  'assets/images/cloud.svg',
+                  width: cloudSize['w']!.toDouble(),
+                  height: cloudSize['h']!.toDouble(),
+                ),
+              ),
+            );
+          } else {
+            final starSize = starSizes[(i + 1) % starSizes.length];
+            elements.add(
+              Positioned(
+                right: screenWidth * rightPos,
+                top: rightY,
+                child: SvgPicture.asset(
+                  'assets/images/pinkstar.svg',
+                  width: starSize['w']!,
+                  height: starSize['h']!,
+                ),
+              ),
+            );
+          }
+        }
+      }
     }
     
-    // Right side decorations (only if there's space) - more evenly distributed vertically
-    if (rightZone > 50) {
-      // Top section
-      elements.add(
-        Positioned(
-          right: screenWidth * 0.05,
-          top: screenHeight * 0.12,
-          child: SvgPicture.asset(
-            'assets/images/pinkstar.svg',
-            width: isMobile ? 13.0 : 19.0,
-            height: isMobile ? 12.3 : 17.9,
-          ),
-        ),
-      );
-      
-      elements.add(
-        Positioned(
-          right: screenWidth * 0.08,
-          top: screenHeight * 0.20,
-          child: SvgPicture.asset(
-            'assets/images/pinkstar.svg',
-            width: isMobile ? 9.0 : 14.0,
-            height: isMobile ? 8.5 : 13.2,
-          ),
-        ),
-      );
-      
-      elements.add(
-        Positioned(
-          right: screenWidth * 0.03,
-          top: screenHeight * 0.28,
-          child: SvgPicture.asset(
-            'assets/images/cloud.svg',
-            width: isMobile ? 35 : 48,
-            height: isMobile ? 24 : 33,
-          ),
-        ),
-      );
-      
-      // Middle-top section
-      elements.add(
-        Positioned(
-          right: screenWidth * 0.07,
-          top: screenHeight * 0.38,
-          child: SvgPicture.asset(
-            'assets/images/pinkstar.svg',
-            width: isMobile ? 12.0 : 17.0,
-            height: isMobile ? 11.3 : 16.0,
-          ),
-        ),
-      );
-      
-      elements.add(
-        Positioned(
-          right: screenWidth * 0.04,
-          top: screenHeight * 0.45,
-          child: SvgPicture.asset(
-            'assets/images/pinkstar.svg',
-            width: isMobile ? 10.0 : 15.0,
-            height: isMobile ? 9.4 : 14.2,
-          ),
-        ),
-      );
-      
-      // Middle section
-      elements.add(
-        Positioned(
-          right: screenWidth * 0.06,
-          top: screenHeight * 0.53,
-          child: SvgPicture.asset(
-            'assets/images/cloud.svg',
-            width: isMobile ? 38 : 52,
-            height: isMobile ? 26 : 36,
-          ),
-        ),
-      );
-      
-      elements.add(
-        Positioned(
-          right: screenWidth * 0.08,
-          top: screenHeight * 0.60,
-          child: SvgPicture.asset(
-            'assets/images/pinkstar.svg',
-            width: isMobile ? 14.0 : 20.0,
-            height: isMobile ? 13.2 : 18.9,
-          ),
-        ),
-      );
-      
-      // Middle-bottom section
-      elements.add(
-        Positioned(
-          right: screenWidth * 0.05,
-          top: screenHeight * 0.68,
-          child: SvgPicture.asset(
-            'assets/images/pinkstar.svg',
-            width: isMobile ? 11.0 : 16.0,
-            height: isMobile ? 10.4 : 15.1,
-          ),
-        ),
-      );
-      
-      elements.add(
-        Positioned(
-          right: screenWidth * 0.07,
-          top: screenHeight * 0.75,
-          child: SvgPicture.asset(
-            'assets/images/pinkstar.svg',
-            width: isMobile ? 13.0 : 18.0,
-            height: isMobile ? 12.3 : 17.0,
-          ),
-        ),
-      );
-      
-      // Bottom section
-      elements.add(
-        Positioned(
-          right: screenWidth * 0.04,
-          top: screenHeight * 0.83,
-          child: SvgPicture.asset(
-            'assets/images/cloud.svg',
-            width: isMobile ? 30 : 42,
-            height: isMobile ? 20 : 28,
-          ),
-        ),
-      );
-      
-      elements.add(
-        Positioned(
-          right: screenWidth * 0.06,
-          top: screenHeight * 0.90,
-          child: SvgPicture.asset(
-            'assets/images/pinkstar.svg',
-            width: isMobile ? 10.0 : 15.0,
-            height: isMobile ? 9.4 : 14.2,
-          ),
-        ),
-      );
-    }
-    
-    // Top decorations (above content)
+    // Add top decorations (above content)
     elements.add(
       Positioned(
         left: centerX - 100,
-        top: screenHeight * 0.05,
+        top: 30,
         child: SvgPicture.asset(
           'assets/images/pinkstar.svg',
           width: isMobile ? 11.0 : 16.0,
@@ -669,7 +553,7 @@ class _MathGradesState extends State<MathGrades> {
     elements.add(
       Positioned(
         left: centerX + 50,
-        top: screenHeight * 0.08,
+        top: 50,
         child: SvgPicture.asset(
           'assets/images/cloud.svg',
           width: isMobile ? 30 : 42,
@@ -681,7 +565,7 @@ class _MathGradesState extends State<MathGrades> {
     elements.add(
       Positioned(
         left: centerX - 50,
-        top: screenHeight * 0.03,
+        top: 20,
         child: SvgPicture.asset(
           'assets/images/pinkstar.svg',
           width: isMobile ? 9.0 : 14.0,
@@ -690,12 +574,13 @@ class _MathGradesState extends State<MathGrades> {
       ),
     );
     
-    // Bottom decorations (below content, more evenly distributed)
-    if (screenHeight > 600) {
+    // Add bottom decorations (below content)
+    final bottomY = contentHeight - 30;
+    if (bottomY > 0) {
       elements.add(
         Positioned(
           left: centerX - 80,
-          top: screenHeight * 0.92,
+          top: bottomY - 20,
           child: SvgPicture.asset(
             'assets/images/pinkstar.svg',
             width: isMobile ? 13.0 : 18.0,
@@ -707,7 +592,7 @@ class _MathGradesState extends State<MathGrades> {
       elements.add(
         Positioned(
           right: centerX - 120,
-          top: screenHeight * 0.95,
+          top: bottomY - 10,
           child: SvgPicture.asset(
             'assets/images/pinkstar.svg',
             width: isMobile ? 10.0 : 14.0,
@@ -719,7 +604,7 @@ class _MathGradesState extends State<MathGrades> {
       elements.add(
         Positioned(
           left: centerX + 30,
-          top: screenHeight * 0.88,
+          top: bottomY - 30,
           child: SvgPicture.asset(
             'assets/images/cloud.svg',
             width: isMobile ? 28 : 40,
