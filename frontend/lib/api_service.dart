@@ -63,7 +63,7 @@ class ApiService {
       );
       final data = res.data as Map<String, dynamic>; // JSON Object is returned as map
       // token key depends on backend; "jwt" is only correct if response uses that key
-      final token = data['jwt'];
+      final token = data['token'];
       if (token == null) {
         throw Exception('No token found in login response: $data');
       }
@@ -87,7 +87,7 @@ class ApiService {
     ); // Sends POST request to baseURL (natural from _dio.post) + /auth/login 
       // server responds with a JSON object res.data; we store in variable as map.
       final data = res.data as Map<String, dynamic>; 
-      final token = data['jwt'];
+      final token = data['token'];
       if (token == null) {
        throw Exception('No token found in login response: $data');
       }
@@ -97,7 +97,7 @@ class ApiService {
   Future<Map<String, dynamic>> getProfile() async {
     final token = await getToken(); // reads the user's token from current storage (fields are not)
     if (token == null || token.isEmpty) {
-      throw Exception('No JWT saved');
+      throw Exception('No token saved');
     }
     final res = await _dio.get( // Retrieve user data from server using token
       '/user/profile',

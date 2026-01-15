@@ -66,6 +66,55 @@ class _LoginPageState extends State<LoginPage> { // stateful because transitions
     return null; // when all validations passed
   } 
 
+    Future<void> _onTap() async {
+  final error = _validateInputs();
+  if (error != null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(error)),
+    );
+    return;
+  }
+
+  setState(() => _isLoading = true); // loading wheel
+
+  try {
+    final email = emailController.text.trim();
+    final password = passwordController.text;
+
+    if (_isLogin) {
+      await ApiService.instance.login( // use apiservice login function
+        email: email,
+        password: password,
+      );
+    } else {
+      await ApiService.instance.register( // use apiservice register function
+        email: email,
+        password: password,
+        name: nameController.text.trim(),
+        phone: phoneController.text.trim(),
+        institution: institutionController.text.trim(),
+        address: addressController.text.trim(),
+        country: countryController.text.trim(),
+        gender: genderController.text.trim(),
+        grade: gradeController.text.trim(),
+        photo: photoController.text.trim(),
+        userType: userTypeController.text.trim(),
+        referenceCode: referenceCodeController.text.trim(),
+      );
+    }
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const Home()),
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(e.toString())),
+    );
+  } finally {
+    setState(() => _isLoading = false);
+  }
+}  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -155,6 +204,7 @@ class _LoginPageState extends State<LoginPage> { // stateful because transitions
                   ),
                 )
               : GestureDetector(
+                  onTap: _onTap,
                   child: SvgPicture.asset(
                     _isLogin ? 'assets/images/login_button.svg' : 'assets/images/signup_button.svg',
                   ),
