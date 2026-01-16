@@ -3,12 +3,14 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'home.dart';
 import 'main.dart';
 import 'leaderboard.dart';
+import 'quiz_answers.dart';
 
 class PostQuiz extends StatelessWidget {
   final double score;
   final VoidCallback onRedoQuiz;
   final String topicName;
   final VoidCallback onViewAnswers;
+  final int attemptId;
 
   const PostQuiz({
     super.key,
@@ -16,6 +18,7 @@ class PostQuiz extends StatelessWidget {
     required this.onRedoQuiz,
     required this.topicName,
     required this.onViewAnswers,
+    required this.attemptId,
   });
 
   // Check if screen is mobile
@@ -297,7 +300,7 @@ class PostQuiz extends StatelessWidget {
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: isMobile ? 24 : 40),
                     child: Text(
-                      'Congratulations!\nYou have completed the quiz.',
+                      'You have completed the quiz!',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: isMobile ? 32 : 42,
@@ -330,7 +333,7 @@ class PostQuiz extends StatelessWidget {
                   // Bottom navigation icons
                   Padding(
                     padding: EdgeInsets.symmetric(
-                      horizontal: isMobile ? 40 : 80,
+                      horizontal: isMobile ? 20 : 40,
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -367,7 +370,7 @@ class PostQuiz extends StatelessWidget {
                           ],
                         ),
                         
-                        SizedBox(width: isMobile ? 32 : 42),
+                        SizedBox(width: isMobile ? 24 : 32),
                         
                         // Leaderboard button
                         Column(
@@ -402,7 +405,42 @@ class PostQuiz extends StatelessWidget {
                           ],
                         ),
                         
-                        SizedBox(width: isMobile ? 32 : 42),
+                        SizedBox(width: isMobile ? 24 : 32),
+                        
+                        // Answers button
+                        Column(
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => QuizAnswers(attemptId: attemptId),
+                                  ),
+                                );
+                              },
+                              child: SizedBox(
+                                width: isMobile ? 60 : 80,
+                                height: isMobile ? 60 : 80,
+                                child: SvgPicture.asset(
+                                  'assets/images/book.svg',
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: isMobile ? 8 : 12),
+                            Text(
+                              'Answers',
+                              style: TextStyle(
+                                fontSize: isMobile ? 14 : 16,
+                                color: MyApp.homeDarkGreyText,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        
+                        SizedBox(width: isMobile ? 24 : 32),
                         
                         // Share button
                         Column(

@@ -198,15 +198,24 @@ class _ResultsState extends State<Results> { //
     });
   }
   
-  // Convert UTC DateTime to EST
-  DateTime _convertToEST(DateTime utcDateTime) {
+  // Convert UTC DateTime to Toronto timezone
+  DateTime _convertToToronto(DateTime utcDateTime) {
+    // Toronto uses America/Toronto timezone (EST/EDT)
     // EST is UTC-5, EDT is UTC-4
-    // For simplicity, we'll use EST (UTC-5) year-round
-    return utcDateTime.subtract(Duration(hours: 5));
+    // We'll use a simple approach: check if date is in DST period (March-November)
+    final month = utcDateTime.month;
+    if (month >= 3 && month <= 11) {
+      // Likely EDT (UTC-4) for most of this period
+      // More precise: March 2nd Sunday to November 1st Sunday
+      return utcDateTime.subtract(Duration(hours: 4));
+    } else {
+      // EST (UTC-5) for winter months
+      return utcDateTime.subtract(Duration(hours: 5));
+    }
   }
   
-  // Format date in EST
-  String _formatDateEST(String dateTimeString) {
+  // Format date in Toronto timezone
+  String _formatDateToronto(String dateTimeString) {
     try {
       // Parse the datetime string - if it has timezone info, it will be parsed correctly
       // If not, assume it's UTC (common for database timestamps)
@@ -218,8 +227,8 @@ class _ResultsState extends State<Results> { //
         // No timezone info, assume UTC
         utcDateTime = DateTime.parse(dateTimeString).toUtc();
       }
-      final estDateTime = _convertToEST(utcDateTime);
-      return DateFormat('MM/dd/yyyy h:mma').format(estDateTime);
+      final torontoDateTime = _convertToToronto(utcDateTime);
+      return DateFormat('MM/dd/yyyy h:mma').format(torontoDateTime);
     } catch (e) {
       return dateTimeString;
     }
@@ -407,7 +416,7 @@ class _ResultsState extends State<Results> { //
                               ...List.generate(
                                 numRows,
                                 (index) {
-                                  String formattedDate = _formatDateEST(testList[index].dateTime);
+                                  String formattedDate = _formatDateToronto(testList[index].dateTime);
                                   double scoreNumber = testList[index].score; 
                                   return Container(
                                     margin: EdgeInsets.only(bottom: isMobile ? 16 : 20),

@@ -486,7 +486,7 @@ class Leaderboard extends StatelessWidget {
                                 ],
                               ),
                             );
-                          }).toList(),
+                          }),
                           
                           SizedBox(height: isMobile ? 20 : 30),
                         ],
