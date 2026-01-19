@@ -34,13 +34,15 @@ class ApiService {
     required String email,
     required String password,
     required String name,
+    required String? interestedProgram, // "69598383bfc1a2a7926b46f6"
+    required String? studentType, // "school"
+    required String? photo, // "https://example.com/profile.jpg",
     String? phone,
     String? institution,
     String? address,
     String? country,
     String? gender,
     String? grade,
-    String? photo,
     String? userType,
     String? referenceCode,
   }) async {
@@ -97,7 +99,7 @@ class ApiService {
   Future<Map<String, dynamic>> getProfile() async {
     final token = await getToken(); // reads the user's token from current storage (fields are not)
     if (token == null || token.isEmpty) {
-      throw Exception('No token saved');
+      throw Exception('No token  saved');
     }
     final res = await _dio.get( // Retrieve user data from server using token
       '/user/profile',

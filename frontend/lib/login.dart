@@ -27,6 +27,9 @@ class _LoginPageState extends State<LoginPage> { // stateful because transitions
   final userTypeController = TextEditingController();
   final referenceCodeController = TextEditingController();  
 
+  final studentTypeController = TextEditingController();
+  final interestedProgramController = TextEditingController(); // "69598383bfc1a2a7926b46f6"
+
   bool _isLogin = true; // true = Login, false = Sign Up
   bool _isLoading = false; // prevent spam tapping and show the spinner.
 
@@ -100,6 +103,8 @@ class _LoginPageState extends State<LoginPage> { // stateful because transitions
         photo: photoController.text.trim(),
         userType: userTypeController.text.trim(),
         referenceCode: referenceCodeController.text.trim(),
+        studentType: studentTypeController.text.trim(),
+        interestedProgram: interestedProgramController.text.trim(),
       );
     }
 
