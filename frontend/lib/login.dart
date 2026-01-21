@@ -23,12 +23,12 @@ class _LoginPageState extends State<LoginPage> { // stateful because transitions
   final countryController = TextEditingController();
   final genderController = TextEditingController();
   final gradeController = TextEditingController();
-  final photoController = TextEditingController();
   final userTypeController = TextEditingController();
   final referenceCodeController = TextEditingController();  
 
   final studentTypeController = TextEditingController();
   final interestedProgramController = TextEditingController(); // "69598383bfc1a2a7926b46f6"
+  final photoController = TextEditingController();
 
   bool _isLogin = true; // true = Login, false = Sign Up
   bool _isLoading = false; // prevent spam tapping and show the spinner.
@@ -100,11 +100,11 @@ class _LoginPageState extends State<LoginPage> { // stateful because transitions
         country: countryController.text.trim(),
         gender: genderController.text.trim(),
         grade: gradeController.text.trim(),
-        photo: photoController.text.trim(),
+        photo: "https://example.com/profile.jpg",
         userType: userTypeController.text.trim(),
         referenceCode: referenceCodeController.text.trim(),
-        studentType: studentTypeController.text.trim(),
-        interestedProgram: interestedProgramController.text.trim(),
+        studentType: "school",
+        interestedProgram: "69598383bfc1a2a7926b46f6",
       );
     }
 
@@ -137,7 +137,7 @@ class _LoginPageState extends State<LoginPage> { // stateful because transitions
               const SizedBox(height: 12),
               TextField(
               controller: nameController,
-              decoration: const InputDecoration(labelText: 'Full Name'),
+              decoration: const InputDecoration(labelText: 'Name'),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -166,11 +166,6 @@ class _LoginPageState extends State<LoginPage> { // stateful because transitions
               ),
               const SizedBox(height: 12),
               TextField(
-              controller: photoController,
-              decoration: const InputDecoration(labelText: 'Photo'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
               controller: userTypeController,
               decoration: const InputDecoration(labelText: 'User Type'),
               ),
@@ -180,17 +175,18 @@ class _LoginPageState extends State<LoginPage> { // stateful because transitions
               decoration: const InputDecoration(labelText: 'Reference Code'),
               ),
             ],
+            const SizedBox(height: 12),
             TextField(
-              controller: emailController,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(labelText: 'Email'),
+            controller: emailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(labelText: 'Email'),
             ),
             const SizedBox(height: 12),
             TextField(
-              controller: passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'Password'),
-            ),
+            controller: passwordController,
+            obscureText: true,
+            decoration: const InputDecoration(labelText: 'Password'),
+            ),            
             if (_isLogin == false)...[
               const SizedBox(height: 12),
               TextField(

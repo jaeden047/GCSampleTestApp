@@ -36,7 +36,7 @@ class ApiService {
     required String name,
     required String? interestedProgram, // "69598383bfc1a2a7926b46f6"
     required String? studentType, // "school"
-    required String? photo, // "https://example.com/profile.jpg",
+    required String? photo, // "https://example.com/profile.jpg"
     String? phone,
     String? institution,
     String? address,
@@ -51,6 +51,9 @@ class ApiService {
           'email': email,
           'password': password,
           'name': name,
+          'interestedProgram': interestedProgram,
+          'studentType': studentType,
+          'photo': photo,
           if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
           if (institution != null && institution.trim().isNotEmpty) 'institution': institution.trim(),
           if (address != null && address.trim().isNotEmpty) 'address': address.trim(),
