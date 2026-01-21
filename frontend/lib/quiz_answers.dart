@@ -310,7 +310,7 @@ class _QuizAnswersState extends State<QuizAnswers> {
                                         Icon(Icons.star, color: MyApp.homeYellow, size: 18),
                                         SizedBox(width: 6),
                                         Text(
-                                          'Score: ${scoreNumber.toStringAsFixed(1)}%',
+                                          'Score: ${scoreNumber.toInt()} pts',
                                           style: TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w600,

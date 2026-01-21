@@ -269,6 +269,7 @@ class _ResultsState extends State<Results> { //
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
+                            SizedBox(height: screenHeight * 0.15), // Add top spacing to center vertically
                             // SVG Image
                             SvgPicture.asset(
                               'assets/images/grey_results.svg',
@@ -279,16 +280,17 @@ class _ResultsState extends State<Results> { //
                             Text(
                               'Empty History',
                               style: TextStyle(
-                                fontSize: 20,
+                                fontSize: isMobile ? 20 : 24,
                                 fontWeight: FontWeight.bold,
                                 color: MyApp.homeDarkGreyText,
                               ),
                             ),
+                            SizedBox(height: 8),
                             Text(
                               'Try a quiz before coming back',
                               style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
+                                fontSize: isMobile ? 14 : 16,
+                                fontWeight: FontWeight.w500,
                                 color: MyApp.homeGreyText,
                               ),
                             ),
@@ -468,7 +470,7 @@ class _ResultsState extends State<Results> { //
                                                   Icon(Icons.star, color: MyApp.homeYellow, size: 18),
                                                   SizedBox(width: 6),
                                                   Text(
-                                                    'Score: ${scoreNumber.toStringAsFixed(1)}%',
+                                                    'Score: ${scoreNumber.toInt()} pts',
                                                     style: TextStyle(
                                                       fontSize: 16,
                                                       fontWeight: FontWeight.w600,

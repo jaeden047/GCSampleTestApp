@@ -3,26 +3,71 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'main.dart';
 
-class Leaderboard extends StatelessWidget {
+class Leaderboard extends StatefulWidget {
   final String topicName;
 
   const Leaderboard({
     super.key,
     required this.topicName,
   });
+
+  @override
+  State<Leaderboard> createState() => _LeaderboardState();
+}
+
+class _LeaderboardState extends State<Leaderboard> {
+  String? selectedTopic;
+  List<Map<String, dynamic>> topicList = [];
+  bool isLoadingTopics = true;
+
+  @override
+  void initState() {
+    super.initState();
+    selectedTopic = widget.topicName;
+    _fetchTopics();
+  }
+
+  Future<void> _fetchTopics() async {
+    try {
+      final supabase = Supabase.instance.client;
+      final topicsResponse = await supabase
+          .from('topics')
+          .select('topic_name')
+          .order('topic_name');
+      
+      setState(() {
+        topicList = List<Map<String, dynamic>>.from(topicsResponse);
+        isLoadingTopics = false;
+        // If the initial topic is not in the list, use the first available topic
+        if (selectedTopic != null && !topicList.any((t) => t['topic_name'] == selectedTopic)) {
+          if (topicList.isNotEmpty) {
+            selectedTopic = topicList[0]['topic_name'] as String;
+          }
+        } else if (selectedTopic == null && topicList.isNotEmpty) {
+          selectedTopic = topicList[0]['topic_name'] as String;
+        }
+      });
+    } catch (e) {
+      setState(() {
+        isLoadingTopics = false;
+      });
+    }
+  }
   
   // Check if screen is mobile
   bool _isMobile(BuildContext context) {
     return MediaQuery.of(context).size.width < 768;
   }
   
-  // Calculate number of stars based on score
-  int _getStarCount(double score) {
-    if (score >= 80) {
+  // Calculate number of stars based on percentage (score / totalQuestions * 100)
+  int _getStarCount(double score, int totalQuestions) {
+    if (totalQuestions == 0) return 0;
+    final percentage = (score / totalQuestions) * 100;
+    if (percentage >= 80) {
       return 3;
-    } else if (score >= 60) {
+    } else if (percentage >= 60) {
       return 2;
-    } else if (score >= 40) {
+    } else if (percentage >= 40) {
       return 1;
     } else {
       return 0;
@@ -291,7 +336,7 @@ class Leaderboard extends StatelessWidget {
     // Step 2: Get top 10 test_attempts joined with users, sorted
     final attemptsResponse = await supabase
       .from('test_attempts')
-      .select('score, duration_seconds, profiles(name)')
+      .select('score, duration_seconds, question_list, profiles(name)')
       .eq('topic_id', topicId)
       .order('score', ascending: false)
       .order('duration_seconds', ascending: true)
@@ -316,9 +361,16 @@ class Leaderboard extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: fetchLeaderboard(topicName),
-        builder: (context, snapshot) {
+      body: selectedTopic == null || isLoadingTopics
+          ? Center(
+              child: CircularProgressIndicator(
+                color: MyApp.homeTealGreen,
+              ),
+            )
+          : FutureBuilder<List<Map<String, dynamic>>>(
+              key: ValueKey(selectedTopic), // Rebuild when topic changes
+              future: fetchLeaderboard(selectedTopic!),
+              builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(
               child: CircularProgressIndicator(
@@ -336,14 +388,161 @@ class Leaderboard extends StatelessWidget {
               ),
             );
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(
-              child: Text(
-                'No data found',
-                style: TextStyle(
-                  color: MyApp.homeDarkGreyText,
-                  fontSize: isMobile ? 16 : 18,
-                ),
-              ),
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      // Decorative elements
+                      ..._buildDecorativeElements(screenWidth, screenHeight, isMobile, 0),
+                      // Main content
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isMobile ? 16.0 : 24.0,
+                          vertical: isMobile ? 16.0 : 24.0,
+                        ),
+                        child: Center(
+                          child: Container(
+                            constraints: BoxConstraints(
+                              maxWidth: isMobile ? double.infinity : 600,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Header section with filter on same line
+                                Container(
+                                  width: double.infinity,
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: isMobile ? 16 : 20,
+                                    vertical: isMobile ? 12 : 16,
+                                  ),
+                                  margin: EdgeInsets.only(bottom: isMobile ? 16 : 20),
+                                  decoration: BoxDecoration(
+                                    color: MyApp.homeLightPink,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Global Leaderboard',
+                                              style: TextStyle(
+                                                fontSize: isMobile ? 24 : 32,
+                                                fontWeight: FontWeight.bold,
+                                                color: MyApp.homeDarkGreyText,
+                                                fontFamily: 'serif',
+                                              ),
+                                            ),
+                                            SizedBox(height: 5),
+                                            Text(
+                                              'futuremind 2.0',
+                                              style: TextStyle(
+                                                fontSize: isMobile ? 16 : 20,
+                                                color: MyApp.homeGreyText,
+                                                fontFamily: 'sans-serif',
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      // Topic filter dropdown on the same line
+                                      Container(
+                                        padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12),
+                                        decoration: BoxDecoration(
+                                          color: MyApp.homeLightPink,
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(
+                                            color: MyApp.homeDarkGreyText.withOpacity(0.3),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: DropdownButton<String>(
+                                          value: selectedTopic,
+                                          hint: Text(
+                                            'Select topic',
+                                            style: TextStyle(
+                                              fontSize: isMobile ? 12 : 14,
+                                              color: MyApp.homeDarkGreyText.withOpacity(0.7),
+                                            ),
+                                          ),
+                                          underline: SizedBox(), // Remove default underline
+                                          icon: Icon(
+                                            Icons.arrow_drop_down,
+                                            color: MyApp.homeDarkGreyText,
+                                            size: isMobile ? 20 : 24,
+                                          ),
+                                          style: TextStyle(
+                                            fontSize: isMobile ? 12 : 14,
+                                            color: MyApp.homeDarkGreyText,
+                                          ),
+                                          dropdownColor: MyApp.homeLightPink,
+                                          items: topicList.map<DropdownMenuItem<String>>((topic) {
+                                            return DropdownMenuItem<String>(
+                                              value: topic['topic_name'] as String,
+                                              child: Text(topic['topic_name'] as String),
+                                            );
+                                          }).toList(),
+                                          onChanged: (String? newValue) {
+                                            if (newValue != null) {
+                                              setState(() {
+                                                selectedTopic = newValue;
+                                              });
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                
+                                // Empty state message
+                                Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      // SVG Image
+                                      SvgPicture.asset(
+                                        'assets/images/grey_results.svg',
+                                        height: 100,
+                                      ),
+                                      SizedBox(height: 20), // Space between the image and the text
+                                      // Text message
+                                      Text(
+                                        'Empty Leaderboard',
+                                        style: TextStyle(
+                                          fontSize: isMobile ? 20 : 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: MyApp.homeDarkGreyText,
+                                        ),
+                                      ),
+                                      SizedBox(height: 8),
+                                      Text(
+                                        'Take a quiz and be the first student on our leaderboard!',
+                                        style: TextStyle(
+                                          fontSize: isMobile ? 14 : 16,
+                                          fontWeight: FontWeight.w500,
+                                          color: MyApp.homeGreyText,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             );
           }
 
@@ -377,26 +576,36 @@ class Leaderboard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Header section
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Global Leaderboard',
-                                      style: TextStyle(
-                                        fontSize: isMobile ? 32 : 44,
-                                        fontWeight: FontWeight.bold,
-                                        color: MyApp.homeDarkGreyText,
-                                        fontFamily: 'serif',
+                          // Header section with filter on same line
+                          Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isMobile ? 16 : 20,
+                              vertical: isMobile ? 12 : 16,
+                            ),
+                            margin: EdgeInsets.only(bottom: isMobile ? 16 : 20),
+                            decoration: BoxDecoration(
+                              color: MyApp.homeLightPink,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Global Leaderboard',
+                                        style: TextStyle(
+                                          fontSize: isMobile ? 24 : 32,
+                                          fontWeight: FontWeight.bold,
+                                          color: MyApp.homeDarkGreyText,
+                                          fontFamily: 'serif',
+                                        ),
                                       ),
-                                    ),
-                                    SizedBox(height: 5),
-                                    Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Text(
+                                      SizedBox(height: 5),
+                                      Text(
                                         'futuremind 2.0',
                                         style: TextStyle(
                                           fontSize: isMobile ? 16 : 20,
@@ -404,19 +613,65 @@ class Leaderboard extends StatelessWidget {
                                           fontFamily: 'sans-serif',
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
+                                // Topic filter dropdown on the same line
+                                Container(
+                                  padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12),
+                                  decoration: BoxDecoration(
+                                    color: MyApp.homeLightPink,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: MyApp.homeDarkGreyText.withOpacity(0.3),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: DropdownButton<String>(
+                                    value: selectedTopic,
+                                    hint: Text(
+                                      'Select topic',
+                                      style: TextStyle(
+                                        fontSize: isMobile ? 12 : 14,
+                                        color: MyApp.homeDarkGreyText.withOpacity(0.7),
+                                      ),
+                                    ),
+                                    underline: SizedBox(), // Remove default underline
+                                    icon: Icon(
+                                      Icons.arrow_drop_down,
+                                      color: MyApp.homeDarkGreyText,
+                                      size: isMobile ? 20 : 24,
+                                    ),
+                                    style: TextStyle(
+                                      fontSize: isMobile ? 12 : 14,
+                                      color: MyApp.homeDarkGreyText,
+                                    ),
+                                    dropdownColor: MyApp.homeLightPink,
+                                    items: topicList.map<DropdownMenuItem<String>>((topic) {
+                                      return DropdownMenuItem<String>(
+                                        value: topic['topic_name'] as String,
+                                        child: Text(topic['topic_name'] as String),
+                                      );
+                                    }).toList(),
+                                    onChanged: (String? newValue) {
+                                      if (newValue != null) {
+                                        setState(() {
+                                          selectedTopic = newValue;
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          
-                          SizedBox(height: isMobile ? 24 : 32),
                           
                           // Leaderboard cards
                           ...leaderboard.map((user) {
                             final score = (user['score'] as num?)?.toDouble() ?? 0.0;
-                            final starCount = _getStarCount(score);
+                            final questionList = user['question_list'] as List<dynamic>? ?? [];
+                            final totalQuestions = questionList.length;
+                            final starCount = _getStarCount(score, totalQuestions);
                             final userName = user['profiles']?['name'] ?? 'Unknown';
                             
                             return Container(
@@ -460,9 +715,9 @@ class Leaderboard extends StatelessWidget {
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      // Points
+                                      // Topic name and points
                                       Text(
-                                        '${score.toStringAsFixed(1)} points',
+                                        '$selectedTopic: ${score.toInt()} pts',
                                         style: TextStyle(
                                           fontSize: isMobile ? 14 : 16,
                                           color: MyApp.homeGreyText,

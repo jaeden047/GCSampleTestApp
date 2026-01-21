@@ -170,21 +170,45 @@ class _HomeState extends State<Home> {
                                 // Leaderboard button with star icon
                                 GestureDetector(
                                   onTap: () async {
-                                    // Get the first topic for leaderboard navigation
+                                    // Find a topic that has test attempts for leaderboard navigation
                                     // In a real scenario, you might want to show a topic selection dialog
                                     try {
                                       final supabase = Supabase.instance.client;
-                                      final topicsResponse = await supabase
-                                          .from('topics')
-                                          .select('topic_name')
+                                      String? topicName;
+                                      
+                                      // First, try to get a topic_id from test_attempts (a topic that has attempts)
+                                      final attemptsResponse = await supabase
+                                          .from('test_attempts')
+                                          .select('topic_id')
                                           .limit(1);
                                       
-                                      if (topicsResponse.isNotEmpty) {
-                                        final topicName = topicsResponse[0]['topic_name'] as String;
+                                      if (attemptsResponse.isNotEmpty) {
+                                        // Found attempts, get the topic name for this topic_id
+                                        final topicId = attemptsResponse[0]['topic_id'];
+                                        final topicResponse = await supabase
+                                            .from('topics')
+                                            .select('topic_name')
+                                            .eq('topic_id', topicId)
+                                            .single();
+                                        
+                                        topicName = topicResponse['topic_name'] as String;
+                                      } else {
+                                        // No attempts found, fall back to first topic
+                                        final topicsResponse = await supabase
+                                            .from('topics')
+                                            .select('topic_name')
+                                            .limit(1);
+                                        
+                                        if (topicsResponse.isNotEmpty) {
+                                          topicName = topicsResponse[0]['topic_name'] as String;
+                                        }
+                                      }
+                                      
+                                      if (topicName != null) {
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (context) => Leaderboard(topicName: topicName),
+                                            builder: (context) => Leaderboard(topicName: topicName!),
                                           ),
                                         );
                                       } else {
@@ -194,7 +218,7 @@ class _HomeState extends State<Home> {
                                       }
                                     } catch (e) {
                                       ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Error loading leaderboard')),
+                                        SnackBar(content: Text('Error loading leaderboard: $e')),
                                       );
                                     }
                                   },

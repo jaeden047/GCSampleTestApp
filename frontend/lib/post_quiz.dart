@@ -282,7 +282,7 @@ class PostQuiz extends StatelessWidget {
                         ),
                         SizedBox(width: isMobile ? 8 : 12),
                         Text(
-                          '${score.toStringAsFixed(1)}%',
+                          '${score.toInt()} pts',
                           style: TextStyle(
                             fontSize: isMobile ? 20 : 24,
                             fontWeight: FontWeight.bold,
