@@ -17,6 +17,24 @@ class MyApp extends StatelessWidget {
   final Color bgColor = const Color(0xFFE5ECDF); // #E5ECDF
   final Color txColor = const Color(0xFF2A262A); // #2A262A
 
+  // Login page colors (from Figma design - testing phase)
+  static const Color loginTealBackground = Color(0xFF439D93); // Teal background
+  static const Color loginPinkTitle = Color(0xFFFFBEF4); // Pink title
+  static const Color loginDarkNavyButton = Color(0xFF14172D); // Dark navy button
+  static const Color loginGreySubtitle = Color(0xFFC8C8C8); // Grey subtitle
+  static const Color loginLightGreyHeader = Color(0xFFF5F5F5); // Light grey header
+
+  // Home screen colors (from new Figma design)
+  static const Color homeLightGreyBackground = Color(0xFFF5F5F5); // Light grey background
+  static const Color homeTealGreen = Color(0xFF439D93); // Teal-green for cards and accents
+  static const Color homeDarkTealGreen = Color(0xFF2A7A72); // Dark teal-green for card edges
+  static const Color homeLightPink = Color(0xFFFFBEF4); // Light pink for decorative elements
+  static const Color homeYellow = Color(0xFFFFD700); // Yellow for accents
+  static const Color homePurple = Color(0xFF9B59B6); // Purple for decorative elements
+  static const Color homeGreyText = Color(0xFF808080); // Grey text color
+  static const Color homeDarkGreyText = Color(0xFF2A262A); // Dark grey text
+  static const Color homeWhite = Color(0xFFFFFFFF); // White for buttons and overlays
+
   const MyApp({super.key});
   @override
   Widget build(BuildContext context) {
@@ -49,9 +67,9 @@ class MyApp extends StatelessWidget {
           onSurface: Color(0xFF2A262A),
         ),
       ),
+      initialRoute: '/',
       routes: {
-        '/': (_) => const AuthGate(),
-        '/reset-password': (_) => const ResetPasswordPage(),
+        '/': (_) => const AuthGate()
       },
       debugShowCheckedModeBanner: false,
     );
