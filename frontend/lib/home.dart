@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'; // supabase flutter sdk
 import 'package:flutter_svg/flutter_svg.dart'; // import svg image
+import 'package:frontend/login.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 // navigated pages
+import 'api_service.dart';
 import 'profile.dart';
 import 'math_grades.dart';
 import 'env_topics.dart';
@@ -20,15 +22,15 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  String? userName;
+  String? userName; // "Welcome ___", name.
   bool isLoading = true;
   final ScrollController _scrollController = ScrollController();
   bool _hasCentered = false;
 
   @override
-  void initState() {
+  void initState() { // Runs instantly
     super.initState();
-    _getUserData();
+    _getUserData(); 
   }
 
   @override
@@ -39,37 +41,34 @@ class _HomeState extends State<Home> {
 
   // Fetch user data from Supabase when Home page initializes
   Future<void> _getUserData() async {
-    final user = Supabase.instance.client.auth.currentUser;
-
-    if (user != null) {
-      try {
-        final response = await Supabase.instance.client
-            .from('profiles')
-            .select('name')
-            .eq('id', user.id)
-            .single();
-
-        if (response['name'] != null) {
-          setState(() {
-            userName = response['name'];
-          });
-        }
-      } catch (e) {
-        // Handle error if fetching profile fails
-        // print("Error fetching user data: $e");
-      }
+    // We need token (for access) and field map (for UI)
+    final profile = await ApiService.instance.getProfile(); 
+    // Inside getProfile(), it first reads the saved token from storage
+    // The returned profile is only the server’s JSON response map.
+    // The token is not inside profile. It is in _storage
+    final name = profile['name']?.toString(); 
+    // If token exists in storage, the app will treat the user as logged in (or will try to).
+    if (name == null){
+      await ApiService.instance.clearToken();// If name is non-usable; delete the user token. Make the session invalid, and re-login
+      ScaffoldMessenger.of(context).showSnackBar( 
+      const SnackBar(content: Text('Session invalid. Please log in again.')),
+      );
+      Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
+      ); 
     }
-    
-    // Stop loading indicator once data is fetched
-    setState(() {
-      isLoading = false;
+      setState(() { // Triggers rebuild with updated fields
+        userName = name;
+        isLoading = false;
     });
   }
   
   // Center the math card on mobile
   void _centerMathCard(BuildContext context) {
     if (!_hasCentered && _isMobile(context) && _scrollController.hasClients) {
-      _hasCentered = true;
+      _hasCentered = true; // marks centering happened; prevents re-run
       // Scroll to center the math card (second card)
       final cardWidth = 280.0; // Mobile card width
       final spacing = 20.0;
@@ -83,7 +82,7 @@ class _HomeState extends State<Home> {
     }
   }
 
-  // Get user initials from name
+  // Get user initials from name; to fit in mobile
   String _getUserInitials() {
     if (userName == null || userName!.isEmpty) return 'U';
     final parts = userName!.trim().split(' ');
@@ -96,7 +95,7 @@ class _HomeState extends State<Home> {
   // Check if screen is mobile
   bool _isMobile(BuildContext context) {
     return MediaQuery.of(context).size.width < 768;
-  }
+  } // If width < 768px; mobile user.
 
   @override
   Widget build(BuildContext context) {

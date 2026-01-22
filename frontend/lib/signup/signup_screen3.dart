@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../api_service.dart';
 import '../main.dart';
 import 'signup_data.dart';
 import 'signup_screen1.dart';
@@ -18,8 +18,7 @@ class SignupScreen3 extends StatefulWidget {
 class _SignupScreen3State extends State<SignupScreen3> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final supabase = Supabase.instance.client;
-  
+    
   bool _passwordVisible = false;
   bool _confirmPasswordVisible = false;
   bool _isLoading = false;
@@ -44,8 +43,8 @@ class _SignupScreen3State extends State<SignupScreen3> {
       return 'Password is required';
     }
     
-    if (password.length < 6) {
-      return 'Password must be at least 6 characters';
+    if (password.length < 8) {
+      return 'Password must be at least 8 characters';
     }
 
     final specialCharRegex = RegExp(r'[!@#$%^&*(),.?":{}|<>]');
@@ -92,92 +91,50 @@ class _SignupScreen3State extends State<SignupScreen3> {
     });
     
     try {
-      // Create Supabase auth account
-      final response = await supabase.auth.signUp(
-        email: widget.data.email!,
-        password: _passwordController.text,
-        data: {
-          'phone': widget.data.phoneNumber,
-        },
-      );
+      // Register via REST API
+      await ApiService.instance.register(
+      email: widget.data.email!,
+      password: _passwordController.text,
+      name: widget.data.fullName ?? '',
+      interestedProgram: 'input', // or null
+      studentType: 'input',               // or null
+      photo: 'input',
       
-      if (!mounted) return;
+      phone: widget.data.phoneNumber,
+      institution: widget.data.institutionSchool,
+      address: widget.data.address,
+      country: widget.data.residentialCountry,
+      gender: widget.data.gender,
+      grade: widget.data.grade, 
+      userType: 'input', // need to add userType
+      referenceCode: widget.data.referenceCode,
+    );
+
+    if (!mounted) return;
+
+    setState(() => _isLoading = false);
       
-      if (response.user != null && response.user?.id != null) {
-        final userId = response.user!.id;
-        
-        // Save to profiles table (only old fields for now)
-        try {
-          await supabase.from('profiles').insert({
-            'id': userId,
-            'name': widget.data.fullName,
-            'email': widget.data.email,
-            'phone_number': widget.data.phoneNumber,
-            // New fields will be saved later when database is updated
-            // 'gender': widget.data.gender,
-            // 'address': widget.data.address,
-            // 'school': widget.data.institutionSchool,
-            // 'country': widget.data.residentialCountry,
-          });
-          
-          final updatedData = widget.data.copyWith(
-            password: _passwordController.text,
-            confirmPassword: _confirmPasswordController.text,
-          );
-          
-          setState(() {
-            _isLoading = false;
-          });
-          
-          // Navigate to confirmation screen
-          if (mounted) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => SignupScreen4(data: updatedData)),
-            );
-          }
-        } catch (profileError) {
-          if (!mounted) return;
-          print('Profile insert failed: $profileError');
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Account created, but profile setup failed. Please contact support.'),
-              duration: Duration(seconds: 5),
-            ),
-          );
-          setState(() {
-            _isLoading = false;
-          });
-        }
-      } else {
+    } catch (e) {
         if (!mounted) return;
+        print('Unexpected error during signup: $e');
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Sign up completed, but user data is missing. Please try logging in.')),
+          const SnackBar(
+            content: Text('An error occurred. Please try again.'),
+            duration: Duration(seconds: 3),
+          ),
         );
         setState(() {
           _isLoading = false;
         });
-      }
-    } on AuthException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
+
+        final updatedData = widget.data.copyWith(
+        password: _passwordController.text,
+        confirmPassword: _confirmPasswordController.text,
       );
-      setState(() {
-        _isLoading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      print('Unexpected error during signup: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('An error occurred. Please try again.'),
-          duration: Duration(seconds: 3),
-        ),
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => SignupScreen4(data: updatedData)),
       );
-      setState(() {
-        _isLoading = false;
-      });
     }
   }
   

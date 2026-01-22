@@ -20,6 +20,19 @@ class _SignupScreen1State extends State<SignupScreen1> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
+  final phoneController = TextEditingController();
+  //--
+  final institutionController = TextEditingController();
+  final addressController = TextEditingController();
+  final countryController = TextEditingController();
+  final genderController = TextEditingController();
+  final gradeController = TextEditingController();
+  final userTypeController = TextEditingController();
+  final referenceCodeController = TextEditingController();  
+  //--
+  final studentTypeController = TextEditingController();
+  final interestedProgramController = TextEditingController(); // "69598383bfc1a2a7926b46f6"
+  final photoController = TextEditingController();
   
   CountryCode _selectedCountryCode = CountryCodes.getDefault();
   String? _selectedGender;

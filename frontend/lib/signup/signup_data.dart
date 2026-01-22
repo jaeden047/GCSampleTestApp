@@ -6,7 +6,8 @@ class SignupData {
   String? phoneNumber;
   String? countryCode;
   String? gender;
-  
+  String? grade;
+
   // Screen 2 - Additional Details
   String? address;
   String? institutionSchool;
@@ -23,6 +24,7 @@ class SignupData {
     this.phoneNumber,
     this.countryCode,
     this.gender,
+    this.grade,
     this.address,
     this.institutionSchool,
     this.residentialCountry,
@@ -38,6 +40,7 @@ class SignupData {
     String? phoneNumber,
     String? countryCode,
     String? gender,
+    String? grade,
     String? address,
     String? institutionSchool,
     String? residentialCountry,
@@ -51,6 +54,7 @@ class SignupData {
       phoneNumber: phoneNumber ?? this.phoneNumber,
       countryCode: countryCode ?? this.countryCode,
       gender: gender ?? this.gender,
+      grade: grade ?? this.grade,
       address: address ?? this.address,
       institutionSchool: institutionSchool ?? this.institutionSchool,
       residentialCountry: residentialCountry ?? this.residentialCountry,
