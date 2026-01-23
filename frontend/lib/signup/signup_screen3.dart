@@ -113,6 +113,16 @@ class _SignupScreen3State extends State<SignupScreen3> {
     if (!mounted) return;
 
     setState(() => _isLoading = false);
+
+      final updatedData = widget.data.copyWith(
+        password: _passwordController.text,
+        confirmPassword: _confirmPasswordController.text,
+      );
+
+        Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => SignupScreen4(data: updatedData)),
+      );
       
     } catch (e) {
         if (!mounted) return;
@@ -123,18 +133,7 @@ class _SignupScreen3State extends State<SignupScreen3> {
             duration: Duration(seconds: 3),
           ),
         );
-        setState(() {
-          _isLoading = false;
-        });
-
-        final updatedData = widget.data.copyWith(
-        password: _passwordController.text,
-        confirmPassword: _confirmPasswordController.text,
-      );
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => SignupScreen4(data: updatedData)),
-      );
+        setState(() => _isLoading = false);
     }
   }
   
