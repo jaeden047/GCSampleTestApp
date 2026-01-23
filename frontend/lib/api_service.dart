@@ -43,7 +43,7 @@ class ApiService {
     String? country,
     String? gender,
     String? grade,
-    String? userType,
+    String? userType, // 'STUDENT', 
     String? referenceCode,
   }) async {
     try {

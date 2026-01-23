@@ -28,7 +28,7 @@ class _SignupScreen2State extends State<SignupScreen2> {
   void initState() {
     super.initState();
     _addressController.text = widget.data.address ?? '';
-    _selectedGrade = widget.data.grade ?? '';
+    _selectedGrade = widget.data.grade;
     _institutionController.text = widget.data.institutionSchool ?? '';
     _countryController.text = widget.data.residentialCountry ?? '';
     _referenceCodeController.text = widget.data.referenceCode ?? ''; 
