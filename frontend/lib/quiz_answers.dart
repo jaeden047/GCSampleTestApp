@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:logger/logger.dart';
 import 'main.dart';
 
 class QuizAnswers extends StatefulWidget {
@@ -72,6 +74,16 @@ class Topics {
 
 class _QuizAnswersState extends State<QuizAnswers> {
   final supabase = Supabase.instance.client;
+  final Logger _logger = Logger(
+    printer: PrettyPrinter(
+      methodCount: 0,
+      errorMethodCount: 5,
+      lineLength: 120,
+      colors: true,
+      printEmojis: true,
+      printTime: true,
+    ),
+  );
   TestAttempt? testAttempt;
   List<Answers> answerList = [];
   List<Questions> questionList = [];
@@ -153,29 +165,130 @@ class _QuizAnswersState extends State<QuizAnswers> {
     }
   }
 
-  // Convert UTC DateTime to Toronto timezone
-  DateTime _convertToToronto(DateTime utcDateTime) {
-    final month = utcDateTime.month;
-    if (month >= 3 && month <= 11) {
-      return utcDateTime.subtract(Duration(hours: 4));
-    } else {
-      return utcDateTime.subtract(Duration(hours: 5));
-    }
-  }
-
   // Format date in Toronto timezone
   String _formatDateToronto(String dateTimeString) {
     try {
-      DateTime utcDateTime;
-      if (dateTimeString.endsWith('Z') || dateTimeString.contains('+') || dateTimeString.contains('-', 10)) {
-        utcDateTime = DateTime.parse(dateTimeString).toUtc();
-      } else {
-        utcDateTime = DateTime.parse(dateTimeString).toUtc();
+      _logger.d('=== Timezone Conversion Debug ===');
+      _logger.d('Original timestamp string from Supabase: $dateTimeString');
+      
+      // Parse the datetime string - handle ISO format (e.g., "2026-01-22T17:24:03.99345")
+      DateTime parsedDateTime;
+      
+      // Remove microseconds if present for easier parsing, but preserve timezone
+      String cleanDateTime = dateTimeString.trim();
+      
+      // Check if it has timezone info FIRST (before removing microseconds)
+      // Look for patterns like: "2026-01-22T17:40:00+00:00" or "2026-01-22T17:40:00Z"
+      bool hasTimezone = cleanDateTime.endsWith('Z') || 
+                         RegExp(r'[+-]\d{2}:\d{2}$').hasMatch(cleanDateTime);
+      
+      // Extract timezone part if present (e.g., "+00:00" or "-05:00")
+      String? timezonePart;
+      if (hasTimezone && !cleanDateTime.endsWith('Z')) {
+        final timezoneMatch = RegExp(r'([+-]\d{2}:\d{2})$').firstMatch(cleanDateTime);
+        if (timezoneMatch != null) {
+          timezonePart = timezoneMatch.group(1);
+        }
       }
-      final torontoDateTime = _convertToToronto(utcDateTime);
-      return DateFormat('MM/dd/yyyy h:mma').format(torontoDateTime);
+      
+      // Handle different formats from Supabase
+      // Supabase typically returns timestamps in ISO 8601 format
+      // Remove microseconds but preserve timezone
+      if (cleanDateTime.contains('.')) {
+        // Split on '.' but keep timezone if present
+        final parts = cleanDateTime.split('.');
+        cleanDateTime = parts[0];
+        // Re-add timezone if it was present
+        if (timezonePart != null) {
+          cleanDateTime += timezonePart;
+        } else if (hasTimezone && cleanDateTime.endsWith('Z')) {
+          // Z is already at the end, keep it
+        }
+      }
+      
+      _logger.d('Has timezone info: $hasTimezone');
+      _logger.d('Cleaned datetime string: $cleanDateTime');
+      
+      if (!hasTimezone) {
+        // No timezone indicator - add 'Z' to indicate UTC
+        cleanDateTime += 'Z';
+        _logger.d('Added Z suffix, new string: $cleanDateTime');
+      }
+      
+      // Parse the datetime - DateTime.parse handles timezone if present
+      parsedDateTime = DateTime.parse(cleanDateTime);
+      _logger.d('Parsed DateTime (before UTC conversion): ${parsedDateTime.toString()}');
+      
+      // Always convert to UTC for consistent handling
+      // If it had timezone info, toUtc() converts it
+      // If it didn't, we already added 'Z' so it's treated as UTC
+      parsedDateTime = parsedDateTime.toUtc();
+      _logger.d('UTC DateTime: ${parsedDateTime.year}-${parsedDateTime.month.toString().padLeft(2, '0')}-${parsedDateTime.day.toString().padLeft(2, '0')} ${parsedDateTime.hour.toString().padLeft(2, '0')}:${parsedDateTime.minute.toString().padLeft(2, '0')}:${parsedDateTime.second.toString().padLeft(2, '0')}');
+      
+      // Convert to Toronto timezone using timezone package
+      final torontoLocation = tz.getLocation('America/Toronto');
+      
+      // Create TZDateTime in UTC from the parsed DateTime
+      final utcTZ = tz.TZDateTime.utc(
+        parsedDateTime.year,
+        parsedDateTime.month,
+        parsedDateTime.day,
+        parsedDateTime.hour,
+        parsedDateTime.minute,
+        parsedDateTime.second,
+      );
+      
+      // Get timezone information for Toronto at this UTC time
+      final timeZoneInfo = torontoLocation.timeZone(utcTZ.millisecondsSinceEpoch);
+      
+      // The timezone package's offset represents the offset FROM UTC TO local time
+      // For EST (UTC-5): offset should be negative (behind UTC)
+      // For EDT (UTC-4): offset should be negative (behind UTC)
+      final offsetMs = timeZoneInfo.offset;
+      final offsetHours = offsetMs / 3600000;
+      
+      _logger.d('UTC TZDateTime: ${utcTZ.year}-${utcTZ.month.toString().padLeft(2, '0')}-${utcTZ.day.toString().padLeft(2, '0')} ${utcTZ.hour.toString().padLeft(2, '0')}:${utcTZ.minute.toString().padLeft(2, '0')}:${utcTZ.second.toString().padLeft(2, '0')}');
+      _logger.d('Toronto timezone offset: $offsetMs ms ($offsetHours hours)');
+      _logger.d('Is DST: ${timeZoneInfo.isDst}');
+      
+      // Convert UTC to Toronto time using the timezone package's proper method
+      // Create a TZDateTime in Toronto timezone directly from the UTC TZDateTime
+      // This is the correct way to convert between timezones
+      final torontoTZ = tz.TZDateTime.fromMillisecondsSinceEpoch(
+        torontoLocation,
+        utcTZ.millisecondsSinceEpoch,
+      );
+      
+      _logger.d('Toronto TZDateTime: ${torontoTZ.year}-${torontoTZ.month.toString().padLeft(2, '0')}-${torontoTZ.day.toString().padLeft(2, '0')} ${torontoTZ.hour.toString().padLeft(2, '0')}:${torontoTZ.minute.toString().padLeft(2, '0')}:${torontoTZ.second.toString().padLeft(2, '0')}');
+      
+      // Create a regular DateTime from the TZDateTime for formatting
+      // Use the year, month, day, hour, minute, second from the Toronto TZDateTime
+      final torontoDateTime = DateTime(
+        torontoTZ.year,
+        torontoTZ.month,
+        torontoTZ.day,
+        torontoTZ.hour,
+        torontoTZ.minute,
+        torontoTZ.second,
+      );
+      
+      _logger.d('Toronto DateTime: ${torontoDateTime.year}-${torontoDateTime.month.toString().padLeft(2, '0')}-${torontoDateTime.day.toString().padLeft(2, '0')} ${torontoDateTime.hour.toString().padLeft(2, '0')}:${torontoDateTime.minute.toString().padLeft(2, '0')}:${torontoDateTime.second.toString().padLeft(2, '0')}');
+      
+      // Format as MM/dd/yyyy h:mm a with space between date and time (e.g., "01/22/2026 12:24 PM")
+      final formattedDate = DateFormat('MM/dd/yyyy h:mm a').format(torontoDateTime);
+      _logger.d('Formatted date string: $formattedDate');
+      _logger.d('=== End Timezone Conversion Debug ===');
+      
+      return formattedDate;
     } catch (e) {
-      return dateTimeString;
+      // If parsing fails, try to format the original string as-is
+      try {
+        final fallbackDateTime = DateTime.parse(dateTimeString);
+        return DateFormat('MM/dd/yyyy h:mma').format(fallbackDateTime);
+      } catch (_) {
+        // Last resort: return a formatted version of the original string
+        return dateTimeString;
+      }
     }
   }
 

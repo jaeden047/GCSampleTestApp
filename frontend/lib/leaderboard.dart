@@ -27,16 +27,36 @@ class _LeaderboardState extends State<Leaderboard> {
     _fetchTopics();
   }
 
+  // Custom sort order for topics
+  int _getTopicSortOrder(String topicName) {
+    const order = [
+      'Sample Quiz',
+      'Grade 5 and 6',
+      'Grade 7 and 8',
+      'Grade 9 and 10',
+      'Grade 11 and 12',
+      'Plastic Pollution Focus',
+    ];
+    final index = order.indexOf(topicName);
+    // If topic not in predefined order, put it at the end
+    return index == -1 ? 999 : index;
+  }
+
   Future<void> _fetchTopics() async {
     try {
       final supabase = Supabase.instance.client;
       final topicsResponse = await supabase
           .from('topics')
-          .select('topic_name')
-          .order('topic_name');
+          .select('topic_name');
       
       setState(() {
         topicList = List<Map<String, dynamic>>.from(topicsResponse);
+        // Sort topics according to custom order
+        topicList.sort((a, b) {
+          final orderA = _getTopicSortOrder(a['topic_name'] as String);
+          final orderB = _getTopicSortOrder(b['topic_name'] as String);
+          return orderA.compareTo(orderB);
+        });
         isLoadingTopics = false;
         // If the initial topic is not in the list, use the first available topic
         if (selectedTopic != null && !topicList.any((t) => t['topic_name'] == selectedTopic)) {

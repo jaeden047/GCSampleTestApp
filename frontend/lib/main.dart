@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; // supabase flutter sdk
+import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'home.dart';
 import 'login.dart';
 
@@ -9,6 +10,8 @@ void main() async{
     url: 'https://duvycvfjnirqtqvxkrxz.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1dnljdmZqbmlycXRxdnhrcnh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA5NjE5MDUsImV4cCI6MjA2NjUzNzkwNX0.YGyw8CvpQTVCADMc7EDv2ez2i2uQ0p0bT6cmI7_ZWxQ',
   );
+  // Initialize timezone data
+  tz_data.initializeTimeZones();
   runApp(MyApp());
 }
 
