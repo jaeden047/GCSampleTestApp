@@ -91,6 +91,7 @@ class ApiService {
       data: {'email': email, 'password': password},
     ); // Sends POST request to baseURL (natural from _dio.post) + /auth/login 
       // server responds with a JSON object res.data; we store in variable as map.
+      print(res.data);
       final data = res.data as Map<String, dynamic>; 
       final token = data['token'];
       if (token == null) {
@@ -102,7 +103,7 @@ class ApiService {
   Future<Map<String, dynamic>> getProfile() async {
     final token = await getToken(); // reads the user's token from current storage (fields are not)
     if (token == null || token.isEmpty) {
-      throw Exception('No token  saved');
+      throw Exception('No token saved');
     }
     final res = await _dio.get( // Retrieve user data from server using token
       '/user/profile',

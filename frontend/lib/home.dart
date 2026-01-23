@@ -46,7 +46,7 @@ class _HomeState extends State<Home> {
     // Inside getProfile(), it first reads the saved token from storage
     // The returned profile is only the server’s JSON response map.
     // The token is not inside profile. It is in _storage
-    final name = profile['name']?.toString(); 
+    final name = profile['user']?['name']?.toString();
     // If token exists in storage, the app will treat the user as logged in (or will try to).
     if (name == null){
       await ApiService.instance.clearToken();// If name is non-usable; delete the user token. Make the session invalid, and re-login

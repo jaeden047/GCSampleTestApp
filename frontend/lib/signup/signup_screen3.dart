@@ -183,7 +183,7 @@ class _SignupScreen3State extends State<SignupScreen3> {
                     SizedBox(height: isMobile ? 16 : 20),
                     // Instruction text
                     Text(
-                      'Password should have a combination of alphabets, numbers, special characters, and be at least 6 characters long.',
+                      'Password should have a combination of alphabets, numbers, special characters, and be at least 8 characters long.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: greySubtitle,

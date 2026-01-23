@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'api_service.dart';
 import 'login.dart';
 import 'main.dart';
 
@@ -159,11 +160,12 @@ class _ProfilePageState extends State<ProfilePage> {
   // Function to sign out
   Future<void> signOut() async {
     await supabase.auth.signOut();
+    await ApiService.instance.clearToken(); // clears API token
     if (mounted) {
       Navigator.pushAndRemoveUntil(
         context,
         PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => LoginPage(),
+          pageBuilder: (context, animation, secondaryAnimation) => const LoginPage(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             var tween = Tween(begin: 0.0, end: 1.0);
             var opacityAnimation = animation.drive(tween);
