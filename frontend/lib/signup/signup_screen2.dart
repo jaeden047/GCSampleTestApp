@@ -76,7 +76,7 @@ class _SignupScreen2State extends State<SignupScreen2> {
       grade: _selectedGrade,
       residentialCountry: _countryController.text.trim(),
       referenceCode: _referenceCodeController.text.trim().isEmpty 
-          ? null 
+          ? 'NOTREDAMEUALAA' 
           : _referenceCodeController.text.trim(),
     );
     

@@ -96,9 +96,10 @@ class _SignupScreen3State extends State<SignupScreen3> {
       email: widget.data.email!,
       password: _passwordController.text,
       name: widget.data.fullName ?? '',
-      interestedProgram: 'input', // or null
-      studentType: 'input',               // or null
-      photo: 'input',
+      interestedProgram: '69598383bfc1a2a7926b46f6', 
+      studentType: 'school',               
+      photo: 'https://example.com/profile.jpg',
+      userType: 'STUDENT', 
       
       phone: widget.data.phoneNumber,
       institution: widget.data.institutionSchool,
@@ -106,8 +107,7 @@ class _SignupScreen3State extends State<SignupScreen3> {
       country: widget.data.residentialCountry,
       gender: widget.data.gender,
       grade: widget.data.grade, 
-      userType: 'input', // need to add userType
-      referenceCode: widget.data.referenceCode,
+      referenceCode: widget.data.referenceCode, 
     );
 
     if (!mounted) return;

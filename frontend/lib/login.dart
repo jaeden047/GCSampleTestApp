@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 // Page Imports
 import 'home.dart';
@@ -149,14 +148,18 @@ class _LoginPageState extends State<LoginPage> { // stateful because transitions
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const Home()),
     );
-  } catch (e) {
+  } catch (e, st) {
+    print('AUTH ERROR: $e');
+    print('STACK: $st');
+
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(e.toString())),
+      SnackBar(content: Text('Auth failed: $e')),
     );
   } finally {
-    if (!mounted) return; // If the widgets no longer on screen, stop running function.
-    setState(() => _isLoading = false);
-  }
+  if (!mounted) return;
+  setState(() => _isLoading = false);
+}
 }  
 
   @override
