@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart'; //supabase flutter sdk
 import 'package:flutter_svg/flutter_svg.dart';
 import 'quiz.dart';
 import 'main.dart';
+import 'quiz_rules.dart';
 
 // EnvTopics page
 // Showcase all environmental quiz topics for the users to select
@@ -146,21 +147,36 @@ class _EnvTopicsState extends State<EnvTopics> {
 
           if (quizQuestions is List) {
             final questionsWithAnswers = quizQuestions.cast<Map<String, dynamic>>();
-            // 4. Navigate to quiz page if the attempt ID is returned
+            // 4. Show quiz rules first, then navigate to quiz page
+            if (!mounted) return;
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => QuizPage(
-                  attemptId: quizAttempt,
-                  questions: questionsWithAnswers,
-                  topicName: topicName,
-                  onRedoQuiz: () => _startQuiz(context, topicName),
+                builder: (context) => QuizRulesScreen(
+                  onAgree: () {
+                    // After agreeing to rules, navigate to quiz
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => QuizPage(
+                          attemptId: quizAttempt,
+                          questions: questionsWithAnswers,
+                          topicName: topicName,
+                          onRedoQuiz: () => _startQuiz(context, topicName),
+                        ),
+                      ),
+                    ).then((_) {
+                      // Refresh taken quizzes after returning from quiz
+                      _fetchTakenQuizzes();
+                    });
+                  },
+                  onClose: () {
+                    // Close quiz rules and go back to quiz topic screen
+                    Navigator.pop(context);
+                  },
                 ),
               ),
-            ).then((_) {
-              // Refresh taken quizzes after returning from quiz
-              _fetchTakenQuizzes();
-            });
+            );
           }
         }
       }

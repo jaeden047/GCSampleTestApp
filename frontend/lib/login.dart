@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; // supabase flutter sdk
-import 'home.dart';
 import 'main.dart';
 import 'signup/signup_screen1.dart';
+import 'platform_terms.dart';
 
 // Known Errors:
 // --
@@ -110,9 +110,13 @@ class _LoginPageState extends State<LoginPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Logged in as ${response.user?.email ?? email}')),
         );
+        
+        if (!mounted) return;
+        
+        // Always show platform terms after login
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => Home()),
+          MaterialPageRoute(builder: (_) => const PlatformTermsScreen()),
         );
       } else {
         // This shouldn't happen, but handle it gracefully

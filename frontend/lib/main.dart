@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; // supabase flutter sdk
 import 'package:timezone/data/latest_all.dart' as tz_data;
-import 'home.dart';
 import 'login.dart';
+import 'platform_terms.dart';
 
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
@@ -86,11 +86,10 @@ class AuthGate extends StatelessWidget {
     final session = Supabase.instance.client.auth.currentSession;
 
     if (session != null) {
-      // User is logged in
-      return Home();
+      // User is logged in - always show platform terms
+      return const PlatformTermsScreen();
     } else {
       // User is not logged in
-      // Will need to add signup page
       return LoginPage();
     }
   }
