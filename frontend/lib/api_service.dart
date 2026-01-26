@@ -1,9 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ApiService {
   ApiService._();
   static final ApiService instance = ApiService._();
+  final supabase = Supabase.instance.client;
 
   // PROD base URL from doc:
   static const String baseUrl = 'https://www.greencontributor.org/api/v1';
@@ -28,7 +30,35 @@ class ApiService {
   // removes jwt key
   // ----- API calls -----
 
-  
+  // Supabase Sign-Up
+  Future<void> supabaseSignUp({ // Supabase Signup is Standardized; need to import fields through profile.
+    required String email,
+    required String password,
+  }) async {
+    final res = await supabase.auth.signUp(
+      email: email,
+      password: password,
+    );
+    if (res.user == null) {
+      throw Exception('Supabase sign up failed (no user returned).');
+    }
+  }
+
+  // Supabase Login
+  Future<void> supabaseLogin({ // Supabase Login is also standardized
+    required String email,
+    required String password,
+  }) async {
+    final res = await supabase.auth.signInWithPassword(
+      email: email,
+      password: password,
+    );
+    if (res.user == null) {
+      throw Exception('Supabase login failed (no user returned).');
+    }
+  }
+
+ 
   /// POST /auth/register to server
   Future<void> register({ // Register is an action, therefore it needs to return nothing
     required String email,
@@ -66,14 +96,10 @@ class ApiService {
           // if Optional Fields are filled out, we integrate them, if not, we use them in POST user/profile
         },
       );
-      final data = res.data as Map<String, dynamic>; // JSON Object is returned as map
+      print(res.data);
       // token key depends on backend; "jwt" is only correct if response uses that key
-      final token = data['token'];
-      if (token == null) {
-        throw Exception('No token found in login response: $data');
-      }
-      await saveToken(token.toString()); 
-    } on DioException catch (e) { // dio specific errors
+    } 
+      on DioException catch (e) { // dio specific errors
       final statusCode = e.response?.statusCode; // server error code 404/400/etc.
       final body = e.response?.data; // server response data
       throw Exception('Register failed ($statusCode): $body'); 

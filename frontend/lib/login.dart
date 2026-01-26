@@ -36,41 +36,14 @@ class _LoginPageState extends State<LoginPage> { // stateful because transitions
   // each controller holds the current value of a text field and lets you read it.
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-  final nameController = TextEditingController();
-  final phoneController = TextEditingController();
-  //--
-  final institutionController = TextEditingController();
-  final addressController = TextEditingController();
-  final countryController = TextEditingController();
-  final genderController = TextEditingController();
-  final gradeController = TextEditingController();
-  final userTypeController = TextEditingController();
-  final referenceCodeController = TextEditingController();  
-  //--
-  final studentTypeController = TextEditingController();
-  final interestedProgramController = TextEditingController(); // "69598383bfc1a2a7926b46f6"
-  final photoController = TextEditingController();
 
   @override
   void dispose() {
     emailController.dispose();
     passwordController.dispose();
-    nameController.dispose();
-    phoneController.dispose();
-    institutionController.dispose();
-    addressController.dispose();
-    countryController.dispose();
-    genderController.dispose();
-    gradeController.dispose();
-    userTypeController.dispose();
-    referenceCodeController.dispose();
-    studentTypeController.dispose();
-    interestedProgramController.dispose();
-    photoController.dispose();
     super.dispose();
   }
 
-  bool _isLogin = true; // login?
   bool _isLoading = false; // prevent spam tapping and show the spinner.
   bool _passwordVisible = false; // Password visibility toggle
 
@@ -99,14 +72,6 @@ class _LoginPageState extends State<LoginPage> { // stateful because transitions
     if (!specialCharRegex.hasMatch(password)) {
       return r'Password must contain at least one special character: [!@#$%^&*(),.?":{}|<>]';
     }
-    //Special Char Checks
-    if (!_isLogin) {
-      final name = nameController.text.trim();
-      if (name.isEmpty) {
-        return 'Name is required';
-      }
-    }
-    //This check is an extra check used for sign-up only (additional check for Name)
     return null; // when all validations passed
   } 
 
@@ -122,36 +87,20 @@ class _LoginPageState extends State<LoginPage> { // stateful because transitions
   try { // After inputs validated, we send to api
     final email = emailController.text.trim();
     final password = passwordController.text;
-    if (_isLogin) {
-      await ApiService.instance.login( // use apiservice login function
-        email: email,
-        password: password,
-      );
-    } else {
-      await ApiService.instance.register( // use apiservice register function
-        email: email,
-        password: password,
-        name: nameController.text.trim(),
-        phone: phoneController.text.trim(),
-        institution: institutionController.text.trim(),
-        address: addressController.text.trim(),
-        country: countryController.text.trim(),
-        gender: genderController.text.trim(),
-        grade: gradeController.text.trim(),
-        photo: "https://example.com/profile.jpg",
-        userType: userTypeController.text.trim(),
-        referenceCode: referenceCodeController.text.trim(),
-        studentType: "school",
-        interestedProgram: "69598383bfc1a2a7926b46f6",
-      );
-    }
+    await ApiService.instance.login( // use apiservice login function
+      email: email,
+      password: password,
+    );
+    await ApiService.instance.supabaseLogin(
+      email: email, 
+      password: password,
+    );
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const Home()),
     );
   } catch (e, st) {
     print('AUTH ERROR: $e');
     print('STACK: $st');
-
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Auth failed: $e')),
@@ -304,7 +253,7 @@ class _LoginPageState extends State<LoginPage> { // stateful because transitions
         ),
         SizedBox(height: isMobile ? 24 : 32),
       ],
-      // Login / Signup Button
+      // Login Button
       SizedBox(
         width: double.infinity,
         child: ElevatedButton( // BUTTON

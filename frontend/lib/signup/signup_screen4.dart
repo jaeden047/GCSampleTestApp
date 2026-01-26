@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../main.dart';
+import '../login.dart';
 import 'signup_data.dart';
 
 // Screen 4: Email Verification Confirmation
@@ -119,6 +120,19 @@ class _SignupScreen4State extends State<SignupScreen4> {
                             color: greySubtitle,
                             fontSize: isMobile ? 16 : 18,
                             fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(builder: (_) => const LoginPage()),
+                              (route) => false,
+                            );
+                          },
+                          child: Text(
+                            'Back to Login',
+                            style: TextStyle(color: greySubtitle),
                           ),
                         ),
                       ],

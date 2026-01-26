@@ -107,8 +107,12 @@ class _SignupScreen3State extends State<SignupScreen3> {
       country: widget.data.residentialCountry,
       gender: widget.data.gender,
       grade: widget.data.grade, 
-      referenceCode: widget.data.referenceCode, 
-    );
+      referenceCode: widget.data.referenceCode,); 
+      await ApiService.instance.supabaseSignUp(
+        email: widget.data.email!, 
+        password: _passwordController.text
+      );
+    ;
 
     if (!mounted) return;
 
