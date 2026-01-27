@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../api_service.dart';
 import '../main.dart';
 import 'signup_data.dart';
@@ -112,7 +113,28 @@ class _SignupScreen3State extends State<SignupScreen3> {
         email: widget.data.email!, 
         password: _passwordController.text
       );
-    ;
+      final sb = Supabase.instance.client;
+      final user = sb.auth.currentUser;
+      if (user == null) {
+        throw Exception('Supabase sign up succeeded but no currentUser session was found.');
+      }
+
+      await sb.from('profiles').upsert({
+        'id': user.id, // MUST match auth.users.id
+        'email': user.email,
+        'name': widget.data.fullName ?? '',
+        'phone_number': widget.data.phoneNumber,
+        'school': widget.data.institutionSchool,
+        'country': widget.data.residentialCountry,
+        'gender': widget.data.gender,
+        'address': widget.data.address,
+        'grade': widget.data.grade,
+        'institution': widget.data.institutionSchool,
+        'student_type': 'school',
+        'reference_code': widget.data.referenceCode,
+        'user_type': 'STUDENT',
+        'interested_program': '69598383bfc1a2a7926b46f6',
+      });    
 
     if (!mounted) return;
 
@@ -129,15 +151,12 @@ class _SignupScreen3State extends State<SignupScreen3> {
       );
       
     } catch (e) {
-        if (!mounted) return;
-        print('Unexpected error during signup: $e');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('An error occurred. Please try again.'),
-            duration: Duration(seconds: 3),
-          ),
-        );
-        setState(() => _isLoading = false);
+      if (!mounted) return;
+      print('Signup failed: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+      setState(() => _isLoading = false);
     }
   }
   
