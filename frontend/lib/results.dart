@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -77,78 +78,135 @@ class _ResultsState extends State<Results> { //
   List<Questions> questionList = []; // List of Test Attempt Data
   List<Topics> topicList = [];
   String? selectedFilter; // Selected filter option
+  bool _isLoadingAttempts = true;
+  String? _loadError; // Non-null when fetch failed (e.g. auth or network)
+  StreamSubscription<AuthState>? _authSubscription;
 
   // Check if screen is mobile
   bool _isMobile(BuildContext context) {
     return MediaQuery.of(context).size.width < 768;
   }
 
-  @override // Overriding the initState function
-  void initState() { // Function called before screen loads
+  @override
+  void initState() {
     super.initState();
-    fetchTestAttempts(); // Now, fetchTestAttempts will be apart of the function
-  }
-  Future<void> fetchTestAttempts() async {
-    final testRawData = await supabase.from('test_attempts').select().eq('user_id', supabase.auth.currentUser!.id); 
-    // Retrieve Raw Data Rows ONLY from currently signed in user_id from testRawData
-    final questionAnswers = await supabase.from('answers').select(); 
-    final questionData = await supabase.from('questions').select();
-    final topicData = await supabase.from('topics').select();
-    // questionAnswers pulls all rows from the answers table 
-    setState(() { // Rebuild UI
-      numRows = testRawData.length;
-      testList = testRawData.map<TestAttempt>((row) { // Each 'row' is now a separate function.
-      // Map each row in testRows to a TestAttempt Object. 
-      // Collect all TestAttempt Objects and save it in List<TestAttempt>: testList
-        return TestAttempt( 
-          dateTime: row['test_datetime']?.toString() ?? 'No Date',
-          questionList: List<dynamic>.from(row['question_list'] ?? []), // Make a List from row or leave empty
-          answerOrder: List<dynamic>.from(row['answer_order'] ?? []),
-          selectedAnswers: List<dynamic>.from(row['selected_answers'] ?? []),
-          score: row['score'] ?? 0,
-          topicId: row['topic_id'] ?? 0,
-        );
-        // ?.toString => Is not null: Keep value, Is null: "null"
-        // ?? 'No Date' => left side: "null" => switch to 'No Date' text, else, keep. 
-      }).toList(); // Converts to List<TestAttempt>.
-
-      answerList = questionAnswers.map<Answers>((row) {
-        return Answers(
-          answerID: row['answer_id'],
-          questionID: row['question_id'],
-          answerText: row['answer_text'],
-          isCorrect: row['is_correct'],
-        );
-      }).toList();
-
-      questionList = questionData.map<Questions>((row) {
-        return Questions(
-          questionID: row['question_id'],
-          topicID: row['topic_id'],
-          questionText: row['question_text'],
-        );
-      }).toList();
-      // numRows = number of user's testattempts
-
-      topicList = topicData.map<Topics>((row) {
-        return Topics(
-          topicId2: row['topic_id'],
-          topicName: row['topic_name'],
-        );
-      }).toList();
-      
-      // Apply default sorting (newest to oldest) after fetching
-      testList.sort((a, b) {
-        try {
-          final dateA = DateTime.parse(a.dateTime);
-          final dateB = DateTime.parse(b.dateTime);
-          return dateB.compareTo(dateA); // Descending (newest first)
-        } catch (e) {
-          return 0;
-        }
-      });
-      selectedFilter = 'newest'; // Set default filter
+    _authSubscription = supabase.auth.onAuthStateChange.listen((AuthState state) {
+      if (state.event == AuthChangeEvent.signedIn ||
+          state.event == AuthChangeEvent.initialSession ||
+          state.event == AuthChangeEvent.signedOut ||
+          state.event == AuthChangeEvent.userUpdated) {
+        fetchTestAttempts();
+      }
     });
+    fetchTestAttempts();
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> fetchTestAttempts() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) {
+      if (mounted) {
+        setState(() {
+          _isLoadingAttempts = false;
+          _loadError = 'Please sign in to see your quiz history.';
+          numRows = 0;
+          testList = [];
+          answerList = [];
+          questionList = [];
+          topicList = [];
+          selectedFilter = 'newest';
+        });
+      }
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _isLoadingAttempts = true;
+        _loadError = null;
+      });
+    }
+
+    try {
+      final testRawData = await supabase
+          .from('test_attempts')
+          .select()
+          .eq('user_id', user.id);
+
+      final questionAnswers = await supabase.from('answers').select();
+      final questionData = await supabase.from('questions').select();
+      final topicData = await supabase.from('topics').select();
+
+      if (!mounted) return;
+      setState(() {
+        _isLoadingAttempts = false;
+        _loadError = null;
+        numRows = testRawData.length;
+        testList = testRawData.map<TestAttempt>((row) {
+          return TestAttempt(
+            dateTime: row['test_datetime']?.toString() ?? 'No Date',
+            questionList: List<dynamic>.from(row['question_list'] ?? []),
+            answerOrder: List<dynamic>.from(row['answer_order'] ?? []),
+            selectedAnswers: List<dynamic>.from(row['selected_answers'] ?? []),
+            score: (row['score'] ?? 0).toDouble(),
+            topicId: row['topic_id'] ?? 0,
+          );
+        }).toList();
+
+        answerList = questionAnswers.map<Answers>((row) {
+          return Answers(
+            answerID: row['answer_id'],
+            questionID: row['question_id'],
+            answerText: row['answer_text'],
+            isCorrect: row['is_correct'],
+          );
+        }).toList();
+
+        questionList = questionData.map<Questions>((row) {
+          return Questions(
+            questionID: row['question_id'],
+            topicID: row['topic_id'],
+            questionText: row['question_text'],
+          );
+        }).toList();
+
+        topicList = topicData.map<Topics>((row) {
+          return Topics(
+            topicId2: row['topic_id'],
+            topicName: row['topic_name'],
+          );
+        }).toList();
+
+        testList.sort((a, b) {
+          try {
+            final dateA = DateTime.parse(a.dateTime);
+            final dateB = DateTime.parse(b.dateTime);
+            return dateB.compareTo(dateA);
+          } catch (e) {
+            return 0;
+          }
+        });
+        selectedFilter = 'newest';
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingAttempts = false;
+          _loadError = 'Could not load quiz history. Please try again.';
+          numRows = 0;
+          testList = [];
+          answerList = [];
+          questionList = [];
+          topicList = [];
+          selectedFilter = 'newest';
+        });
+      }
+    }
   }
   
   // Sort test list based on selected filter
@@ -310,61 +368,63 @@ class _ResultsState extends State<Results> { //
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: numRows == 0
-        ? LayoutBuilder(
-            builder: (context, constraints) {
-              return SingleChildScrollView(
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    // Decorative elements
-                    ..._buildDecorativeElements(screenWidth, screenHeight, isMobile, 0),
-                    // Main content
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isMobile ? 16.0 : 24.0,
-                        vertical: isMobile ? 16.0 : 24.0,
-                      ),
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            SizedBox(height: screenHeight * 0.15), // Add top spacing to center vertically
-                            // SVG Image
-                            SvgPicture.asset(
-                              'assets/images/grey_results.svg',
-                              height: 100,
+      body: _isLoadingAttempts
+        ? Center(child: CircularProgressIndicator(color: MyApp.homeDarkGreyText))
+        : (numRows == 0
+            ? LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        ..._buildDecorativeElements(screenWidth, screenHeight, isMobile, 0),
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isMobile ? 16.0 : 24.0,
+                            vertical: isMobile ? 16.0 : 24.0,
+                          ),
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                SizedBox(height: screenHeight * 0.15),
+                                SvgPicture.asset(
+                                  'assets/images/grey_results.svg',
+                                  height: 100,
+                                ),
+                                SizedBox(height: 20),
+                                Text(
+                                  _loadError ?? 'Empty History',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 20 : 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: MyApp.homeDarkGreyText,
+                                  ),
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  _loadError != null
+                                      ? 'Sign in or check your connection and open this screen again.'
+                                      : 'Try a quiz before coming back',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 14 : 16,
+                                    fontWeight: FontWeight.w500,
+                                    color: MyApp.homeGreyText,
+                                  ),
+                                ),
+                              ],
                             ),
-                            SizedBox(height: 20), // Space between the image and the text
-                            // Text message
-                            Text(
-                              'Empty History',
-                              style: TextStyle(
-                                fontSize: isMobile ? 20 : 24,
-                                fontWeight: FontWeight.bold,
-                                color: MyApp.homeDarkGreyText,
-                              ),
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              'Try a quiz before coming back',
-                              style: TextStyle(
-                                fontSize: isMobile ? 14 : 16,
-                                fontWeight: FontWeight.w500,
-                                color: MyApp.homeGreyText,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
-                ),
-              );
-            },
-          )
-        : LayoutBuilder(
+                  );
+                },
+              )
+            : LayoutBuilder(
             builder: (context, constraints) {
               // Calculate estimated content height based on number of items
               // Title header: ~80px, Each card: ~120px (collapsed), spacing: ~20px
@@ -643,7 +703,7 @@ class _ResultsState extends State<Results> { //
                 ),
               );
             },
-          ),
+          )),
     );
   }
 
