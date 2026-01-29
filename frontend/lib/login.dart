@@ -104,19 +104,17 @@ class _LoginPageState extends State<LoginPage> { // stateful because transitions
     print('STACK: $st');
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Auth failed: $e')),
+      SnackBar(content: Text('Login failed. Please retry password or use a different email.')),
     );
-  } finally {
-  if (!mounted) return;
-  setState(() => _isLoading = false);
-}
+    setState(() => _isLoading = false);
+  }
 }  
 
   @override
   Widget build(BuildContext context) { 
     // Get colors from MyApp theme
     final tealBackground = MyApp.loginTealBackground;
-    final pinkTitle = MyApp.loginPinkTitle;
+    final pinkTitle = const Color.fromARGB(255, 116, 116, 116);
     final darkNavyButton = MyApp.loginDarkNavyButton;
     final greySubtitle = MyApp.loginGreySubtitle;
     
