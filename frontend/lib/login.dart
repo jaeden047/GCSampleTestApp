@@ -95,6 +95,7 @@ class _LoginPageState extends State<LoginPage> { // stateful because transitions
       email: email, 
       password: password,
     );
+    await ApiService.instance.syncApiIdToSupabaseProfiles();
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const Home()),
     );

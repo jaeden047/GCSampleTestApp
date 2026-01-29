@@ -56,6 +56,12 @@ class _ProfilePageState extends State<ProfilePage> {
 
   // Function to fetch user profile data
   Future<void> fetchUserProfile() async {
+    final user = supabase.auth.currentUser; // if logged in, holds user
+    if (user == null) {
+    setState(() => isLoading = false);
+    return;
+    }
+    
     Map<String, dynamic>? profile = await getUserProfile();
     if (profile != null) {
       setState(() {
@@ -66,7 +72,7 @@ class _ProfilePageState extends State<ProfilePage> {
         country = profile['country'] ?? '';
         gender = profile['gender'] ?? '';
         address = profile['address'] ?? '';
-        
+
         nameController.text = name;
         phoneController.text = phone;
         schoolController.text = school;
@@ -133,6 +139,14 @@ class _ProfilePageState extends State<ProfilePage> {
       if (gender.isNotEmpty) updateData['gender'] = gender;
       if (address.isNotEmpty) updateData['address'] = address;
 
+      await ApiService.instance.updateProfileFromProfilePage(name: name, phone: phone, institution: school, address: address, country: country, gender: gender);
+      /*
+      Reads JWT from secure storage
+      Builds JSON body with only non-empty fields
+      Sends PATCH /user/profile
+      API updates its database
+      */
+
       await supabase.from('profiles').update(updateData).eq('id', user.id);
 
       if (mounted) {
@@ -182,6 +196,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final isMobile = _isMobile(context);
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+    
 
     if (isLoading) {
       return Scaffold(
@@ -619,7 +634,6 @@ class _ProfilePageState extends State<ProfilePage> {
         }
       }
     }
-
     return elements;
   }
 }

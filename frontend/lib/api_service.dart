@@ -76,7 +76,7 @@ class ApiService {
     String? userType, // 'STUDENT', 
     String? referenceCode,
   }) async {
-    try {
+      try {
       final res = await _dio.post('/auth/register', data: {
           'email': email,
           'password': password,
@@ -108,7 +108,7 @@ class ApiService {
     }
   }
   /// POST /auth/login
-  Future<void> login({
+  Future<void> login({ // API Login
     required String email,
     required String password,
   }) async {
@@ -136,5 +136,51 @@ class ApiService {
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
     return (res.data as Map<String, dynamic>); // returns user's data (res.data) to whoever called this function
+  }
+
+  Future<void> syncApiIdToSupabaseProfiles() async {
+  final supaUser = supabase.auth.currentUser; // reads currently logged in user
+  if (supaUser == null) return;
+
+  // Get API profile
+  final apiRes = await getProfile();
+  final apiUser = apiRes['user'] as Map<String, dynamic>;
+  final apiId = apiUser['id']?.toString();
+
+  if (apiId == null || apiId.isEmpty) return;
+
+  // Write to supabase profiles
+    await supabase.from('profiles').upsert({
+    'id': supaUser.id,          // must exist for upsert
+    'api_user_id': apiId,
+  }, onConflict: 'id');
+  // Saves API ID to user field
+}
+
+  Future<void> updateProfileFromProfilePage({
+  required String name,
+  required String phone,
+  required String institution, 
+  required String address,
+  required String country,
+  required String gender,
+  }) async {
+    final token = await getToken(); // Secure Storage token
+    if (token == null || token.isEmpty) {
+      throw Exception('No token saved');
+    }
+      final data = <String, dynamic>{}; // JSON Body
+    if (name.trim().isNotEmpty) data['name'] = name.trim();
+    if (phone.trim().isNotEmpty) data['phone'] = phone.trim();
+    if (institution.trim().isNotEmpty) data['institution'] = institution.trim();
+    if (address.trim().isNotEmpty) data['address'] = address.trim();
+    if (country.trim().isNotEmpty) data['country'] = country.trim();
+    if (gender.trim().isNotEmpty) data['gender'] = gender.trim();
+    final res = await _dio.patch( // Response, sends PATCH request to API
+    '/user/profile',
+    data: data,
+    options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+    print(res.data);
   }
 }
