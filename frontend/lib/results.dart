@@ -63,11 +63,17 @@ class Questions {
 class Topics {
   final int topicId2;
   final String topicName;
+  final bool resultsReleased;
+  final bool isSampleQuiz;
 
   Topics({
     required this.topicId2,
     required this.topicName,
+    required this.resultsReleased,
+    required this.isSampleQuiz,
   });
+
+  bool get canShowResults => isSampleQuiz || resultsReleased;
 }
 
 class _ResultsState extends State<Results> { // 
@@ -140,7 +146,7 @@ class _ResultsState extends State<Results> { //
 
       final questionAnswers = await supabase.from('answers').select();
       final questionData = await supabase.from('questions').select();
-      final topicData = await supabase.from('topics').select();
+      final topicData = await supabase.from('topics').select('topic_id, topic_name, results_released, is_sample_quiz');
 
       if (!mounted) return;
       setState(() {
@@ -179,6 +185,8 @@ class _ResultsState extends State<Results> { //
           return Topics(
             topicId2: row['topic_id'],
             topicName: row['topic_name'],
+            resultsReleased: row['results_released'] == true,
+            isSampleQuiz: row['is_sample_quiz'] == true,
           );
         }).toList();
 
@@ -540,7 +548,9 @@ class _ResultsState extends State<Results> { //
                                 numRows,
                                 (index) {
                                   String formattedDate = _formatDateToronto(testList[index].dateTime);
-                                  double scoreNumber = testList[index].score; 
+                                  double scoreNumber = testList[index].score;
+                                  final topic = topicList.firstWhere((t) => t.topicId2 == testList[index].topicId, orElse: () => Topics(topicId2: 0, topicName: 'Unknown', resultsReleased: false, isSampleQuiz: false));
+                                  final canShow = topic.canShowResults;
                                   return Container(
                                     margin: EdgeInsets.only(bottom: isMobile ? 16 : 20),
                                     decoration: BoxDecoration(
@@ -565,7 +575,7 @@ class _ResultsState extends State<Results> { //
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Text(
-                                            'Attempt ${index + 1} • ${topicList.firstWhere((t) => t.topicId2 == testList[index].topicId, orElse: () => Topics(topicId2: 0, topicName: 'Unknown')).topicName}',
+                                            'Attempt ${index + 1} • ${topic.topicName}',
                                             style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,
@@ -588,16 +598,29 @@ class _ResultsState extends State<Results> { //
                                               Row(
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
-                                                  Icon(Icons.star, color: MyApp.homeYellow, size: 18),
-                                                  SizedBox(width: 6),
-                                                  Text(
-                                                    'Score: ${scoreNumber.toInt()} pts',
-                                                    style: TextStyle(
-                                                      fontSize: 16,
-                                                      fontWeight: FontWeight.w600,
-                                                      color: MyApp.homeWhite,
+                                                  if (canShow) ...[
+                                                    Icon(Icons.star, color: MyApp.homeYellow, size: 18),
+                                                    SizedBox(width: 6),
+                                                    Text(
+                                                      'Score: ${scoreNumber.toInt()} pts',
+                                                      style: TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight: FontWeight.w600,
+                                                        color: MyApp.homeWhite,
+                                                      ),
                                                     ),
-                                                  ),
+                                                  ] else ...[
+                                                    Icon(Icons.lock_outline, color: MyApp.homeWhite.withOpacity(0.9), size: 18),
+                                                    SizedBox(width: 6),
+                                                    Text(
+                                                      'Results locked',
+                                                      style: TextStyle(
+                                                        fontSize: 14,
+                                                        fontWeight: FontWeight.w500,
+                                                        color: MyApp.homeWhite.withOpacity(0.9),
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ],
                                               ),
                                             ],
@@ -605,89 +628,108 @@ class _ResultsState extends State<Results> { //
                                         ],
                                       ),
                                       children: [
-                                        Padding( 
+                                        Padding(
                                           padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.center,
-                                            children: [
-                                              SizedBox(height: 8),
-                                              ...List.generate(
-                                                testList[index].questionList.length, 
-                                                (i) {
-                                                  int questionID = testList[index].questionList[i]; 
-                                                  int start = i * 4;
-                                                  int end = start + 4;
-                                                  List<int> correctAnswerOrder = testList[index].answerOrder.sublist(start, end).cast<int>();
-                                                  List<Answers> answerOptions = correctAnswerOrder.map((id) => answerList.firstWhere((a) => a.answerID == id)).toList();
-                                                  return Container(
-                                                    margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                                    padding: EdgeInsets.all(12),
-                                                    decoration: BoxDecoration(
-                                                      color: MyApp.homeWhite.withOpacity(0.9),
-                                                      borderRadius: BorderRadius.circular(12),
-                                                      border: Border.all(
-                                                        color: MyApp.homeWhite.withOpacity(0.3),
-                                                        width: 1,
-                                                      ),
-                                                      boxShadow: [
-                                                        BoxShadow(
-                                                          color: Colors.black12,
-                                                          blurRadius: 4,
-                                                          offset: Offset(0, 2),
-                                                        ),
-                                                      ],
-                                                    ),  
-                                                    child: Column(
-                                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                                      children: [
-                                                        Text(
-                                                          '${i + 1}. ${(questionList.firstWhere((q) => q.questionID == questionID).questionText)}',
-                                                          style: TextStyle(
-                                                            fontSize: 16,
-                                                            fontWeight: FontWeight.w600,
-                                                            color: MyApp.homeDarkGreyText,
-                                                          ),
-                                                        ),
-                                                        SizedBox(height: 4),
-                                                        ...answerOptions.map((row) {
-                                                          bool isSelected = testList[index].selectedAnswers.contains(row.answerID); 
-                                                          bool isCorrect = row.isCorrect;
-                                                          Icon iconChosen = Icon(Icons.check_circle_outline);
-                                                          Color colorChosen = MyApp.homeDarkGreyText;
-                                                          if (isSelected && isCorrect) {
-                                                            iconChosen = Icon(Icons.circle, color: Color(0xFF628B35));
-                                                            colorChosen = Color(0xFF628B35);
-                                                          } else if (isSelected && !isCorrect) {
-                                                            iconChosen = Icon(Icons.circle, color: Color(0xFFBD433E));
-                                                            colorChosen = Color(0xFFBD433E);
-                                                          } else if (!isSelected && isCorrect) {
-                                                            iconChosen = Icon(Icons.circle_outlined, color: Color(0xFF628B35));
-                                                            colorChosen = Color(0xFF628B35);
-                                                          } else if (!isSelected && !isCorrect) {
-                                                            iconChosen = Icon(Icons.circle_outlined, color: MyApp.homeDarkGreyText); 
-                                                            colorChosen = MyApp.homeDarkGreyText;
-                                                          }
-                                                          return Row(
-                                                            children: [
-                                                              iconChosen,
-                                                              SizedBox(width: 6),
-                                                              Flexible(
-                                                                child: Text(
-                                                                  row.answerText,
-                                                                  style: TextStyle(color: colorChosen),
-                                                                  softWrap: true,
-                                                                ),
+                                          child: canShow
+                                              ? Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                                  children: [
+                                                    SizedBox(height: 8),
+                                                    ...List.generate(
+                                                      testList[index].questionList.length,
+                                                      (i) {
+                                                        int questionID = testList[index].questionList[i];
+                                                        int start = i * 4;
+                                                        int end = start + 4;
+                                                        List<int> correctAnswerOrder = testList[index].answerOrder.sublist(start, end).cast<int>();
+                                                        List<Answers> answerOptions = correctAnswerOrder.map((id) => answerList.firstWhere((a) => a.answerID == id)).toList();
+                                                        return Container(
+                                                          margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                                          padding: EdgeInsets.all(12),
+                                                          decoration: BoxDecoration(
+                                                            color: MyApp.homeWhite.withOpacity(0.9),
+                                                            borderRadius: BorderRadius.circular(12),
+                                                            border: Border.all(
+                                                              color: MyApp.homeWhite.withOpacity(0.3),
+                                                              width: 1,
+                                                            ),
+                                                            boxShadow: [
+                                                              BoxShadow(
+                                                                color: Colors.black12,
+                                                                blurRadius: 4,
+                                                                offset: Offset(0, 2),
                                                               ),
                                                             ],
-                                                          );
-                                                        }),
-                                                      ],
+                                                          ),
+                                                          child: Column(
+                                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                                            children: [
+                                                              Text(
+                                                                '${i + 1}. ${(questionList.firstWhere((q) => q.questionID == questionID).questionText)}',
+                                                                style: TextStyle(
+                                                                  fontSize: 16,
+                                                                  fontWeight: FontWeight.w600,
+                                                                  color: MyApp.homeDarkGreyText,
+                                                                ),
+                                                              ),
+                                                              SizedBox(height: 4),
+                                                              ...answerOptions.map((row) {
+                                                                bool isSelected = testList[index].selectedAnswers.contains(row.answerID);
+                                                                bool isCorrect = row.isCorrect;
+                                                                Icon iconChosen = Icon(Icons.check_circle_outline);
+                                                                Color colorChosen = MyApp.homeDarkGreyText;
+                                                                if (isSelected && isCorrect) {
+                                                                  iconChosen = Icon(Icons.circle, color: Color(0xFF628B35));
+                                                                  colorChosen = Color(0xFF628B35);
+                                                                } else if (isSelected && !isCorrect) {
+                                                                  iconChosen = Icon(Icons.circle, color: Color(0xFFBD433E));
+                                                                  colorChosen = Color(0xFFBD433E);
+                                                                } else if (!isSelected && isCorrect) {
+                                                                  iconChosen = Icon(Icons.circle_outlined, color: Color(0xFF628B35));
+                                                                  colorChosen = Color(0xFF628B35);
+                                                                } else {
+                                                                  iconChosen = Icon(Icons.circle_outlined, color: MyApp.homeDarkGreyText);
+                                                                  colorChosen = MyApp.homeDarkGreyText;
+                                                                }
+                                                                return Row(
+                                                                  children: [
+                                                                    iconChosen,
+                                                                    SizedBox(width: 6),
+                                                                    Flexible(
+                                                                      child: Text(
+                                                                        row.answerText,
+                                                                        style: TextStyle(color: colorChosen),
+                                                                        softWrap: true,
+                                                                      ),
+                                                                    ),
+                                                                  ],
+                                                                );
+                                                              }),
+                                                            ],
+                                                          ),
+                                                        );
+                                                      },
                                                     ),
-                                                  );
-                                                },
-                                              ),
-                                            ],
-                                          ),
+                                                  ],
+                                                )
+                                              : Padding(
+                                                  padding: EdgeInsets.symmetric(vertical: 16),
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(Icons.info_outline, color: MyApp.homeWhite.withOpacity(0.9), size: 20),
+                                                      SizedBox(width: 8),
+                                                      Expanded(
+                                                        child: Text(
+                                                          'Results will be available when your admin releases them.',
+                                                          style: TextStyle(
+                                                            fontSize: 14,
+                                                            color: MyApp.homeWhite.withOpacity(0.95),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
                                         ),
                                       ],
                                     ),

@@ -65,11 +65,17 @@ class Questions {
 class Topics {
   final int topicId2;
   final String topicName;
+  final bool resultsReleased;
+  final bool isSampleQuiz;
 
   Topics({
     required this.topicId2,
     required this.topicName,
+    required this.resultsReleased,
+    required this.isSampleQuiz,
   });
+
+  bool get canShowResults => isSampleQuiz || resultsReleased;
 }
 
 class _QuizAnswersState extends State<QuizAnswers> {
@@ -113,7 +119,7 @@ class _QuizAnswersState extends State<QuizAnswers> {
       // Fetch all answers, questions, and topics
       final questionAnswers = await supabase.from('answers').select();
       final questionData = await supabase.from('questions').select();
-      final topicData = await supabase.from('topics').select();
+      final topicData = await supabase.from('topics').select('topic_id, topic_name, results_released, is_sample_quiz');
 
       setState(() {
         testAttempt = TestAttempt(
@@ -144,11 +150,13 @@ class _QuizAnswersState extends State<QuizAnswers> {
 
         final topicRow = topicData.firstWhere(
           (t) => t['topic_id'] == testAttempt!.topicId,
-          orElse: () => {'topic_id': 0, 'topic_name': 'Unknown'},
+          orElse: () => {'topic_id': 0, 'topic_name': 'Unknown', 'results_released': false, 'is_sample_quiz': false},
         );
         topic = Topics(
           topicId2: topicRow['topic_id'],
           topicName: topicRow['topic_name'],
+          resultsReleased: topicRow['results_released'] == true,
+          isSampleQuiz: topicRow['is_sample_quiz'] == true,
         );
 
         isLoading = false;
@@ -312,6 +320,40 @@ class _QuizAnswersState extends State<QuizAnswers> {
         body: Center(
           child: CircularProgressIndicator(
             color: MyApp.homeTealGreen,
+          ),
+        ),
+      );
+    }
+
+    if (topic != null && !topic!.canShowResults) {
+      return Scaffold(
+        backgroundColor: MyApp.homeLightGreyBackground,
+        appBar: AppBar(
+          backgroundColor: MyApp.homeLightGreyBackground,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: MyApp.homeDarkGreyText),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.lock_outline, size: 48, color: MyApp.homeDarkGreyText),
+                SizedBox(height: 16),
+                Text(
+                  'Results will be available when your admin releases them.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: isMobile ? 16 : 18,
+                    color: MyApp.homeDarkGreyText,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );

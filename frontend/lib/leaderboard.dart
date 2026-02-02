@@ -20,6 +20,15 @@ class _LeaderboardState extends State<Leaderboard> {
   List<Map<String, dynamic>> topicList = [];
   bool isLoadingTopics = true;
 
+  bool _canShowResultsForTopic(String topicName) {
+    try {
+      final t = topicList.firstWhere((e) => e['topic_name'] == topicName);
+      return t['is_sample_quiz'] == true || t['results_released'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -47,8 +56,8 @@ class _LeaderboardState extends State<Leaderboard> {
       final supabase = Supabase.instance.client;
       final topicsResponse = await supabase
           .from('topics')
-          .select('topic_name');
-      
+          .select('topic_id, topic_name, results_released, is_sample_quiz');
+
       setState(() {
         topicList = List<Map<String, dynamic>>.from(topicsResponse);
         // Sort topics according to custom order
@@ -387,10 +396,31 @@ class _LeaderboardState extends State<Leaderboard> {
                 color: MyApp.homeTealGreen,
               ),
             )
-          : FutureBuilder<List<Map<String, dynamic>>>(
-              key: ValueKey(selectedTopic), // Rebuild when topic changes
-              future: fetchLeaderboard(selectedTopic!),
-              builder: (context, snapshot) {
+          : !_canShowResultsForTopic(selectedTopic!)
+              ? Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.lock_outline, size: 48, color: MyApp.homeDarkGreyText),
+                        SizedBox(height: 16),
+                        Text(
+                          'Rankings will be available after your admin releases results.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: isMobile ? 16 : 18,
+                            color: MyApp.homeDarkGreyText,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : FutureBuilder<List<Map<String, dynamic>>>(
+                  key: ValueKey(selectedTopic),
+                  future: fetchLeaderboard(selectedTopic!),
+                  builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(
               child: CircularProgressIndicator(
