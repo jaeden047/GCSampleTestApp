@@ -138,9 +138,14 @@ class _ProfilePageState extends State<ProfilePage> {
       if (country.isNotEmpty) updateData['country'] = country;
       if (gender.isNotEmpty) updateData['gender'] = gender;
       if (address.isNotEmpty) updateData['address'] = address;
-
-      await ApiService.instance.updateProfileFromProfilePage(name: name, phone: phone, institution: school, address: address, country: country, gender: gender);
-      /*
+      
+      await ApiService.instance.updateProfileFromProfilePage(
+        phone: phone,
+        institution: school,
+        address: address,
+        gender: gender,
+      );
+            /*
       Reads JWT from secure storage
       Builds JSON body with only non-empty fields
       Sends PATCH /user/profile

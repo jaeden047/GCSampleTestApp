@@ -157,30 +157,32 @@ class ApiService {
   // Saves API ID to user field
 }
 
-  Future<void> updateProfileFromProfilePage({
-  required String name,
-  required String phone,
-  required String institution, 
-  required String address,
-  required String country,
-  required String gender,
+    Future<Map<String, dynamic>> updateProfileFromProfilePage({
+    String? phone,
+    String? institution,
+    String? address,
+    String? gender,
+    String? photo,
   }) async {
-    final token = await getToken(); // Secure Storage token
+    final token = await getToken();
     if (token == null || token.isEmpty) {
       throw Exception('No token saved');
     }
-      final data = <String, dynamic>{}; // JSON Body
-    if (name.trim().isNotEmpty) data['name'] = name.trim();
-    if (phone.trim().isNotEmpty) data['phone'] = phone.trim();
-    if (institution.trim().isNotEmpty) data['institution'] = institution.trim();
-    if (address.trim().isNotEmpty) data['address'] = address.trim();
-    if (country.trim().isNotEmpty) data['country'] = country.trim();
-    if (gender.trim().isNotEmpty) data['gender'] = gender.trim();
-    final res = await _dio.patch( // Response, sends PATCH request to API
-    '/user/profile',
-    data: data,
-    options: Options(headers: {'Authorization': 'Bearer $token'}),
+
+    final data = <String, dynamic>{};
+    if (phone != null && phone.trim().isNotEmpty) data['phone'] = phone.trim();
+    if (institution != null && institution.trim().isNotEmpty) data['institution'] = institution.trim();
+    if (address != null && address.trim().isNotEmpty) data['address'] = address.trim();
+    if (gender != null && gender.trim().isNotEmpty) data['gender'] = gender.trim();
+    if (photo != null && photo.trim().isNotEmpty) data['photo'] = photo.trim();
+
+    final res = await _dio.put(
+      '/user/profile', // baseUrl already has /api/v1
+      data: data,
+      options: Options(headers: {'Authorization': 'Bearer $token', 'Content-Type': 'Application/json'}),
     );
-    print(res.data);
+    print (res.data);
+
+    return (res.data as Map<String, dynamic>);
   }
 }
