@@ -77,7 +77,7 @@ class CountryCodes {
   ];
 
   static CountryCode getDefault() {
-    return codes.firstWhere((c) => c.code == 'CA', orElse: () => codes[0]);
+    return codes.firstWhere((c) => c.code == 'CA');
   }
 
   static CountryCode? findByCode(String code) {

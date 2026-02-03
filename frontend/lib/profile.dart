@@ -22,8 +22,9 @@ class _ProfilePageState extends State<ProfilePage> {
   String school = '';
   String gender = '';
   String address = '';
+  String country = '';
 
-  CountryCode _selectedCountryCode = CountryCodes.getDefault();
+  CountryCode _selectedCountryCode = CountryCodes.getDefault(); // for user country, CA if default.
   
   final nameController = TextEditingController();
   final phoneController = TextEditingController();
@@ -71,16 +72,14 @@ class _ProfilePageState extends State<ProfilePage> {
         school = profile['school'] ?? '';
         gender = profile['gender'] ?? '';
         address = profile['address'] ?? '';
-
-        final savedCountry = (profile['country'] as String).trim();
-        _selectedCountryCode = CountryCodes.findByCode(savedCountry)!;
+        country = profile['country'] ?? '';
 
         nameController.text = name;
         phoneController.text = phone;
         schoolController.text = school;
         genderController.text = gender;
         addressController.text = address;
-        
+        _selectedCountryCode = CountryCodes.findByCode(country) ?? CountryCodes.getDefault(); // back to Default if fails to find user Country     
         isLoading = false;
       });
     } else {
@@ -401,6 +400,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                   label: 'School',
                                   isMobile: isMobile,
                                 ),
+                                SizedBox(height: isMobile ? 16 : 20),
+                                _buildCountryDropdown(isMobile: isMobile)
                               ],
                             ),
                           ),
@@ -477,6 +478,52 @@ class _ProfilePageState extends State<ProfilePage> {
         filled: true,
         fillColor: MyApp.homeLightGreyBackground,
       ),
+    );
+  }
+
+    Widget _buildCountryDropdown({required bool isMobile}) {
+    return DropdownButtonFormField<CountryCode>(
+      value: _selectedCountryCode,
+      isExpanded: true,
+      decoration: InputDecoration(
+        labelText: 'Country',
+        labelStyle: TextStyle(
+          color: MyApp.homeGreyText,
+          fontSize: isMobile ? 14 : 16,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(
+            color: MyApp.homeDarkGreyText.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(
+            color: MyApp.homeTealGreen,
+            width: 2,
+          ),
+        ),
+        filled: true,
+        fillColor: MyApp.homeLightGreyBackground,
+      ),
+      items: CountryCodes.codes.map((c) {
+        return DropdownMenuItem<CountryCode>( // selectable entries
+          value: c,
+          child: Text('${c.code} — ${c.name}'),
+        );
+      }).toList(),
+      onChanged: (val) {
+        if (val == null) return;
+        setState(() => _selectedCountryCode = val);
+      },
+      /*
+      Flutter calls onChanged with the chosen CountryCode
+      you store it in _selectedCountryCode
+      setState triggers rebuild
+      because value: now points to the new object, the UI updates
+      */
     );
   }
 
