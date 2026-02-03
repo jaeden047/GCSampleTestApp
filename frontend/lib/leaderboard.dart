@@ -362,10 +362,10 @@ class _LeaderboardState extends State<Leaderboard> {
 
     final topicId = topicResponse['topic_id'];
 
-    // Step 2: Get top 10 test_attempts joined with users, sorted
+    // Step 2: Get top 10 test_attempts joined with users, sorted (include round for Math)
     final attemptsResponse = await supabase
       .from('test_attempts')
-      .select('score, duration_seconds, question_list, profiles(name)')
+      .select('score, duration_seconds, question_list, round, profiles(name)')
       .eq('topic_id', topicId)
       .order('score', ascending: false)
       .order('duration_seconds', ascending: true)
@@ -373,6 +373,9 @@ class _LeaderboardState extends State<Leaderboard> {
 
     return List<Map<String, dynamic>>.from(attemptsResponse);
   }
+
+  static const _mathRoundTopicNames = ['Sample Quiz', 'Grade 5 and 6', 'Grade 7 and 8', 'Grade 9 and 10', 'Grade 11 and 12'];
+  bool _isMathRoundTopic(String topicName) => _mathRoundTopicNames.contains(topicName);
 
   @override
   Widget build(BuildContext context) {
@@ -723,6 +726,7 @@ class _LeaderboardState extends State<Leaderboard> {
                             final totalQuestions = questionList.length;
                             final starCount = _getStarCount(score, totalQuestions);
                             final userName = user['profiles']?['name'] ?? 'Unknown';
+                            final roundLabel = _isMathRoundTopic(selectedTopic!) ? ((user['round'] == 'final') ? 'Final Round' : 'Local Round') : null;
                             
                             return Container(
                               margin: EdgeInsets.only(bottom: isMobile ? 12 : 16),
@@ -765,9 +769,9 @@ class _LeaderboardState extends State<Leaderboard> {
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      // Topic name and points
+                                      // Topic name, round (if Math), and points
                                       Text(
-                                        '$selectedTopic: ${score.toInt()} pts',
+                                        selectedTopic! + (roundLabel != null ? ' • $roundLabel' : '') + ': ${score.toInt()} pts',
                                         style: TextStyle(
                                           fontSize: isMobile ? 14 : 16,
                                           color: MyApp.homeGreyText,

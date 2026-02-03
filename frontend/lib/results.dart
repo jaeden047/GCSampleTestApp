@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'main.dart';
+import 'math_text.dart';
 
 // Results page
 class Results extends StatefulWidget { // Results is a type of widget (Class) 
@@ -23,6 +24,8 @@ class TestAttempt { // Here we create a custom type (i.e. String is a type)
   final List<dynamic> selectedAnswers;
   final double score;
   final int topicId;
+  /// For Math: 'local' or 'final'. Other topics default to 'local'.
+  final String round;
 
   TestAttempt({ // Model for Constructor for the class: To create an object - this is what you require
     required this.dateTime,
@@ -31,6 +34,7 @@ class TestAttempt { // Here we create a custom type (i.e. String is a type)
     required this.selectedAnswers,
     required this.score,
     required this.topicId,
+    this.round = 'local',
   });
 }
 
@@ -92,6 +96,9 @@ class _ResultsState extends State<Results> { //
   bool _isMobile(BuildContext context) {
     return MediaQuery.of(context).size.width < 768;
   }
+
+  static const _mathRoundTopicNames = ['Sample Quiz', 'Grade 5 and 6', 'Grade 7 and 8', 'Grade 9 and 10', 'Grade 11 and 12'];
+  bool _isMathRoundTopic(String topicName) => _mathRoundTopicNames.contains(topicName);
 
   @override
   void initState() {
@@ -161,6 +168,7 @@ class _ResultsState extends State<Results> { //
             selectedAnswers: List<dynamic>.from(row['selected_answers'] ?? []),
             score: (row['score'] ?? 0).toDouble(),
             topicId: row['topic_id'] ?? 0,
+            round: (row['round'] as String?) ?? 'local',
           );
         }).toList();
 
@@ -575,7 +583,7 @@ class _ResultsState extends State<Results> { //
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Text(
-                                            'Attempt ${index + 1} • ${topic.topicName}',
+                                            'Attempt ${index + 1} • ${topic.topicName}${_isMathRoundTopic(topic.topicName) ? ' • ${testList[index].round == 'final' ? 'Final Round' : 'Local Round'}' : ''}',
                                             style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,
@@ -664,14 +672,14 @@ class _ResultsState extends State<Results> { //
                                                           child: Column(
                                                             crossAxisAlignment: CrossAxisAlignment.start,
                                                             children: [
-                                                              Text(
-                                                                '${i + 1}. ${(questionList.firstWhere((q) => q.questionID == questionID).questionText)}',
-                                                                style: TextStyle(
-                                                                  fontSize: 16,
-                                                                  fontWeight: FontWeight.w600,
-                                                                  color: MyApp.homeDarkGreyText,
-                                                                ),
-                                                              ),
+                                                        MathText(
+                                                          '${i + 1}. ${(questionList.firstWhere((q) => q.questionID == questionID).questionText)}',
+                                                          textStyle: TextStyle(
+                                                            fontSize: 16,
+                                                            fontWeight: FontWeight.w600,
+                                                            color: MyApp.homeDarkGreyText,
+                                                          ),
+                                                        ),
                                                               SizedBox(height: 4),
                                                               ...answerOptions.map((row) {
                                                                 bool isSelected = testList[index].selectedAnswers.contains(row.answerID);
@@ -696,11 +704,10 @@ class _ResultsState extends State<Results> { //
                                                                     iconChosen,
                                                                     SizedBox(width: 6),
                                                                     Flexible(
-                                                                      child: Text(
-                                                                        row.answerText,
-                                                                        style: TextStyle(color: colorChosen),
-                                                                        softWrap: true,
-                                                                      ),
+                                                                child: MathText(
+                                                                  row.answerText,
+                                                                  textStyle: TextStyle(color: colorChosen),
+                                                                ),
                                                                     ),
                                                                   ],
                                                                 );

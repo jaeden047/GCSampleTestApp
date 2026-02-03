@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:logger/logger.dart';
 import 'main.dart';
+import 'math_text.dart';
 
 class QuizAnswers extends StatefulWidget {
   final int attemptId;
@@ -25,6 +26,8 @@ class TestAttempt {
   final List<dynamic> selectedAnswers;
   final double score;
   final int topicId;
+  /// For Math: 'local' or 'final'. Other topics default to 'local'.
+  final String round;
 
   TestAttempt({
     required this.dateTime,
@@ -33,6 +36,7 @@ class TestAttempt {
     required this.selectedAnswers,
     required this.score,
     required this.topicId,
+    this.round = 'local',
   });
 }
 
@@ -101,6 +105,9 @@ class _QuizAnswersState extends State<QuizAnswers> {
     return MediaQuery.of(context).size.width < 768;
   }
 
+  static const _mathRoundTopicNames = ['Sample Quiz', 'Grade 5 and 6', 'Grade 7 and 8', 'Grade 9 and 10', 'Grade 11 and 12'];
+  bool _isMathRoundTopic(String? topicName) => topicName != null && _mathRoundTopicNames.contains(topicName);
+
   @override
   void initState() {
     super.initState();
@@ -129,6 +136,7 @@ class _QuizAnswersState extends State<QuizAnswers> {
           selectedAnswers: List<dynamic>.from(testRawData['selected_answers'] ?? []),
           score: testRawData['score'] ?? 0,
           topicId: testRawData['topic_id'] ?? 0,
+          round: (testRawData['round'] as String?) ?? 'local',
         );
 
         answerList = questionAnswers.map<Answers>((row) {
@@ -438,7 +446,7 @@ class _QuizAnswersState extends State<QuizAnswers> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  '${topic?.topicName ?? 'Quiz'} Answers',
+                                  '${topic?.topicName ?? 'Quiz'}${_isMathRoundTopic(topic?.topicName) ? ' • ${testAttempt!.round == 'final' ? 'Final Round' : 'Local Round'}' : ''} Answers',
                                   style: TextStyle(
                                     fontSize: isMobile ? 24 : 32,
                                     fontWeight: FontWeight.bold,
@@ -511,9 +519,9 @@ class _QuizAnswersState extends State<QuizAnswers> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
+                                    MathText(
                                       '${i + 1}. ${(questionList.firstWhere((q) => q.questionID == questionID).questionText)}',
-                                      style: TextStyle(
+                                      textStyle: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
                                         color: MyApp.homeDarkGreyText,
@@ -543,10 +551,9 @@ class _QuizAnswersState extends State<QuizAnswers> {
                                           iconChosen,
                                           SizedBox(width: 6),
                                           Flexible(
-                                            child: Text(
+                                            child: MathText(
                                               row.answerText,
-                                              style: TextStyle(color: colorChosen),
-                                              softWrap: true,
+                                              textStyle: TextStyle(color: colorChosen),
                                             ),
                                           ),
                                         ],

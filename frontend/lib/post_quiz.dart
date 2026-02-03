@@ -334,7 +334,7 @@ class _PostQuizState extends State<PostQuiz> {
                                 Icon(Icons.lock_outline, color: MyApp.homeWhite, size: isMobile ? 20 : 24),
                                 SizedBox(width: isMobile ? 8 : 12),
                                 Text(
-                                  'Results when released',
+                                  'Results to be released soon!',
                                   style: TextStyle(
                                     fontSize: isMobile ? 14 : 16,
                                     fontWeight: FontWeight.w600,

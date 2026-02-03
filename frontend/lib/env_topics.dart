@@ -97,32 +97,6 @@ class _EnvTopicsState extends State<EnvTopics> {
 
     final topicId = topicResponse['topic_id'];
 
-    // List of quizzes that are restricted to a single attempt only
-    List<String> oneTryTopics = ['Plastic Pollution Focus'];
-
-    // Check if the user has already attempted the specific quizzes
-    if (oneTryTopics.contains(topicName)) {
-      try {
-        final response = await supabase.rpc('check_user_attempt', params: {
-          'p_user_id': user.id,  // Current user ID
-          'p_topic_id': topicId,  // Topic ID for the quiz
-        });
-        // If the response is true, user has already attempted the quiz
-        if (response == true) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('You have already attempted this quiz.')),
-          );
-          return;
-        }
-        // Proceed with starting the quiz
-      } catch (e) {
-        // Handle any errors (e.g., network, function error)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error checking previous attempts: $e')),
-        );
-      }
-    }
-
     try {
       // 1. Generate 10 question IDs for the quiz
       final questions = await supabase.rpc('generate_questions', params: {

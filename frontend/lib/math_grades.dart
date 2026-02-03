@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'quiz.dart';
 import 'main.dart';
 import 'quiz_rules.dart';
+import 'math_round_selection.dart';
 
 class MathGrades extends StatefulWidget {
   const MathGrades({super.key});
@@ -75,8 +76,18 @@ class _MathGradesState extends State<MathGrades> {
     return takenTopicIds.contains(topicId);
   }
 
-  // Start a new quiz: create an attempt and fetch questions
-  Future<void> _startQuiz(BuildContext context, String topicName) async {
+  /// Math categories that use the two-round flow (Local + Final).
+  static const _mathRoundTopicNames = [
+    'Sample Quiz',
+    'Grade 5 and 6',
+    'Grade 7 and 8',
+    'Grade 9 and 10',
+    'Grade 11 and 12',
+  ];
+
+  // Start a new quiz: create an attempt and fetch questions. [round] is 'local' or 'final'.
+  // [roundSelectionContext] if set is popped before pushing quiz rules so user doesn't see Math Problems in between.
+  Future<void> _startQuiz(BuildContext context, String topicName, [String round = 'local', BuildContext? roundSelectionContext]) async {
     final user = supabase.auth.currentUser;
 
     if (user == null) {
@@ -93,32 +104,6 @@ class _MathGradesState extends State<MathGrades> {
         .single();
 
     final topicId = topicResponse['topic_id'];
-
-    // List of quizzes that are restricted to a single attempt only
-    List<String> oneTryTopics = ['Grade 5 and 6', 'Grade 7 and 8', 'Grade 9 and 10', 'Grade 11 and 12'];
-
-    // Check if the user has already attempted the specific quizzes
-    if (oneTryTopics.contains(topicName)) {
-      try {
-        final response = await supabase.rpc('check_user_attempt', params: {
-          'p_user_id': user.id,  // Current user ID
-          'p_topic_id': topicId,  // Topic ID for the quiz
-        });
-        // If the response is true, user has already attempted the quiz
-        if (response == true) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('You have already attempted this quiz.')),
-          );
-          return;
-        }
-        // Proceed with starting the quiz
-      } catch (e) {
-        // Handle any errors (e.g., network, function error)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error checking previous attempts: $e')),
-        );
-      }
-    }
 
     try {
       // 1. Generate 10 question IDs for the quiz
@@ -139,6 +124,8 @@ class _MathGradesState extends State<MathGrades> {
         // print('attempt_id is $quizAttempt');
 
         if (quizAttempt is int) {
+          // Store round (local/final) for Math two-round flow
+          await supabase.from('test_attempts').update({'round': round}).eq('attempt_id', quizAttempt);
           // 3. Retrive the questions
           final quizQuestions = await supabase.rpc('retrieve_questions', params: {
             'input_attempt_id': quizAttempt,  // Pass the attempt_id
@@ -146,8 +133,12 @@ class _MathGradesState extends State<MathGrades> {
 
           if (quizQuestions is List) {
             final questionsWithAnswers = quizQuestions.cast<Map<String, dynamic>>();
-            // 4. Show quiz rules first, then navigate to quiz page
-            if (!mounted) return;
+            if (!context.mounted) return;
+            // Pop round selection first so user goes straight to quiz rules without seeing Math Problems
+            if (roundSelectionContext != null && roundSelectionContext.mounted) {
+              Navigator.pop(roundSelectionContext);
+            }
+            if (!context.mounted) return;
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -161,7 +152,7 @@ class _MathGradesState extends State<MathGrades> {
                           attemptId: quizAttempt,
                           questions: questionsWithAnswers,
                           topicName: topicName,
-                          onRedoQuiz: () => _startQuiz(context, topicName),
+                          onRedoQuiz: () => _startQuiz(context, topicName, round),
                         ),
                       ),
                     ).then((_) {
@@ -363,12 +354,29 @@ class _MathGradesState extends State<MathGrades> {
 
                           // Quiz cards - pink blocks
                           ...topics.map((topic) {
-                            final isTaken = _isQuizTaken(topic['title']!);
+                            final topicName = topic['title']!;
+                            final isTaken = _isQuizTaken(topicName);
+                            final useRoundSelection = _mathRoundTopicNames.contains(topicName);
                             return _HoverableQuizCard(
                               topic: topic,
                               isTaken: isTaken,
                               isMobile: isMobile,
-                              onTap: () => _startQuiz(context, topic['title']!),
+                              onTap: () {
+                                if (useRoundSelection) {
+                                  final mathGradesContext = context;
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => MathRoundSelection(
+                                        topicName: topicName,
+                                        onStartLocalRound: (roundSelectionContext) => _startQuiz(mathGradesContext, topicName, 'local', roundSelectionContext),
+                                      ),
+                                    ),
+                                  );
+                                } else {
+                                  _startQuiz(context, topicName);
+                                }
+                              },
                             );
                           }),
                         ],
