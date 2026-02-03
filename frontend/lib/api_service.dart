@@ -163,6 +163,7 @@ class ApiService {
     String? address,
     String? gender,
     String? photo,
+    String? country,
   }) async {
     final token = await getToken();
     if (token == null || token.isEmpty) {
@@ -175,6 +176,7 @@ class ApiService {
     if (address != null && address.trim().isNotEmpty) data['address'] = address.trim();
     if (gender != null && gender.trim().isNotEmpty) data['gender'] = gender.trim();
     if (photo != null && photo.trim().isNotEmpty) data['photo'] = photo.trim();
+    if (country != null && country.trim().isNotEmpty) data['country'] = country.trim(); 
 
     final res = await _dio.put(
       '/user/profile', // baseUrl already has /api/v1

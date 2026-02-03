@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'api_service.dart';
 import 'login.dart';
 import 'main.dart';
+import 'signup/country_codes.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -19,14 +20,14 @@ class _ProfilePageState extends State<ProfilePage> {
   String email = '';
   String phone = '';
   String school = '';
-  String country = '';
   String gender = '';
   String address = '';
+
+  CountryCode _selectedCountryCode = CountryCodes.getDefault();
   
   final nameController = TextEditingController();
   final phoneController = TextEditingController();
   final schoolController = TextEditingController();
-  final countryController = TextEditingController();
   final genderController = TextEditingController();
   final addressController = TextEditingController();
   
@@ -48,7 +49,6 @@ class _ProfilePageState extends State<ProfilePage> {
     nameController.dispose();
     phoneController.dispose();
     schoolController.dispose();
-    countryController.dispose();
     genderController.dispose();
     addressController.dispose();
     super.dispose();
@@ -62,21 +62,22 @@ class _ProfilePageState extends State<ProfilePage> {
     return;
     }
     
-    Map<String, dynamic>? profile = await getUserProfile();
+    Map<String, dynamic>? profile = await getUserProfile(); // gets user data from API
     if (profile != null) {
       setState(() {
         name = profile['name'] ?? '';
         email = profile['email'] ?? '';
         phone = profile['phone_number'] ?? '';
         school = profile['school'] ?? '';
-        country = profile['country'] ?? '';
         gender = profile['gender'] ?? '';
         address = profile['address'] ?? '';
+
+        final savedCountry = (profile['country'] as String).trim();
+        _selectedCountryCode = CountryCodes.findByCode(savedCountry)!;
 
         nameController.text = name;
         phoneController.text = phone;
         schoolController.text = school;
-        countryController.text = country;
         genderController.text = gender;
         addressController.text = address;
         
@@ -124,7 +125,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
     final phone = phoneController.text.trim();
     final school = schoolController.text.trim();
-    final country = countryController.text.trim();
     final gender = genderController.text.trim();
     final address = addressController.text.trim();
     final name = nameController.text.trim();
@@ -135,7 +135,6 @@ class _ProfilePageState extends State<ProfilePage> {
       if (name.isNotEmpty) updateData['name'] = name;
       if (phone.isNotEmpty) updateData['phone_number'] = phone;
       if (school.isNotEmpty) updateData['school'] = school;
-      if (country.isNotEmpty) updateData['country'] = country;
       if (gender.isNotEmpty) updateData['gender'] = gender;
       if (address.isNotEmpty) updateData['address'] = address;
       
@@ -400,12 +399,6 @@ class _ProfilePageState extends State<ProfilePage> {
                                 _buildTextField(
                                   controller: schoolController,
                                   label: 'School',
-                                  isMobile: isMobile,
-                                ),
-                                SizedBox(height: isMobile ? 16 : 20),
-                                _buildTextField(
-                                  controller: countryController,
-                                  label: 'Country',
                                   isMobile: isMobile,
                                 ),
                               ],

@@ -16,7 +16,6 @@ class SignupScreen2 extends StatefulWidget {
 class _SignupScreen2State extends State<SignupScreen2> {
   final _addressController = TextEditingController();
   final _institutionController = TextEditingController();
-  final _countryController = TextEditingController();
   final _referenceCodeController = TextEditingController();
   String? _selectedGrade;
   final tealBackground = MyApp.loginTealBackground;
@@ -30,7 +29,6 @@ class _SignupScreen2State extends State<SignupScreen2> {
     _addressController.text = widget.data.address ?? '';
     _selectedGrade = widget.data.grade;
     _institutionController.text = widget.data.institutionSchool ?? '';
-    _countryController.text = widget.data.residentialCountry ?? '';
     _referenceCodeController.text = widget.data.referenceCode ?? ''; 
     // In case user goes back to page 1 and comes back
   }
@@ -39,7 +37,6 @@ class _SignupScreen2State extends State<SignupScreen2> {
   void dispose() {
     _addressController.dispose();
     _institutionController.dispose();
-    _countryController.dispose();
     _referenceCodeController.dispose();
     super.dispose();
   }
@@ -50,9 +47,6 @@ class _SignupScreen2State extends State<SignupScreen2> {
     }
     if (_institutionController.text.trim().isEmpty) {
       return 'Institution/School name is required';
-    }
-    if (_countryController.text.trim().isEmpty) {
-      return 'Residential country is required';
     }
     if (_selectedGrade == null || _selectedGrade!.isEmpty) {
       return 'Please select your grade';
@@ -74,7 +68,6 @@ class _SignupScreen2State extends State<SignupScreen2> {
       address: _addressController.text.trim(),
       institutionSchool: _institutionController.text.trim(),
       grade: _selectedGrade,
-      residentialCountry: _countryController.text.trim(),
       referenceCode: _referenceCodeController.text.trim().isEmpty 
           ? 'NOTREDAMEUALAA' 
           : _referenceCodeController.text.trim(),
@@ -183,27 +176,6 @@ class _SignupScreen2State extends State<SignupScreen2> {
                           ),
                         ),
                         SizedBox(height: isMobile ? 16 : 20),
-                        // Residential Country field
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.9),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: TextField(
-                            controller: _countryController,
-                            style: TextStyle(fontSize: isMobile ? 14 : 16),
-                            decoration: InputDecoration(
-                              hintText: 'Residential Country',
-                              hintStyle: TextStyle(color: greySubtitle, fontSize: isMobile ? 14 : 16),
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: isMobile ? 16 : 18,
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: isMobile ? 16 : 20),
                         // Grade field (NEED TO MAKE A TOGGLE)
                         Container(
                           decoration: BoxDecoration(
@@ -225,7 +197,7 @@ class _SignupScreen2State extends State<SignupScreen2> {
                                   vertical: isMobile ? 16 : 18,
                                 ),
                               ),
-                              items: ['9', '10', '11', '12']
+                              items: ['5', '6', '7', '8', '9', '10', '11', '12']
                                   .map((grade) => DropdownMenuItem(
                                         value: grade,
                                         child: Text(grade),
