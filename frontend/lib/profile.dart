@@ -142,6 +142,7 @@ class _ProfilePageState extends State<ProfilePage> {
         institution: school,
         address: address,
         gender: gender,
+        country: _selectedCountryCode.code,
       );
             /*
       Reads JWT from secure storage

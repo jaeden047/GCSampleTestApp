@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:frontend/api_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; //supabase flutter sdk
 import 'quiz.dart';
+import 'quiz_sets.dart';
+
 
 class MathGrades extends StatelessWidget {
   const MathGrades({super.key});
@@ -136,6 +138,7 @@ class MathGrades extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
         final grade = snap.data!['user']?['grade']?.toString(); // Extract grade
+        final country = snap.data!['user']?['country']?.toString(); // Extract country
         final allowedTopic = allowedTopicFromGrade(grade);
       return SingleChildScrollView(  // Make the content scrollable
         child: Padding(
@@ -223,7 +226,20 @@ class MathGrades extends StatelessWidget {
                   child: SizedBox(
                     width: double.infinity, // Ensures the button spans the full width
                     child: ElevatedButton(
-                      onPressed: isAllowed ? () => _startQuiz(context, topic['title']!) : null, // starts or does not start.
+                      onPressed: isAllowed
+                      ? () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => CountryMenuPage(
+                                topicName: title,
+                                country: country ?? 'CA', // reuse your existing quiz-start logic
+                              ),
+                            ),
+                          );
+                        }
+                      : null,
+
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(0xFFEDF1E6), // Custom color (green)
                         shape: RoundedRectangleBorder(

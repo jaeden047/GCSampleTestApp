@@ -20,21 +20,8 @@ class _SignupScreen1State extends State<SignupScreen1> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
-  final phoneController = TextEditingController();
-  //--
-  final institutionController = TextEditingController();
-  final addressController = TextEditingController();
-  final countryController = TextEditingController();
-  final genderController = TextEditingController();
-  final gradeController = TextEditingController();
-  final userTypeController = TextEditingController();
-  final referenceCodeController = TextEditingController();  
-  //--
-  final studentTypeController = TextEditingController();
-  final interestedProgramController = TextEditingController(); // "69598383bfc1a2a7926b46f6"
-  final photoController = TextEditingController();
   
-  CountryCode _selectedCountryCode = CountryCodes.getDefault();
+  CountryCode _selectedCountryCode = CountryCodes.getDefault(); // "CA" originally.
   String? _selectedGender;
   
   final tealBackground = MyApp.loginTealBackground;
@@ -48,25 +35,14 @@ class _SignupScreen1State extends State<SignupScreen1> {
     if (widget.initialData != null) {
       _nameController.text = widget.initialData!.fullName ?? '';
       _emailController.text = widget.initialData!.email ?? '';
-      // Extract phone number without dial code if it exists
-      final phone = widget.initialData!.phoneNumber ?? '';
-      if (phone.startsWith('+')) {
-        // Find country code from phone number
-        final countryCode = CountryCodes.findByDialCode(
-          phone.split(' ').first,
-        );
-        if (countryCode != null) {
-          _selectedCountryCode = countryCode;
-          _phoneController.text = phone.substring(countryCode.dialCode.length).trim();
-        } else {
-          _phoneController.text = phone;
-        }
-      } else {
-        _phoneController.text = phone;
-      }
+      _phoneController.text = widget.initialData!.phoneNumber ?? '';
       final code = widget.initialData!.countryCode ?? 'CA';
       _selectedCountryCode = CountryCodes.findByCode(code) ?? CountryCodes.getDefault();
       _selectedGender = widget.initialData!.gender;
+      print(_selectedCountryCode.code);
+      // once I open up this page, it will default me to 'CA' because i have no code selected.
+      // Then I click US, once I do, it saves into selectedCountryCode as object
+      // 
     }
   }
   
@@ -91,6 +67,7 @@ class _SignupScreen1State extends State<SignupScreen1> {
     if (_phoneController.text.trim().isEmpty) {
       return 'Phone number is required';
     }
+
     if (_selectedGender == null || _selectedGender!.isEmpty) {
       return 'Please select your gender';
     }
@@ -112,6 +89,7 @@ class _SignupScreen1State extends State<SignupScreen1> {
     final data = (widget.initialData ?? SignupData()).copyWith(
       fullName: _nameController.text.trim(),
       email: _emailController.text.trim(),
+
       phoneNumber: fullPhoneNumber,
       countryCode: _selectedCountryCode.code,
       gender: _selectedGender,
@@ -274,7 +252,7 @@ class _SignupScreen1State extends State<SignupScreen1> {
                                     }).toList(),
                                     onChanged: (CountryCode? newValue) {
                                       if (newValue != null) {
-                                        setState(() {
+                                        setState(() { // Sets the new CountryCode Object into the _selected Country Code
                                           _selectedCountryCode = newValue;
                                         });
                                       }

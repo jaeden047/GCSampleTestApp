@@ -93,6 +93,8 @@ class _SignupScreen3State extends State<SignupScreen3> {
     
     try {
       // Register via REST API
+      print(widget.data.countryCode);
+      
       await ApiService.instance.register(
       email: widget.data.email!,
       password: _passwordController.text,
@@ -105,7 +107,7 @@ class _SignupScreen3State extends State<SignupScreen3> {
       phone: widget.data.phoneNumber,
       institution: widget.data.institutionSchool,
       address: widget.data.address,
-      country: widget.data.residentialCountry,
+      country: widget.data.countryCode,
       gender: widget.data.gender,
       grade: widget.data.grade, 
       referenceCode: widget.data.referenceCode,); 
@@ -125,7 +127,7 @@ class _SignupScreen3State extends State<SignupScreen3> {
         'name': widget.data.fullName ?? '',
         'phone_number': widget.data.phoneNumber,
         'school': widget.data.institutionSchool,
-        'country': widget.data.residentialCountry,
+        'country': widget.data.countryCode,
         'gender': widget.data.gender,
         'address': widget.data.address,
         'grade': widget.data.grade,
