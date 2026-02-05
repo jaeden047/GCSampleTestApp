@@ -4,16 +4,16 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'main.dart';
 
 /// Shown when the user taps a Math category (e.g. Grade 5 and 6).
-/// Layout matches Math Problems screen: Global Competition banner, category as header, Local/Final round cards.
+/// Shows Sample quiz (open), Local round (locked), Final round (locked).
 class MathRoundSelection extends StatefulWidget {
   final String topicName;
-  /// Called when user taps Local Round. Pass this widget's context so the caller can pop it before showing quiz rules.
-  final void Function(BuildContext roundSelectionContext) onStartLocalRound;
+  /// Called when user taps Sample Quiz. Pass this widget's context so the caller can pop it before showing quiz rules.
+  final Future<void> Function(BuildContext roundSelectionContext) onStartSampleQuiz;
 
   const MathRoundSelection({
     super.key,
     required this.topicName,
-    required this.onStartLocalRound,
+    required this.onStartSampleQuiz,
   });
 
   @override
@@ -24,6 +24,7 @@ class _MathRoundSelectionState extends State<MathRoundSelection> {
   final supabase = Supabase.instance.client;
   bool _loadingEligibility = true;
   bool _eligibleForFinal = false;
+  bool _loadingSample = false;
 
   @override
   void initState() {
@@ -89,6 +90,22 @@ class _MathRoundSelectionState extends State<MathRoundSelection> {
   }
 
   bool _isMobile(BuildContext context) => MediaQuery.of(context).size.width < 768;
+
+  Future<void> _onSampleQuizTap(BuildContext context) async {
+    if (_loadingSample) return;
+    setState(() => _loadingSample = true);
+    try {
+      await widget.onStartSampleQuiz(context);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Something went wrong. Please try again.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loadingSample = false);
+    }
+  }
 
   // Same dynamic distribution as math_grades.dart
   List<Widget> _buildDecorativeElements(
@@ -302,7 +319,7 @@ class _MathRoundSelectionState extends State<MathRoundSelection> {
     final isMobile = _isMobile(context);
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    const numCards = 2;
+    const numCards = 3;
     final estimatedContentHeight = 200.0 + 80.0 + (numCards * 140.0);
     final actualContentHeight = estimatedContentHeight > screenHeight ? estimatedContentHeight : screenHeight;
 
@@ -431,15 +448,22 @@ class _MathRoundSelectionState extends State<MathRoundSelection> {
                                   ),
                                 ),
                               ),
-                              // Round cards - same style as quiz category cards (pink, title + description)
+                              // Round cards: Sample (open), Local (locked), Final (locked)
+                              _RoundCard(
+                                title: 'Sample Quiz',
+                                description: 'Practice with sample questions for this category. Unlimited attempts.',
+                                isLocked: false,
+                                isMobile: isMobile,
+                                loading: _loadingSample,
+                                onTap: _loadingSample ? null : () => _onSampleQuizTap(context),
+                              ),
+                              SizedBox(height: isMobile ? 20 : 24),
                               _RoundCard(
                                 title: 'Local Round',
                                 description: 'Take the quiz with the current question set. Your score will count toward final round eligibility.',
-                                isLocked: false,
+                                isLocked: true,
                                 isMobile: isMobile,
-                                onTap: () {
-                                  widget.onStartLocalRound(context);
-                                },
+                                onTap: null,
                               ),
                               SizedBox(height: isMobile ? 20 : 24),
                               _RoundCard(
@@ -496,7 +520,7 @@ class _RoundCardState extends State<_RoundCard> {
 
   @override
   Widget build(BuildContext context) {
-    final canTap = widget.onTap != null && !widget.isLocked;
+    final canTap = widget.onTap != null && !widget.isLocked && !widget.loading;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -569,7 +593,7 @@ class _RoundCardState extends State<_RoundCard> {
                           fontFamily: 'sans-serif',
                         ),
                       ),
-                      if (widget.isLocked && widget.loading)
+                      if (widget.loading)
                         Padding(
                           padding: EdgeInsets.only(top: 12),
                           child: SizedBox(

@@ -105,8 +105,9 @@ class _QuizAnswersState extends State<QuizAnswers> {
     return MediaQuery.of(context).size.width < 768;
   }
 
-  static const _mathRoundTopicNames = ['Sample Quiz', 'Grade 5 and 6', 'Grade 7 and 8', 'Grade 9 and 10', 'Grade 11 and 12'];
+  static const _mathRoundTopicNames = ['Grade 5 and 6', 'Grade 7 and 8', 'Grade 9 and 10', 'Grade 11 and 12'];
   bool _isMathRoundTopic(String? topicName) => topicName != null && _mathRoundTopicNames.contains(topicName);
+  static String _roundLabel(String round) => round == 'sample' ? 'Sample Quiz' : round == 'final' ? 'Final Round' : 'Local Round';
 
   @override
   void initState() {
@@ -446,7 +447,7 @@ class _QuizAnswersState extends State<QuizAnswers> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  '${topic?.topicName ?? 'Quiz'}${_isMathRoundTopic(topic?.topicName) ? ' • ${testAttempt!.round == 'final' ? 'Final Round' : 'Local Round'}' : ''} Answers',
+                                  '${topic?.topicName ?? 'Quiz'}${_isMathRoundTopic(topic?.topicName) ? ' • ${_roundLabel(testAttempt!.round)}' : ''} Answers',
                                   style: TextStyle(
                                     fontSize: isMobile ? 24 : 32,
                                     fontWeight: FontWeight.bold,

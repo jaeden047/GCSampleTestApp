@@ -374,8 +374,9 @@ class _LeaderboardState extends State<Leaderboard> {
     return List<Map<String, dynamic>>.from(attemptsResponse);
   }
 
-  static const _mathRoundTopicNames = ['Sample Quiz', 'Grade 5 and 6', 'Grade 7 and 8', 'Grade 9 and 10', 'Grade 11 and 12'];
+  static const _mathRoundTopicNames = ['Grade 5 and 6', 'Grade 7 and 8', 'Grade 9 and 10', 'Grade 11 and 12'];
   bool _isMathRoundTopic(String topicName) => _mathRoundTopicNames.contains(topicName);
+  static String _roundLabel(String? round) => round == 'sample' ? 'Sample Quiz' : round == 'final' ? 'Final Round' : 'Local Round';
 
   @override
   Widget build(BuildContext context) {
@@ -726,7 +727,7 @@ class _LeaderboardState extends State<Leaderboard> {
                             final totalQuestions = questionList.length;
                             final starCount = _getStarCount(score, totalQuestions);
                             final userName = user['profiles']?['name'] ?? 'Unknown';
-                            final roundLabel = _isMathRoundTopic(selectedTopic!) ? ((user['round'] == 'final') ? 'Final Round' : 'Local Round') : null;
+                            final roundLabel = _isMathRoundTopic(selectedTopic!) ? _roundLabel(user['round'] as String? ?? 'local') : null;
                             
                             return Container(
                               margin: EdgeInsets.only(bottom: isMobile ? 12 : 16),

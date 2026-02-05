@@ -97,8 +97,9 @@ class _ResultsState extends State<Results> { //
     return MediaQuery.of(context).size.width < 768;
   }
 
-  static const _mathRoundTopicNames = ['Sample Quiz', 'Grade 5 and 6', 'Grade 7 and 8', 'Grade 9 and 10', 'Grade 11 and 12'];
+  static const _mathRoundTopicNames = ['Grade 5 and 6', 'Grade 7 and 8', 'Grade 9 and 10', 'Grade 11 and 12'];
   bool _isMathRoundTopic(String topicName) => _mathRoundTopicNames.contains(topicName);
+  static String _roundLabel(String round) => round == 'sample' ? 'Sample Quiz' : round == 'final' ? 'Final Round' : 'Local Round';
 
   @override
   void initState() {
@@ -583,7 +584,7 @@ class _ResultsState extends State<Results> { //
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Text(
-                                            'Attempt ${index + 1} • ${topic.topicName}${_isMathRoundTopic(topic.topicName) ? ' • ${testList[index].round == 'final' ? 'Final Round' : 'Local Round'}' : ''}',
+                                            'Attempt ${index + 1} • ${topic.topicName}${_isMathRoundTopic(topic.topicName) ? ' • ${_roundLabel(testList[index].round)}' : ''}',
                                             style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,

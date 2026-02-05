@@ -76,110 +76,184 @@ class _MathGradesState extends State<MathGrades> {
     return takenTopicIds.contains(topicId);
   }
 
-  /// Math categories that use the two-round flow (Local + Final).
+  /// Math categories that use round selection (Sample / Local / Final).
   static const _mathRoundTopicNames = [
-    'Sample Quiz',
     'Grade 5 and 6',
     'Grade 7 and 8',
     'Grade 9 and 10',
     'Grade 11 and 12',
   ];
 
-  // Start a new quiz: create an attempt and fetch questions. [round] is 'local' or 'final'.
-  // [roundSelectionContext] if set is popped before pushing quiz rules so user doesn't see Math Problems in between.
-  Future<void> _startQuiz(BuildContext context, String topicName, [String round = 'local', BuildContext? roundSelectionContext]) async {
+  /// Starts a quiz for the given topic and round. For 'sample' uses question_sets; for local/final uses generate_questions when unlocked.
+  /// [roundSelectionContext] if set is popped before pushing quiz rules.
+  Future<void> _startQuiz(BuildContext context, String topicName, [String round = 'sample', BuildContext? roundSelectionContext]) async {
     final user = supabase.auth.currentUser;
-
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('User not logged in.')),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User not logged in.')),
+        );
+      }
       return;
     }
 
-    final topicResponse = await supabase
-        .from('topics')
-        .select('topic_id')
-        .eq('topic_name', topicName)
-        .single();
+    int topicId;
+    try {
+      final topicResponse = await supabase
+          .from('topics')
+          .select('topic_id')
+          .eq('topic_name', topicName)
+          .single();
+      topicId = topicResponse['topic_id'] as int;
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not load topic. Please try again.')),
+        );
+      }
+      return;
+    }
 
-    final topicId = topicResponse['topic_id'];
+    List<int> questionIds;
+    int? questionSetId;
+
+    if (round == 'sample') {
+      try {
+        final setRow = await supabase
+            .from('question_sets')
+            .select('set_id')
+            .eq('topic_id', topicId)
+            .eq('round', 'sample')
+            .eq('set_number', 1)
+            .maybeSingle();
+        if (setRow == null) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('No questions found, come back later.')),
+            );
+          }
+          return;
+        }
+        final setId = setRow['set_id'] as int;
+        questionSetId = setId;
+        final qRows = await supabase
+            .from('questions')
+            .select('question_id')
+            .eq('question_set_id', setId)
+            .order('question_id');
+        questionIds = (qRows as List).map<int>((r) => r['question_id'] as int).toList();
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No questions found, come back later.')),
+          );
+        }
+        return;
+      }
+      if (questionIds.isEmpty) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No questions found, come back later.')),
+          );
+        }
+        return;
+      }
+    } else {
+      try {
+        final questions = await supabase.rpc('generate_questions', params: {
+          'topic_input': topicName,
+        });
+        if (questions is! List || questions.isEmpty) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('No questions found, come back later.')),
+            );
+          }
+          return;
+        }
+        questionIds = questions.cast<int>();
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error loading questions. Please try again.')),
+          );
+        }
+        return;
+      }
+    }
 
     try {
-      // 1. Generate 10 question IDs for the quiz
-      final questions = await supabase.rpc('generate_questions', params: {
-        'topic_input': topicName,
+      final quizAttempt = await supabase.rpc('create_new_quiz', params: {
+        'p_user_id': user.id,
+        'p_question_list': questionIds,
+        'p_topic_id': topicId
       });
 
-      if (questions is List) {
-        final questionIds = questions.cast<int>();
-        // print('Got 10 question IDs: $questionIds');
-
-        // 2. Create the quiz and generate an ID
-        final quizAttempt = await supabase.rpc('create_new_quiz', params: {
-          'p_user_id': user.id,
-          'p_question_list': questionIds,
-          'p_topic_id': topicId
-        });
-        // print('attempt_id is $quizAttempt');
-
-        if (quizAttempt is int) {
-          // Store round (local/final) for Math two-round flow
-          await supabase.from('test_attempts').update({'round': round}).eq('attempt_id', quizAttempt);
-          // 3. Retrive the questions
-          final quizQuestions = await supabase.rpc('retrieve_questions', params: {
-            'input_attempt_id': quizAttempt,  // Pass the attempt_id
-          });
-
-          if (quizQuestions is List) {
-            final questionsWithAnswers = quizQuestions.cast<Map<String, dynamic>>();
-            if (!context.mounted) return;
-            // Pop round selection first so user goes straight to quiz rules without seeing Math Problems
-            if (roundSelectionContext != null && roundSelectionContext.mounted) {
-              Navigator.pop(roundSelectionContext);
-            }
-            if (!context.mounted) return;
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => QuizRulesScreen(
-                  onAgree: () {
-                    // After agreeing to rules, navigate to quiz
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => QuizPage(
-                          attemptId: quizAttempt,
-                          questions: questionsWithAnswers,
-                          topicName: topicName,
-                          onRedoQuiz: () => _startQuiz(context, topicName, round),
-                        ),
-                      ),
-                    ).then((_) {
-                      // Refresh taken quizzes after returning from quiz
-                      _fetchTakenQuizzes();
-                    });
-                  },
-                  onClose: () {
-                    // Close quiz rules and go back to quiz topic screen
-                    Navigator.pop(context);
-                  },
-                ),
-              ),
-            );
-          } else {
-            // print('Failed to retrieve questions');
-          }
-        } else {
-          // print('Failed to create quiz: $quizAttempt');
+      if (quizAttempt is! int) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not start quiz. Please try again.')),
+          );
         }
-      } else {
-        // print('Unexpected response: $questions');
+        return;
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error starting quiz: $e')),
+
+      final updates = <String, dynamic>{'round': round};
+      if (questionSetId != null) {
+        updates['question_set_id'] = questionSetId;
+      }
+      await supabase.from('test_attempts').update(updates).eq('attempt_id', quizAttempt);
+
+      final quizQuestions = await supabase.rpc('retrieve_questions', params: {
+        'input_attempt_id': quizAttempt,
+      });
+
+      if (quizQuestions is! List || quizQuestions.isEmpty) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not load questions. Please try again.')),
+          );
+        }
+        return;
+      }
+
+      final questionsWithAnswers = quizQuestions.cast<Map<String, dynamic>>();
+      if (!context.mounted) return;
+      if (roundSelectionContext != null && roundSelectionContext.mounted) {
+        Navigator.pop(roundSelectionContext);
+      }
+      if (!context.mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => QuizRulesScreen(
+            onAgree: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => QuizPage(
+                    attemptId: quizAttempt,
+                    questions: questionsWithAnswers,
+                    topicName: topicName,
+                    onRedoQuiz: () => _startQuiz(context, topicName, round),
+                  ),
+                ),
+              ).then((_) {
+                _fetchTakenQuizzes();
+              });
+            },
+            onClose: () {
+              Navigator.pop(context);
+            },
+          ),
+        ),
       );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error starting quiz. Please try again.')),
+        );
+      }
     }
   }
 
@@ -193,11 +267,10 @@ class _MathGradesState extends State<MathGrades> {
     final isMobile = _isMobile(context);
 
     final topics = [
-      {'title': 'Sample Quiz', 'description': 'The sample quiz consists of 10 questions and must be completed within 30 minutes. Students have unlimited attempts to practice.'},
-      {'title': 'Grade 5 and 6', 'description': 'The quiz consists of 15 questions and must be completed within 30 minutes. Each student is allowed only ONE attempt.'},
-      {'title': 'Grade 7 and 8', 'description': 'The quiz consists of 15 questions and must be completed within 30 minutes. Each student is allowed only ONE attempt.'},
-      {'title': 'Grade 9 and 10', 'description': 'The quiz consists of 15 questions and must be completed within 30 minutes. Each student is allowed only ONE attempt.'},
-      {'title': 'Grade 11 and 12', 'description': 'The quiz consists of 15 questions and must be completed within 30 minutes. Each student is allowed only ONE attempt.'}
+      {'title': 'Grade 5 and 6', 'description': 'Sample quiz, local round, and final round. Complete the sample quiz to practice.'},
+      {'title': 'Grade 7 and 8', 'description': 'Sample quiz, local round, and final round. Complete the sample quiz to practice.'},
+      {'title': 'Grade 9 and 10', 'description': 'Sample quiz, local round, and final round. Complete the sample quiz to practice.'},
+      {'title': 'Grade 11 and 12', 'description': 'Sample quiz, local round, and final round. Complete the sample quiz to practice.'}
     ];
 
     return Scaffold(
@@ -369,7 +442,7 @@ class _MathGradesState extends State<MathGrades> {
                                     MaterialPageRoute(
                                       builder: (context) => MathRoundSelection(
                                         topicName: topicName,
-                                        onStartLocalRound: (roundSelectionContext) => _startQuiz(mathGradesContext, topicName, 'local', roundSelectionContext),
+                                        onStartSampleQuiz: (roundSelectionContext) => _startQuiz(mathGradesContext, topicName, 'sample', roundSelectionContext),
                                       ),
                                     ),
                                   );
