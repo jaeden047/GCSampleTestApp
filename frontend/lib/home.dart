@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart'; // import svg image
 import 'package:frontend/login.dart';
@@ -115,6 +116,8 @@ class _HomeState extends State<Home> {
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
+                    // Decorative stars and clouds — drawn first so they stay behind header and cards
+                    ..._buildDecorativeElements(screenWidth, screenHeight, isMobile),
                     // Main content
                     Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -337,6 +340,14 @@ class _HomeState extends State<Home> {
                           return Stack(
                             clipBehavior: Clip.none,
                             children: [
+                              // Card-area decorations — behind the cards
+                              ..._buildCardDecorativeElements(
+                                screenWidth,
+                                screenHeight,
+                                isMobile,
+                                useVerticalLayout,
+                                useTwoColumnLayout,
+                              ),
                               // Cards container - smart responsive layout
                               useVerticalLayout
                                   ? // Vertical layout for very small screens
@@ -529,14 +540,6 @@ class _HomeState extends State<Home> {
                                             },
                                           ),
                                         ),
-                              // Decorative stars around cards
-                              ..._buildCardDecorativeElements(
-                                screenWidth,
-                                screenHeight,
-                                isMobile,
-                                useVerticalLayout,
-                                useTwoColumnLayout,
-                              ),
                             ],
                           );
                         },
@@ -544,8 +547,8 @@ class _HomeState extends State<Home> {
                       
                       SizedBox(height: 40),
                     ],
-                  ),
-                    // Top left logo - positioned in Stack like decorative elements
+                    ),
+                    // Top left logo — on top so it stays visible
                     Positioned(
                       top: MediaQuery.of(context).padding.top + 20,
                       left: 20,
@@ -560,9 +563,6 @@ class _HomeState extends State<Home> {
                         ),
                       ),
                     ),
-                    // Decorative stars and clouds around title - positioned after Column so they render on top
-                    // Using screenWidth/screenHeight 
-                    ..._buildDecorativeElements(screenWidth, screenHeight, isMobile),
                   ],
                 ),
               ),
@@ -570,462 +570,410 @@ class _HomeState extends State<Home> {
     );
   }
 
-  // Build decorative stars and clouds around the title
-  // Using screenWidth/screenHeight positioning like signup_screen4.dart - this is the key!
+  /// Deterministic hash in [0, 1]. Uses large prime so consecutive indices do NOT get consecutive
+  /// values — avoids straight lines. Same inputs => same output (no flicker).
+  static double _scatter(int index, int seed) {
+    const int prime = 7919;
+    return (((index * prime + seed * 31) % 1000) / 1000.0);
+  }
+
+  /// Independent hash for X vs Y so positions fill 2D area instead of a line.
+  static double _scatter2(int index, int seed) {
+    const int prime = 6781;
+    return (((index * prime + seed * 17) % 1000) / 1000.0);
+  }
+
+  static double _jitter(int index, int seed, double range) {
+    return ((_scatter(index, seed) - 0.5) * 2.0 * range);
+  }
+
+  /// Clamp that never throws when max < min (can happen on tiny windows).
+  static double _safeClamp(double value, double min, double max) {
+    if (max < min) return min;
+    return value.clamp(min, max).toDouble();
+  }
+
+  // Decorative stars and clouds — scattered across screen, wrapping around content; never cover text or cards.
   List<Widget> _buildDecorativeElements(double screenWidth, double screenHeight, bool isMobile) {
+    const double marginFrac = 0.09;
+    const double cardsTopFrac = 0.40;
+    const double cardsBottomFrac = 0.88;
+    // Very tight text rect — hugs "Welcome" / "Continue with Quiz" / "Future Mind Challenges" so stars fill the gap around them
+    const double textWidthFrac = 0.32;
+    const double textTopFrac = 0.13;
+    const double textBottomFrac = 0.30;
+
+    final textRect = Rect.fromLTWH(
+      screenWidth * (1 - textWidthFrac) / 2,
+      screenHeight * textTopFrac,
+      screenWidth * textWidthFrac,
+      screenHeight * (textBottomFrac - textTopFrac),
+    );
+    final cardsRect = Rect.fromLTWH(
+      screenWidth * marginFrac,
+      screenHeight * cardsTopFrac,
+      screenWidth * (1 - marginFrac * 2),
+      screenHeight * (cardsBottomFrac - cardsTopFrac),
+    );
+
+    // Forbid only the actual content: center text block and card area. Rest of screen is free.
+    bool overlapsContent(double left, double top, double w, double h) {
+      final r = Rect.fromLTWH(left, top, w, h);
+      return r.overlaps(textRect) || r.overlaps(cardsRect);
+    }
+
+    final textLeft = textRect.left;
+    final textRight = textRect.right;
+    final textTop = textRect.top;
+    final textBottom = textRect.bottom;
+    final cardsLeft = cardsRect.left;
+    final cardsRight = cardsRect.right;
+    final cardsTop = cardsRect.top;
+    final cardsBottom = cardsRect.bottom;
+
     final elements = <Widget>[];
-    
-    // Clouds - positioned closer to text, wrapping around it (reduced number)
-    // Left cloud - positioned close to "Future Mind" on the left
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.12,
-        top: screenHeight * 0.28,
-        child: SvgPicture.asset(
-          'assets/images/cloud.svg',
-          width: isMobile ? 40 : 55,
-          height: isMobile ? 28 : 38,
-        ),
-      ),
-    );
-    
-    // Right cloud - positioned below "Challenges" to the right, smaller size
-    elements.add(
-      Positioned(
-        right: screenWidth * 0.15,
-        top: screenHeight * 0.35,
-        child: SvgPicture.asset(
-          'assets/images/cloud.svg',
-          width: isMobile ? 30 : 40,
-          height: isMobile ? 20 : 28,
-        ),
-      ),
-    );
-    
-    // Stars positioned around the title using screenWidth/screenHeight like signup_screen4.dart
-    // Top row - above the text
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.15,
-        top: screenHeight * 0.24,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 12.0 : 18.0,
-          height: isMobile ? 11.3 : 17.0,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.25,
-        top: screenHeight * 0.23,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 10.0 : 15.0,
-          height: isMobile ? 9.4 : 14.2,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.45,
-        top: screenHeight * 0.25,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 14.0 : 20.0,
-          height: isMobile ? 13.2 : 18.9,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.55,
-        top: screenHeight * 0.24,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 11.0 : 16.0,
-          height: isMobile ? 10.4 : 15.1,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.70,
-        top: screenHeight * 0.23,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 13.0 : 19.0,
-          height: isMobile ? 12.3 : 17.9,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.80,
-        top: screenHeight * 0.25,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 9.0 : 14.0,
-          height: isMobile ? 8.5 : 13.2,
-        ),
-      ),
-    );
-    
-    // Middle row - beside the text
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.10,
-        top: screenHeight * 0.30,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 9.0 : 14.0,
-          height: isMobile ? 8.5 : 13.2,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.05,
-        top: screenHeight * 0.34,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 12.0 : 18.0,
-          height: isMobile ? 11.3 : 17.0,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        right: screenWidth * 0.10,
-        top: screenHeight * 0.31,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 11.0 : 16.0,
-          height: isMobile ? 10.4 : 15.1,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        right: screenWidth * 0.05,
-        top: screenHeight * 0.35,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 10.0 : 15.0,
-          height: isMobile ? 9.4 : 14.2,
-        ),
-      ),
-    );
-    
-    // Bottom row - below the text
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.18,
-        top: screenHeight * 0.38,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 11.0 : 16.0,
-          height: isMobile ? 10.4 : 15.1,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.35,
-        top: screenHeight * 0.39,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 10.0 : 15.0,
-          height: isMobile ? 9.4 : 14.2,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.50,
-        top: screenHeight * 0.38,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 12.0 : 18.0,
-          height: isMobile ? 11.3 : 17.0,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.65,
-        top: screenHeight * 0.40,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 9.0 : 14.0,
-          height: isMobile ? 8.5 : 13.2,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.78,
-        top: screenHeight * 0.39,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 13.0 : 19.0,
-          height: isMobile ? 12.3 : 17.9,
-        ),
-      ),
-    );
-    
-    // Additional stars for more density
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.08,
-        top: screenHeight * 0.26,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 10.0 : 15.0,
-          height: isMobile ? 9.4 : 14.2,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.30,
-        top: screenHeight * 0.22,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 11.0 : 16.0,
-          height: isMobile ? 10.4 : 15.1,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        right: screenWidth * 0.08,
-        top: screenHeight * 0.28,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 12.0 : 17.0,
-          height: isMobile ? 11.3 : 16.0,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        right: screenWidth * 0.25,
-        top: screenHeight * 0.24,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 9.0 : 14.0,
-          height: isMobile ? 8.5 : 13.2,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.22,
-        top: screenHeight * 0.36,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 13.0 : 18.0,
-          height: isMobile ? 12.3 : 17.0,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        right: screenWidth * 0.22,
-        top: screenHeight * 0.37,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 10.0 : 15.0,
-          height: isMobile ? 9.4 : 14.2,
-        ),
-      ),
-    );
-    
-    // Bottom decorations - reduced clouds, more stars at the bottom of the page
-    // Using top positioning for consistency (calculated from screenHeight)
-    // Only add clouds if they won't overlap with cards (cards typically start around 0.45-0.50 screenHeight)
-    if (screenHeight > 800) {
+    final pad = isMobile ? 8.0 : 12.0;
+    // Larger jitter so stars are scattered and even, not clustered (ref: second image)
+    final jitterPx = isMobile ? 52.0 : 68.0;
+
+    void addStarIfSafe(double left, double top, double w, double h) {
+      if (overlapsContent(left, top, w, h)) return;
       elements.add(
-        Positioned(
-          left: screenWidth * 0.10,
-          top: screenHeight * 0.85,
-          child: SvgPicture.asset(
-            'assets/images/cloud.svg',
-            width: isMobile ? 38 : 52,
-            height: isMobile ? 26 : 36,
-          ),
-        ),
-      );
-      
-      elements.add(
-        Positioned(
-          right: screenWidth * 0.12,
-          top: screenHeight * 0.88,
-          child: SvgPicture.asset(
-            'assets/images/cloud.svg',
-            width: isMobile ? 35 : 48,
-            height: isMobile ? 24 : 33,
-          ),
-        ),
+        Positioned(left: left, top: top, child: SvgPicture.asset('assets/images/pinkstar.svg', width: w, height: h)),
       );
     }
-    
-    // Bottom stars
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.05,
-        top: screenHeight * 0.80,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 12.0 : 17.0,
-          height: isMobile ? 11.3 : 16.0,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.15,
-        top: screenHeight * 0.92,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 14.0 : 20.0,
-          height: isMobile ? 13.2 : 18.9,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.30,
-        top: screenHeight * 0.85,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 11.0 : 16.0,
-          height: isMobile ? 10.4 : 15.1,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.50,
-        top: screenHeight * 0.88,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 13.0 : 19.0,
-          height: isMobile ? 12.3 : 17.9,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.65,
-        top: screenHeight * 0.84,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 10.0 : 15.0,
-          height: isMobile ? 9.4 : 14.2,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        right: screenWidth * 0.05,
-        top: screenHeight * 0.86,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 12.0 : 18.0,
-          height: isMobile ? 11.3 : 17.0,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        right: screenWidth * 0.15,
-        top: screenHeight * 0.90,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 11.0 : 16.0,
-          height: isMobile ? 10.4 : 15.1,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        right: screenWidth * 0.30,
-        top: screenHeight * 0.87,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 9.0 : 14.0,
-          height: isMobile ? 8.5 : 13.2,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        right: screenWidth * 0.08,
-        top: screenHeight * 0.94,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 13.0 : 18.0,
-          height: isMobile ? 12.3 : 17.0,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.40,
-        top: screenHeight * 0.83,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 10.0 : 15.0,
-          height: isMobile ? 9.4 : 14.2,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        right: screenWidth * 0.40,
-        top: screenHeight * 0.91,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 11.0 : 16.0,
-          height: isMobile ? 10.4 : 15.1,
-        ),
-      ),
-    );
-    
+
+    // Clouds: spread across screen (same zones as stars), never on text or cards; keep distance from each other.
+    final cloudRects = <Rect>[];
+    final minCloudDx = screenWidth * 0.28;
+    final minCloudDy = screenHeight * 0.24;
+    bool canPlaceCloud(double left, double top, double w, double h) {
+      final r = Rect.fromLTWH(left, top, w, h);
+      if (overlapsContent(left, top, w, h)) return false;
+      for (final c in cloudRects) {
+        final dx = (r.center.dx - c.center.dx).abs();
+        final dy = (r.center.dy - c.center.dy).abs();
+        if (dx < minCloudDx && dy < minCloudDy) return false;
+      }
+      cloudRects.add(r);
+      return true;
+    }
+
+    // ---- Stars: scattered across full screen, wrapping around content (no overlap with text or cards) ----
+    // Star size; responsive
+    double starW(int i, int s) => (isMobile ? 9.0 : 12.0) + _scatter2(i, s) * (isMobile ? 5.0 : 6.0);
+    double starH(double w) => w * (11.3 / 12);
+
+    // Zone 1: Top band — fewer stars, more scattered (natural look)
+    final topBandBottom = (textTop - pad - 6).clamp(0.0, screenHeight);
+    if (topBandBottom > 12) {
+      final nTop = isMobile ? 3 : 4;
+      for (int i = 0; i < nTop; i++) {
+        final w = starW(i, 1);
+        final h = starH(w);
+        final left = _safeClamp(_scatter(i, 2) * (screenWidth - w - 4) + _jitter(i, 3, jitterPx), 0.0, screenWidth - w - 4);
+        final top = _safeClamp(_scatter2(i, 4) * (topBandBottom - h) + _jitter(i, 5, jitterPx * 0.6), 0.0, topBandBottom - h);
+        addStarIfSafe(left, top, w, h);
+      }
+    }
+
+    // Zone 1b: Header frame — a few stars just above and just below "Future Mind Challenges" (closer to title, scattered)
+    const double headerFramePad = 4.0;
+    final justAboveTop = (textTop - 28).clamp(0.0, screenHeight);
+    final justAboveBottom = (textTop - headerFramePad - 6).clamp(0.0, screenHeight);
+    if (justAboveBottom > justAboveTop + 8) {
+      final nFrame = isMobile ? 2 : 3;
+      for (int i = 0; i < nFrame; i++) {
+        final w = starW(i + 80, 1);
+        final h = starH(w);
+        final left = _safeClamp(_scatter(i + 80, 2) * (screenWidth - w - 4) + _jitter(i + 80, 3, jitterPx * 0.8), 0.0, screenWidth - w - 4);
+        final top = _safeClamp(justAboveTop + _scatter2(i + 80, 4) * (justAboveBottom - justAboveTop - h) + _jitter(i + 80, 5, 10), justAboveTop, justAboveBottom - h);
+        addStarIfSafe(left, top, w, h);
+      }
+    }
+    final justBelowTop = (textBottom + headerFramePad).clamp(0.0, screenHeight);
+    final justBelowBottom = (textBottom + 32).clamp(0.0, screenHeight);
+    if (justBelowBottom > justBelowTop + 8) {
+      final nFrame = isMobile ? 2 : 3;
+      for (int i = 0; i < nFrame; i++) {
+        final w = starW(i + 85, 1);
+        final h = starH(w);
+        final left = _safeClamp(_scatter(i + 85, 2) * (screenWidth - w - 4) + _jitter(i + 85, 3, jitterPx * 0.8), 0.0, screenWidth - w - 4);
+        final top = _safeClamp(justBelowTop + _scatter2(i + 85, 4) * (justBelowBottom - justBelowTop - h) + _jitter(i + 85, 5, 10), justBelowTop, justBelowBottom - h);
+        addStarIfSafe(left, top, w, h);
+      }
+    }
+
+    // Zone 2: Beside header (left/right of "Future Mind Challenges") — few stars, well scattered
+    final leftOfTextMax = (textLeft - pad - 6).clamp(0.0, screenWidth);
+    final rightOfTextMin = (textRight + pad).clamp(0.0, screenWidth);
+    if (leftOfTextMax > 10) {
+      final nSide = isMobile ? 2 : 3;
+      for (int i = 0; i < nSide; i++) {
+        final w = starW(i + 20, 1);
+        final h = starH(w);
+        final left = _safeClamp(_scatter(i + 20, 2) * leftOfTextMax + _jitter(i + 20, 3, jitterPx * 0.7), 0.0, leftOfTextMax);
+        final top = _safeClamp(textTop + _scatter2(i + 20, 4) * (textRect.height - h) + _jitter(i + 20, 5, jitterPx * 0.4), textTop, textBottom - h);
+        addStarIfSafe(left, top, w, h);
+      }
+    }
+    if (screenWidth - rightOfTextMin > 10) {
+      final nSide = isMobile ? 2 : 3;
+      for (int i = 0; i < nSide; i++) {
+        final w = starW(i + 30, 1);
+        final h = starH(w);
+        final rightSpace = (screenWidth - rightOfTextMin - w).clamp(0.0, screenWidth);
+        final left = screenWidth - rightSpace - w + _safeClamp(_scatter(i + 30, 2) * (rightSpace - 2) + _jitter(i + 30, 3, jitterPx * 0.7), 0.0, rightSpace - 2);
+        final top = _safeClamp(textTop + _scatter2(i + 30, 4) * (textRect.height - h) + _jitter(i + 30, 5, jitterPx * 0.4), textTop, textBottom - h);
+        addStarIfSafe(left, top, w, h);
+      }
+    }
+
+    // Zone 3: Gap between header and cards — fewer stars, even spread
+    final gapTop = (textBottom + pad).clamp(0.0, screenHeight);
+    final gapBottom = (cardsTop - pad - 6).clamp(0.0, screenHeight);
+    if (gapBottom > gapTop + 12) {
+      final nGap = isMobile ? 2 : 3;
+      for (int i = 0; i < nGap; i++) {
+        final w = starW(i + 40, 1);
+        final h = starH(w);
+        final left = _safeClamp(_scatter(i + 40, 2) * (screenWidth - w - 4) + _jitter(i + 40, 3, jitterPx), 0.0, screenWidth - w - 4);
+        final top = _safeClamp(gapTop + _scatter2(i + 40, 4) * (gapBottom - gapTop - h) + _jitter(i + 40, 5, jitterPx * 0.5), gapTop, gapBottom - h);
+        addStarIfSafe(left, top, w, h);
+      }
+    }
+
+    // Zone 4: Beside cards — fewer stars, scattered
+    final leftOfCardsMax = (cardsLeft - pad - 6).clamp(0.0, screenWidth);
+    final rightOfCardsMin = (cardsRight + pad).clamp(0.0, screenWidth);
+    if (leftOfCardsMax > 10) {
+      final nSide = isMobile ? 2 : 3;
+      for (int i = 0; i < nSide; i++) {
+        final w = starW(i + 50, 1);
+        final h = starH(w);
+        final left = _safeClamp(_scatter(i + 50, 2) * leftOfCardsMax + _jitter(i + 50, 3, jitterPx * 0.7), 0.0, leftOfCardsMax);
+        final top = _safeClamp(cardsTop + _scatter2(i + 50, 4) * (cardsRect.height - h) + _jitter(i + 50, 5, jitterPx * 0.5), cardsTop, cardsBottom - h);
+        addStarIfSafe(left, top, w, h);
+      }
+    }
+    if (screenWidth - rightOfCardsMin > 10) {
+      final nSide = isMobile ? 2 : 3;
+      for (int i = 0; i < nSide; i++) {
+        final w = starW(i + 60, 1);
+        final h = starH(w);
+        final rightSpace = (screenWidth - rightOfCardsMin - w).clamp(0.0, screenWidth);
+        final left = screenWidth - rightSpace - w + _safeClamp(_scatter(i + 60, 2) * (rightSpace - 2) + _jitter(i + 60, 3, jitterPx * 0.7), 0.0, rightSpace - 2);
+        final top = _safeClamp(cardsTop + _scatter2(i + 60, 4) * (cardsRect.height - h) + _jitter(i + 60, 5, jitterPx * 0.5), cardsTop, cardsBottom - h);
+        addStarIfSafe(left, top, w, h);
+      }
+    }
+
+    // Zone 5: Bottom band — fewer stars, even spread
+    final bottomBandTop = (cardsBottom + pad).clamp(0.0, screenHeight);
+    final bottomBandBottom = (screenHeight - 16).clamp(0.0, screenHeight);
+    if (bottomBandBottom > bottomBandTop + 12) {
+      final nBottom = isMobile ? 4 : 5;
+      for (int i = 0; i < nBottom; i++) {
+        final w = starW(i + 70, 1);
+        final h = starH(w);
+        final left = _safeClamp(_scatter(i + 70, 2) * (screenWidth - w - 4) + _jitter(i + 70, 3, jitterPx), 0.0, screenWidth - w - 4);
+        final top = _safeClamp(bottomBandTop + _scatter2(i + 70, 4) * (bottomBandBottom - bottomBandTop - h) + _jitter(i + 70, 5, jitterPx * 0.6), bottomBandTop, bottomBandBottom - h);
+        addStarIfSafe(left, top, w, h);
+      }
+    }
+
+    // Clouds: spread across same zones as stars (top full width, beside header, gap, beside cards, bottom full width).
+    final cloudCount = isMobile ? 5 : 6;
+    final cw = isMobile ? 26.0 : 32.0;
+    final ch = cw * 0.68;
+    for (int i = 0; i < cloudCount; i++) {
+      double left;
+      double top;
+      final zone = i % cloudCount;
+      if (zone == 0) {
+        // Top band (full width)
+        final topBandB = (textTop - pad - ch).clamp(0.0, screenHeight);
+        if (topBandB > ch + 4) {
+          left = _safeClamp(_scatter(i + 120, 1) * (screenWidth - cw - 8) + _jitter(i + 120, 2, 20), 0.0, screenWidth - cw - 8);
+          top = _safeClamp(_scatter2(i + 120, 3) * (topBandB - ch) + _jitter(i + 120, 4, 8), 0.0, topBandB - ch);
+        } else { continue; }
+      } else if (zone == 1) {
+        // Beside header (left)
+        final leftMax = (textLeft - pad - cw).clamp(0.0, screenWidth);
+        if (leftMax <= 0) continue;
+        left = _safeClamp(_scatter(i + 120, 5) * leftMax + _jitter(i + 120, 6, 12), 0.0, leftMax);
+        top = _safeClamp(textTop + _scatter2(i + 120, 7) * (textRect.height - ch) + _jitter(i + 120, 8, 6), textTop, textBottom - ch);
+      } else if (zone == 2) {
+        // Gap between header and cards (full width)
+        final gTop = (textBottom + pad).clamp(0.0, screenHeight);
+        final gBottom = (cardsTop - pad - ch).clamp(0.0, screenHeight);
+        if (gBottom <= gTop + ch) continue;
+        left = _safeClamp(_scatter(i + 120, 9) * (screenWidth - cw - 8) + _jitter(i + 120, 10, 24), 0.0, screenWidth - cw - 8);
+        top = _safeClamp(gTop + _scatter2(i + 120, 11) * (gBottom - gTop - ch) + _jitter(i + 120, 12, 6), gTop, gBottom - ch);
+      } else if (zone == 3) {
+        // Beside cards (right)
+        final rightSpace = (screenWidth - cardsRight - pad - cw).clamp(0.0, screenWidth);
+        if (rightSpace <= 0) continue;
+        left = screenWidth - rightSpace - cw + _safeClamp(_scatter(i + 120, 13) * (rightSpace - 4) + _jitter(i + 120, 14, 12), 0.0, rightSpace - 4);
+        top = _safeClamp(cardsTop + _scatter2(i + 120, 15) * (cardsRect.height - ch) + _jitter(i + 120, 16, 6), cardsTop, cardsBottom - ch);
+      } else {
+        // Bottom band (full width)
+        final botTop = (cardsBottom + pad).clamp(0.0, screenHeight);
+        final botBottom = (screenHeight - ch - 8).clamp(0.0, screenHeight);
+        if (botBottom <= botTop + ch) continue;
+        left = _safeClamp(_scatter(i + 120, 17) * (screenWidth - cw - 8) + _jitter(i + 120, 18, 24), 0.0, screenWidth - cw - 8);
+        top = _safeClamp(botTop + _scatter2(i + 120, 19) * (botBottom - botTop - ch) + _jitter(i + 120, 20, 8), botTop, botBottom - ch);
+      }
+      if (!canPlaceCloud(left, top, cw, ch)) continue;
+      elements.add(Positioned(left: left, top: top, child: SvgPicture.asset('assets/images/cloud.svg', width: cw, height: ch)));
+    }
+
     return elements;
   }
   
-  // Build decorative stars around the cards section
-  // Calculate safe zones to prevent overlapping with cards
+  /// Add scattered stars/clouds in strips around the card area. X and Y use independent hashes so no lines.
+  void _addScatteredCardDecorations(
+    List<Widget> elements,
+    double screenWidth,
+    double screenHeight,
+    bool isMobile,
+    double cardAreaLeft,
+    double cardAreaRight,
+    double cardAreaTop,
+    double cardAreaBottom,
+    int seedOffset,
+  ) {
+    const double margin = 20.0;
+    final jitter = isMobile ? 28.0 : 38.0;
+    final leftStripMax = (cardAreaLeft - margin).clamp(0.0, screenWidth * 0.5);
+    final rightStripWidth = (screenWidth - cardAreaRight - margin).clamp(0.0, screenWidth);
+    final topStripMax = (cardAreaTop - margin).clamp(0.0, screenHeight * 0.5);
+    final bottomStripMin = (cardAreaBottom + margin).clamp(0.0, screenHeight);
+
+    // Left strip: very light scatter (natural look)
+    if (leftStripMax > 30) {
+      for (int i = 0; i < 2; i++) {
+        final leftMax = leftStripMax - 18;
+        final left = _safeClamp(
+          (_scatter(i + seedOffset, 1) * (leftStripMax - 16) + _jitter(i + seedOffset, 3, 14)),
+          0.0,
+          leftMax,
+        );
+        final top = _safeClamp(
+          (_scatter2(i + seedOffset, 2) * (screenHeight - 25) + _jitter(i + seedOffset, 4, jitter)),
+          0.0,
+          (screenHeight - 25),
+        );
+        final w = (isMobile ? 9.0 : 12.0) + _scatter2(i + seedOffset, 5) * (isMobile ? 5.0 : 6.0);
+        final h = w * (11.3 / 12);
+        elements.add(
+          Positioned(left: left, top: top, child: SvgPicture.asset('assets/images/pinkstar.svg', width: w, height: h)),
+        );
+      }
+      for (int i = 0; i < 2; i++) {
+        final leftMax = leftStripMax - 55;
+        if (leftMax <= 0) continue;
+        final left = _safeClamp(
+          (_scatter(i + seedOffset + 10, 1) * (leftStripMax - 50) + _jitter(i + seedOffset + 10, 3, 18)),
+          0.0,
+          leftMax,
+        );
+        final top = _safeClamp(
+          (_scatter2(i + seedOffset + 10, 2) * (screenHeight - 45) + _jitter(i + seedOffset + 10, 4, jitter)),
+          0.0,
+          (screenHeight - 45),
+        );
+        final cw = isMobile ? 26.0 : 36.0;
+        final ch = isMobile ? 18.0 : 24.0;
+        elements.add(
+          Positioned(left: left, top: top, child: SvgPicture.asset('assets/images/cloud.svg', width: cw, height: ch)),
+        );
+      }
+    }
+    // Right strip: very light scatter
+    if (rightStripWidth > 30) {
+      for (int i = 0; i < 2; i++) {
+        final rightMax = rightStripWidth - 18;
+        final right = _safeClamp(
+          (_scatter(i + seedOffset + 20, 1) * (rightStripWidth - 16) + _jitter(i + seedOffset + 20, 3, 14)),
+          0.0,
+          rightMax,
+        );
+        final top = _safeClamp(
+          (_scatter2(i + seedOffset + 20, 2) * (screenHeight - 25) + _jitter(i + seedOffset + 20, 4, jitter)),
+          0.0,
+          (screenHeight - 25),
+        );
+        final w = (isMobile ? 9.0 : 12.0) + _scatter2(i + seedOffset + 20, 5) * (isMobile ? 5.0 : 6.0);
+        final h = w * (11.3 / 12);
+        elements.add(
+          Positioned(right: right, top: top, child: SvgPicture.asset('assets/images/pinkstar.svg', width: w, height: h)),
+        );
+      }
+      for (int i = 0; i < 2; i++) {
+        final rightMax = rightStripWidth - 60;
+        if (rightMax <= 0) continue;
+        final right = _safeClamp(
+          (_scatter(i + seedOffset + 30, 1) * (rightStripWidth - 55) + _jitter(i + seedOffset + 30, 3, 18)),
+          0.0,
+          rightMax,
+        );
+        final top = _safeClamp(
+          (_scatter2(i + seedOffset + 30, 2) * (screenHeight - 45) + _jitter(i + seedOffset + 30, 4, jitter)),
+          0.0,
+          (screenHeight - 45),
+        );
+        final cw = isMobile ? 24.0 : 34.0;
+        final ch = isMobile ? 16.0 : 22.0;
+        elements.add(
+          Positioned(right: right, top: top, child: SvgPicture.asset('assets/images/cloud.svg', width: cw, height: ch)),
+        );
+      }
+    }
+    // Top strip (above cards)
+    if (topStripMax > 28) {
+      for (int i = 0; i < 2; i++) {
+        final left = _safeClamp(
+          (_scatter(i + seedOffset + 40, 1) * (screenWidth - 24) + _jitter(i + seedOffset + 40, 2, jitter)),
+          0.0,
+          (screenWidth - 22),
+        );
+        final top = _safeClamp(
+          (_scatter2(i + seedOffset + 40, 3) * (topStripMax - 18) + _jitter(i + seedOffset + 40, 4, 14)),
+          0.0,
+          (topStripMax - 20),
+        );
+        final w = (isMobile ? 9.0 : 12.0) + _scatter(i + seedOffset + 40, 5) * (isMobile ? 4.0 : 5.0);
+        final h = w * (11.3 / 12);
+        elements.add(
+          Positioned(left: left, top: top, child: SvgPicture.asset('assets/images/pinkstar.svg', width: w, height: h)),
+        );
+      }
+    }
+    // Bottom strip (below cards)
+    if (screenHeight - bottomStripMin > 28) {
+      final bottomHeight = screenHeight - bottomStripMin - 22;
+      for (int i = 0; i < 2; i++) {
+        final left = _safeClamp(
+          (_scatter(i + seedOffset + 50, 1) * (screenWidth - 24) + _jitter(i + seedOffset + 50, 2, jitter)),
+          0.0,
+          (screenWidth - 22),
+        );
+        final top = _safeClamp(
+          (bottomStripMin + _scatter2(i + seedOffset + 50, 3) * bottomHeight + _jitter(i + seedOffset + 50, 4, 14)),
+          bottomStripMin,
+          (screenHeight - 20),
+        );
+        final w = (isMobile ? 9.0 : 12.0) + _scatter(i + seedOffset + 50, 5) * (isMobile ? 4.0 : 5.0);
+        final h = w * (11.3 / 12);
+        elements.add(
+          Positioned(left: left, top: top, child: SvgPicture.asset('assets/images/pinkstar.svg', width: w, height: h)),
+        );
+      }
+    }
+  }
+
+  // Build decorative stars around the cards section — scattered, never covering the 3 quiz cards.
   List<Widget> _buildCardDecorativeElements(double screenWidth, double screenHeight, bool isMobile, bool useVerticalLayout, bool useTwoColumnLayout) {
     final elements = <Widget>[];
     final centerX = screenWidth / 2;
@@ -1033,26 +981,21 @@ class _HomeState extends State<Home> {
     final cardHeight = isMobile ? 320.0 : 380.0;
     final cardSpacing = isMobile ? 20.0 : 30.0;
     
-    // Calculate card area boundaries based on layout (in pixels)
     double cardAreaLeft, cardAreaRight;
-    double cardAreaTopPercent, cardAreaBottomPercent; // Use percentages for vertical positioning
+    double cardAreaTopPercent, cardAreaBottomPercent;
     
     if (useVerticalLayout) {
-      // Vertical: single card centered, 3 cards stacked
-      cardAreaLeft = centerX - cardWidth / 2 - 20; // card width/2 + padding
+      cardAreaLeft = centerX - cardWidth / 2 - 20;
       cardAreaRight = centerX + cardWidth / 2 + 20;
-      // Cards start around 0.45 screenHeight and go down
       cardAreaTopPercent = 0.45;
-      cardAreaBottomPercent = 0.45 + ((cardHeight * 3) + (cardSpacing * 2) + 40) / screenHeight; // 3 cards + spacing
+      cardAreaBottomPercent = 0.45 + ((cardHeight * 3) + (cardSpacing * 2) + 40) / screenHeight;
     } else if (useTwoColumnLayout) {
-      // Two columns: 2 cards side by side, then 1 below
       final twoCardWidth = (cardWidth * 2) + cardSpacing;
       cardAreaLeft = centerX - twoCardWidth / 2 - 20;
       cardAreaRight = centerX + twoCardWidth / 2 + 20;
       cardAreaTopPercent = 0.45;
-      cardAreaBottomPercent = 0.45 + ((cardHeight * 2) + cardSpacing + 40) / screenHeight; // 2 rows
+      cardAreaBottomPercent = 0.45 + ((cardHeight * 2) + cardSpacing + 40) / screenHeight;
     } else {
-      // Three columns: 3 cards horizontal
       final threeCardWidth = (cardWidth * 3) + (cardSpacing * 2);
       cardAreaLeft = centerX - threeCardWidth / 2 - 40;
       cardAreaRight = centerX + threeCardWidth / 2 + 40;
@@ -1060,514 +1003,21 @@ class _HomeState extends State<Home> {
       cardAreaBottomPercent = 0.45 + (cardHeight + 40) / screenHeight;
     }
     
-    // Safe zones - decorations should be outside card area
-    final leftSafeZone = cardAreaLeft - 60; // Space on the left before cards
-    final rightSafeZone = screenWidth - cardAreaRight - 60; // Space on the right after cards
-    final topSafeZone = (cardAreaTopPercent * screenHeight) - 30; // Space above cards
-    final bottomSafeZone = screenHeight - (cardAreaBottomPercent * screenHeight) - 30; // Space below cards
+    final cardAreaTop = cardAreaTopPercent * screenHeight;
+    final cardAreaBottom = cardAreaBottomPercent * screenHeight;
+    final seedOffset = useVerticalLayout ? 100 : (useTwoColumnLayout ? 200 : 300);
     
-    // Stars around the cards using percentage-based positioning
-    // Adjust positions based on layout type
-    if (useVerticalLayout) {
-      // For vertical layout, position stars along the sides (outside card area)
-      // Left side stars (only if there's safe space)
-      if (leftSafeZone > 30) {
-        elements.add(
-          Positioned(
-            left: screenWidth * 0.02,
-            top: screenHeight * 0.45,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 10.0 : 14.0,
-              height: isMobile ? 9.4 : 13.2,
-            ),
-          ),
-        );
-        
-        elements.add(
-          Positioned(
-            left: screenWidth * 0.01,
-            top: screenHeight * 0.55,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 12.0 : 16.0,
-              height: isMobile ? 11.3 : 15.1,
-            ),
-          ),
-        );
-        
-        elements.add(
-          Positioned(
-            left: screenWidth * 0.03,
-            top: screenHeight * 0.65,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 9.0 : 13.0,
-              height: isMobile ? 8.5 : 12.3,
-            ),
-          ),
-        );
-        
-        // One cloud on left side (reduced)
-        if (leftSafeZone > 50) {
-          elements.add(
-            Positioned(
-              left: screenWidth * 0.06,
-              top: screenHeight * 0.50,
-              child: SvgPicture.asset(
-                'assets/images/cloud.svg',
-                width: isMobile ? 32 : 44,
-                height: isMobile ? 22 : 30,
-              ),
-            ),
-          );
-        }
-      }
-      
-      // Right side stars (only if there's safe space)
-      if (rightSafeZone > 30) {
-        elements.add(
-          Positioned(
-            right: screenWidth * 0.02,
-            top: screenHeight * 0.47,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 10.0 : 14.0,
-              height: isMobile ? 9.4 : 13.2,
-            ),
-          ),
-        );
-        
-        elements.add(
-          Positioned(
-            right: screenWidth * 0.01,
-            top: screenHeight * 0.57,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 13.0 : 17.0,
-              height: isMobile ? 12.3 : 16.0,
-            ),
-          ),
-        );
-        
-        elements.add(
-          Positioned(
-            right: screenWidth * 0.03,
-            top: screenHeight * 0.67,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 9.0 : 13.0,
-              height: isMobile ? 8.5 : 12.3,
-            ),
-          ),
-        );
-        
-        // One cloud on right side (reduced)
-        if (rightSafeZone > 50) {
-          elements.add(
-            Positioned(
-              right: screenWidth * 0.06,
-              top: screenHeight * 0.60,
-              child: SvgPicture.asset(
-                'assets/images/cloud.svg',
-                width: isMobile ? 28 : 40,
-                height: isMobile ? 19 : 27,
-              ),
-            ),
-          );
-        }
-      }
-      
-      // Stars above cards (only if there's space above)
-      if (topSafeZone > 20) {
-        final topStarBottom = cardAreaTopPercent * screenHeight - 20;
-        elements.add(
-          Positioned(
-            left: centerX - 60,
-            top: topStarBottom - 30,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 11.0 : 15.0,
-              height: isMobile ? 10.4 : 14.2,
-            ),
-          ),
-        );
-        
-        elements.add(
-          Positioned(
-            right: centerX - 60,
-            top: topStarBottom - 25,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 10.0 : 14.0,
-              height: isMobile ? 9.4 : 13.2,
-            ),
-          ),
-        );
-      }
-      
-      // Stars below cards (only if there's space below)
-      if (bottomSafeZone > 20) {
-        final bottomStarTop = cardAreaBottomPercent * screenHeight + 20;
-        elements.add(
-          Positioned(
-            left: centerX - 50,
-            top: bottomStarTop,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 12.0 : 17.0,
-              height: isMobile ? 11.3 : 16.0,
-            ),
-          ),
-        );
-        
-        elements.add(
-          Positioned(
-            right: centerX - 50,
-            top: bottomStarTop + 10,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 11.0 : 16.0,
-              height: isMobile ? 10.4 : 15.1,
-            ),
-          ),
-        );
-      }
-    } else if (useTwoColumnLayout) {
-      // Two-column layout - adjust star positions for 2 cards side by side
-      // Left side stars (only if there's safe space)
-      if (leftSafeZone > 30) {
-        elements.add(
-          Positioned(
-            left: screenWidth * 0.02,
-            top: screenHeight * 0.42,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 10.0 : 14.0,
-              height: isMobile ? 9.4 : 13.2,
-            ),
-          ),
-        );
-        
-        elements.add(
-          Positioned(
-            left: screenWidth * 0.01,
-            top: screenHeight * 0.50,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 12.0 : 16.0,
-              height: isMobile ? 11.3 : 15.1,
-            ),
-          ),
-        );
-        
-        // One cloud on left (reduced)
-        if (leftSafeZone > 50) {
-          elements.add(
-            Positioned(
-              left: screenWidth * 0.05,
-              top: screenHeight * 0.46,
-              child: SvgPicture.asset(
-                'assets/images/cloud.svg',
-                width: isMobile ? 30 : 42,
-                height: isMobile ? 20 : 28,
-              ),
-            ),
-          );
-        }
-      }
-      
-      // Right side stars (only if there's safe space)
-      if (rightSafeZone > 30) {
-        elements.add(
-          Positioned(
-            right: screenWidth * 0.02,
-            top: screenHeight * 0.44,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 10.0 : 14.0,
-              height: isMobile ? 9.4 : 13.2,
-            ),
-          ),
-        );
-        
-        elements.add(
-          Positioned(
-            right: screenWidth * 0.01,
-            top: screenHeight * 0.52,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 13.0 : 17.0,
-              height: isMobile ? 12.3 : 16.0,
-            ),
-          ),
-        );
-        
-        // One cloud on right (reduced)
-        if (rightSafeZone > 50) {
-          elements.add(
-            Positioned(
-              right: screenWidth * 0.05,
-              top: screenHeight * 0.48,
-              child: SvgPicture.asset(
-                'assets/images/cloud.svg',
-                width: isMobile ? 28 : 40,
-                height: isMobile ? 19 : 27,
-              ),
-            ),
-          );
-        }
-      }
-      
-      // Stars around the bottom card (third card) - only if safe
-      if (leftSafeZone > 30) {
-        elements.add(
-          Positioned(
-            left: screenWidth * 0.15,
-            top: screenHeight * 0.62,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 10.0 : 14.0,
-              height: isMobile ? 9.4 : 13.2,
-            ),
-          ),
-        );
-      }
-      
-      if (rightSafeZone > 30) {
-        elements.add(
-          Positioned(
-            right: screenWidth * 0.15,
-            top: screenHeight * 0.64,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 12.0 : 16.0,
-              height: isMobile ? 11.3 : 15.1,
-            ),
-          ),
-        );
-      }
-      
-      // Stars above and below cards (only if safe)
-      if (topSafeZone > 20) {
-        final topStarBottom = cardAreaTopPercent * screenHeight - 20;
-        elements.add(
-          Positioned(
-            left: centerX - 80,
-            top: topStarBottom - 30,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 11.0 : 15.0,
-              height: isMobile ? 10.4 : 14.2,
-            ),
-          ),
-        );
-      }
-      
-      if (bottomSafeZone > 20) {
-        final bottomStarTop = cardAreaBottomPercent * screenHeight + 20;
-        elements.add(
-          Positioned(
-            left: centerX - 60,
-            top: bottomStarTop,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 9.0 : 13.0,
-              height: isMobile ? 8.5 : 12.3,
-            ),
-          ),
-        );
-      }
-    } else {
-      // Three-card horizontal layout - safe zone positioning
-      // Left side stars (only if there's safe space)
-      if (leftSafeZone > 30) {
-        elements.add(
-          Positioned(
-            left: screenWidth * 0.02,
-            top: screenHeight * 0.40,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 10.0 : 14.0,
-              height: isMobile ? 9.4 : 13.2,
-            ),
-          ),
-        );
-        
-        elements.add(
-          Positioned(
-            left: screenWidth * 0.01,
-            top: screenHeight * 0.48,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 12.0 : 16.0,
-              height: isMobile ? 11.3 : 15.1,
-            ),
-          ),
-        );
-        
-        elements.add(
-          Positioned(
-            left: screenWidth * 0.03,
-            top: screenHeight * 0.56,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 9.0 : 13.0,
-              height: isMobile ? 8.5 : 12.3,
-            ),
-          ),
-        );
-        
-        // One cloud on left (reduced)
-        if (leftSafeZone > 50) {
-          elements.add(
-            Positioned(
-              left: screenWidth * 0.05,
-              top: screenHeight * 0.44,
-              child: SvgPicture.asset(
-                'assets/images/cloud.svg',
-                width: isMobile ? 32 : 44,
-                height: isMobile ? 22 : 30,
-              ),
-            ),
-          );
-        }
-      }
-      
-      // Right side stars (only if there's safe space)
-      if (rightSafeZone > 30) {
-        elements.add(
-          Positioned(
-            right: screenWidth * 0.02,
-            top: screenHeight * 0.42,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 10.0 : 14.0,
-              height: isMobile ? 9.4 : 13.2,
-            ),
-          ),
-        );
-        
-        elements.add(
-          Positioned(
-            right: screenWidth * 0.01,
-            top: screenHeight * 0.50,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 13.0 : 17.0,
-              height: isMobile ? 12.3 : 16.0,
-            ),
-          ),
-        );
-        
-        elements.add(
-          Positioned(
-            right: screenWidth * 0.03,
-            top: screenHeight * 0.58,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 9.0 : 13.0,
-              height: isMobile ? 8.5 : 12.3,
-            ),
-          ),
-        );
-        
-        // One cloud on right (reduced)
-        if (rightSafeZone > 50) {
-          elements.add(
-            Positioned(
-              right: screenWidth * 0.05,
-              top: screenHeight * 0.46,
-              child: SvgPicture.asset(
-                'assets/images/cloud.svg',
-                width: isMobile ? 30 : 42,
-                height: isMobile ? 20 : 28,
-              ),
-            ),
-          );
-        }
-      }
-      
-      // Top stars above cards (only if there's space above)
-      if (topSafeZone > 20) {
-        final topStarBottom = cardAreaTopPercent * screenHeight - 20;
-        elements.add(
-          Positioned(
-            left: screenWidth * 0.12,
-            top: topStarBottom - 40,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 10.0 : 14.0,
-              height: isMobile ? 9.4 : 13.2,
-            ),
-          ),
-        );
-        
-        elements.add(
-          Positioned(
-            left: screenWidth * 0.5,
-            top: topStarBottom - 50,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 12.0 : 16.0,
-              height: isMobile ? 11.3 : 15.1,
-            ),
-          ),
-        );
-        
-        elements.add(
-          Positioned(
-            right: screenWidth * 0.12,
-            top: topStarBottom - 45,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 9.0 : 13.0,
-              height: isMobile ? 8.5 : 12.3,
-            ),
-          ),
-        );
-      }
-      
-      // Bottom stars below cards (only if there's space below)
-      if (bottomSafeZone > 20) {
-        final bottomStarTop = cardAreaBottomPercent * screenHeight + 20;
-        elements.add(
-          Positioned(
-            left: screenWidth * 0.15,
-            top: bottomStarTop,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 11.0 : 15.0,
-              height: isMobile ? 10.4 : 14.2,
-            ),
-          ),
-        );
-        
-        elements.add(
-          Positioned(
-            left: screenWidth * 0.5,
-            top: bottomStarTop + 10,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 10.0 : 14.0,
-              height: isMobile ? 9.4 : 13.2,
-            ),
-          ),
-        );
-        
-        elements.add(
-          Positioned(
-            right: screenWidth * 0.15,
-            top: bottomStarTop + 5,
-            child: SvgPicture.asset(
-              'assets/images/pinkstar.svg',
-              width: isMobile ? 12.0 : 16.0,
-              height: isMobile ? 11.3 : 15.1,
-            ),
-          ),
-        );
-      }
-    }
+    _addScatteredCardDecorations(
+      elements,
+      screenWidth,
+      screenHeight,
+      isMobile,
+      cardAreaLeft,
+      cardAreaRight,
+      cardAreaTop,
+      cardAreaBottom,
+      seedOffset,
+    );
     
     return elements;
   }

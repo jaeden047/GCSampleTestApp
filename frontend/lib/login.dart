@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; // supabase flutter sdk
 
 // Page Imports
 import 'home.dart';
 import 'main.dart';
 import 'api_service.dart';
 import 'signup/signup_screen1.dart';
+import 'platform_terms.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -27,9 +29,10 @@ class _NoScrollbarScrollBehavior extends ScrollBehavior {
     BuildContext context,
     Widget child, 
     ScrollableDetails details, 
-    ) { return child; 
-    }
-  }// Return child without overscroll indicator } }
+    ) { 
+      return child; 
+  }
+}
 //Main errors: no submit function; validate inputs is not called, so aren't other functions.
 
 class _LoginPageState extends State<LoginPage> { // stateful because transitions between login state and signup state & show a spinner
@@ -39,7 +42,7 @@ class _LoginPageState extends State<LoginPage> { // stateful because transitions
 
   @override
   void dispose() {
-    emailController.dispose();
+    emailController.dispose(); // Cleans up controller when widget destroyed
     passwordController.dispose();
     super.dispose();
   }
@@ -75,40 +78,57 @@ class _LoginPageState extends State<LoginPage> { // stateful because transitions
     return null; // when all validations passed
   } 
 
-    Future<void> _onTap() async { // User Taps Login
-    final error = _validateInputs();
-    if (error != null) {
+// ON PRESS LOGIN
+    Future<void> _onTap() async { 
+    final error = _validateInputs(); // checks input verification
+    if (error != null) { // if there is an error
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error)),
       );
       return;
     }
-  setState(() => _isLoading = true); // loading wheel
-  try { // After inputs validated, we send to api
-    final email = emailController.text.trim();
-    final password = passwordController.text;
-    await ApiService.instance.login( // use apiservice login function
-      email: email,
-      password: password,
-    );
-    await ApiService.instance.supabaseLogin(
-      email: email, 
-      password: password,
-    );
-    await ApiService.instance.syncApiIdToSupabaseProfiles();
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const Home()),
-    );
-  } catch (e, st) {
-    print('AUTH ERROR: $e');
-    print('STACK: $st');
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Login failed. Please retry password or use a different email.')),
-    );
-    setState(() => _isLoading = false);
+    setState(() => _isLoading = true); // loading wheel
+    try { // After inputs validated, we send to api
+      final email = emailController.text.trim();
+      final password = passwordController.text;
+      final supabase = Supabase.instance.client;
+      try {
+        // LOGIN FLOW
+        if (!mounted) return;
+        
+        await ApiService.instance.login( // use apiservice login function
+        email: emailController.text,
+        password: passwordController.text,
+        );
+        await ApiService.instance.supabaseLogin(
+        email: emailController.text, 
+        password: passwordController.text,
+        );
+        await ApiService.instance.syncApiIdToSupabaseProfiles();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const PlatformTermsScreen()),
+        );
+        }  catch (e, st) {
+          debugPrint('Login failed: $e');
+          debugPrint('$st');
+
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Login failed: $e')),
+        );
+      } 
+    } catch (e, st) {
+      debugPrint('Login failed: $e');
+      debugPrint('$st');
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Login failed: $e')),
+      );
+    }
   }
-}  
+
 
   @override
   Widget build(BuildContext context) { 

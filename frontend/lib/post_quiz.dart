@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'home.dart';
 import 'main.dart';
 import 'leaderboard.dart';
 import 'quiz_answers.dart';
 
-class PostQuiz extends StatelessWidget {
+class PostQuiz extends StatefulWidget {
   final double score;
   final VoidCallback onRedoQuiz;
   final String topicName;
@@ -21,7 +22,43 @@ class PostQuiz extends StatelessWidget {
     required this.attemptId,
   });
 
-  // Check if screen is mobile
+  @override
+  State<PostQuiz> createState() => _PostQuizState();
+}
+
+class _PostQuizState extends State<PostQuiz> {
+  bool? _canShowResults;
+  bool _loadingRelease = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchReleaseStatus();
+  }
+
+  Future<void> _fetchReleaseStatus() async {
+    try {
+      final row = await Supabase.instance.client
+          .from('topics')
+          .select('results_released, is_sample_quiz')
+          .eq('topic_name', widget.topicName)
+          .maybeSingle();
+      if (mounted) {
+        setState(() {
+          _loadingRelease = false;
+          _canShowResults = row != null && (row['is_sample_quiz'] == true || row['results_released'] == true);
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _loadingRelease = false;
+          _canShowResults = false;
+        });
+      }
+    }
+  }
+
   bool _isMobile(BuildContext context) {
     return MediaQuery.of(context).size.width < 768;
   }
@@ -222,6 +259,8 @@ class PostQuiz extends StatelessWidget {
     final isMobile = _isMobile(context);
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+    final canShow = _canShowResults == true;
+    final stillLoading = _loadingRelease;
 
     return Scaffold(
       backgroundColor: MyApp.homeTealGreen,
@@ -230,10 +269,7 @@ class PostQuiz extends StatelessWidget {
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              // Decorative elements
               ..._buildDecorativeElements(screenWidth, screenHeight, isMobile),
-              
-              // Main content
               Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: isMobile ? 16.0 : 24.0,
@@ -244,55 +280,71 @@ class PostQuiz extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                            SizedBox(height: isMobile ? 10 : 20),
-                            
-                            // Quiz congrats SVG (clipboard with icons)
-                            SizedBox(
-                              width: isMobile ? screenWidth * 0.4 : 200,
-                              height: isMobile ? screenWidth * 0.4 : 200,
-                              child: SvgPicture.asset(
-                                'assets/images/quiz_congrats.svg',
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                  
-                  SizedBox(height: isMobile ? 16 : 20),
-                  
-                  // Score badge with oval border and star
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isMobile ? 24 : 32,
-                      vertical: isMobile ? 8 : 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: MyApp.homeTealGreen,
-                      border: Border.all(
-                        color: MyApp.homeWhite,
-                        width: 2,
-                      ),
-                      borderRadius: BorderRadius.circular(50),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SvgPicture.asset(
-                          'assets/images/white_star.svg',
-                          width: isMobile ? 20 : 24,
-                          height: isMobile ? 18.9 : 22.7,
+                      SizedBox(height: isMobile ? 10 : 20),
+                      SizedBox(
+                        width: isMobile ? screenWidth * 0.4 : 200,
+                        height: isMobile ? screenWidth * 0.4 : 200,
+                        child: SvgPicture.asset(
+                          'assets/images/quiz_congrats.svg',
+                          fit: BoxFit.contain,
                         ),
-                        SizedBox(width: isMobile ? 8 : 12),
-                        Text(
-                          '${score.toInt()} pts',
-                          style: TextStyle(
-                            fontSize: isMobile ? 20 : 24,
-                            fontWeight: FontWeight.bold,
-                            color: MyApp.homeWhite,
-                            fontFamily: 'serif',
+                      ),
+                      SizedBox(height: isMobile ? 16 : 20),
+                      // Score badge (or "Results when released" when locked)
+                      if (stillLoading)
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(color: MyApp.homeWhite, strokeWidth: 2),
+                          ),
+                        )
+                      else
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isMobile ? 24 : 32,
+                            vertical: isMobile ? 8 : 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: MyApp.homeTealGreen,
+                            border: Border.all(color: MyApp.homeWhite, width: 2),
+                            borderRadius: BorderRadius.circular(50),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (canShow) ...[
+                                SvgPicture.asset(
+                                  'assets/images/white_star.svg',
+                                  width: isMobile ? 20 : 24,
+                                  height: isMobile ? 18.9 : 22.7,
+                                ),
+                                SizedBox(width: isMobile ? 8 : 12),
+                                Text(
+                                  '${widget.score.toInt()} pts',
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 20 : 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: MyApp.homeWhite,
+                                    fontFamily: 'serif',
+                                  ),
+                                ),
+                              ] else ...[
+                                Icon(Icons.lock_outline, color: MyApp.homeWhite, size: isMobile ? 20 : 24),
+                                SizedBox(width: isMobile ? 8 : 12),
+                                Text(
+                                  'Results to be released soon!',
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 14 : 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: MyApp.homeWhite,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
                   
                   SizedBox(height: isMobile ? 20 : 24),
                   
@@ -380,7 +432,7 @@ class PostQuiz extends StatelessWidget {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) => Leaderboard(topicName: topicName),
+                                    builder: (_) => Leaderboard(topicName: widget.topicName),
                                   ),
                                 );
                               },
@@ -407,30 +459,35 @@ class PostQuiz extends StatelessWidget {
                         
                         SizedBox(width: isMobile ? 24 : 32),
                         
-                        // Answers button
+                        // Answers button (disabled until release unless sample)
                         Column(
                           children: [
                             GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => QuizAnswers(attemptId: attemptId),
+                              onTap: canShow
+                                  ? () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => QuizAnswers(attemptId: widget.attemptId),
+                                        ),
+                                      );
+                                    }
+                                  : null,
+                              child: Opacity(
+                                opacity: canShow ? 1.0 : 0.5,
+                                child: SizedBox(
+                                  width: isMobile ? 60 : 80,
+                                  height: isMobile ? 60 : 80,
+                                  child: SvgPicture.asset(
+                                    'assets/images/book.svg',
+                                    fit: BoxFit.contain,
                                   ),
-                                );
-                              },
-                              child: SizedBox(
-                                width: isMobile ? 60 : 80,
-                                height: isMobile ? 60 : 80,
-                                child: SvgPicture.asset(
-                                  'assets/images/book.svg',
-                                  fit: BoxFit.contain,
                                 ),
                               ),
                             ),
                             SizedBox(height: isMobile ? 8 : 12),
                             Text(
-                              'Answers',
+                              canShow ? 'Answers' : 'After release',
                               style: TextStyle(
                                 fontSize: isMobile ? 14 : 16,
                                 color: MyApp.homeDarkGreyText,

@@ -20,6 +20,15 @@ class _LeaderboardState extends State<Leaderboard> {
   List<Map<String, dynamic>> topicList = [];
   bool isLoadingTopics = true;
 
+  bool _canShowResultsForTopic(String topicName) {
+    try {
+      final t = topicList.firstWhere((e) => e['topic_name'] == topicName);
+      return t['is_sample_quiz'] == true || t['results_released'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -27,16 +36,36 @@ class _LeaderboardState extends State<Leaderboard> {
     _fetchTopics();
   }
 
+  // Custom sort order for topics
+  int _getTopicSortOrder(String topicName) {
+    const order = [
+      'Sample Quiz',
+      'Grade 5 and 6',
+      'Grade 7 and 8',
+      'Grade 9 and 10',
+      'Grade 11 and 12',
+      'Plastic Pollution Focus',
+    ];
+    final index = order.indexOf(topicName);
+    // If topic not in predefined order, put it at the end
+    return index == -1 ? 999 : index;
+  }
+
   Future<void> _fetchTopics() async {
     try {
       final supabase = Supabase.instance.client;
       final topicsResponse = await supabase
           .from('topics')
-          .select('topic_name')
-          .order('topic_name');
-      
+          .select('topic_id, topic_name, results_released, is_sample_quiz');
+
       setState(() {
         topicList = List<Map<String, dynamic>>.from(topicsResponse);
+        // Sort topics according to custom order
+        topicList.sort((a, b) {
+          final orderA = _getTopicSortOrder(a['topic_name'] as String);
+          final orderB = _getTopicSortOrder(b['topic_name'] as String);
+          return orderA.compareTo(orderB);
+        });
         isLoadingTopics = false;
         // If the initial topic is not in the list, use the first available topic
         if (selectedTopic != null && !topicList.any((t) => t['topic_name'] == selectedTopic)) {
@@ -333,10 +362,10 @@ class _LeaderboardState extends State<Leaderboard> {
 
     final topicId = topicResponse['topic_id'];
 
-    // Step 2: Get top 10 test_attempts joined with users, sorted
+    // Step 2: Get top 10 test_attempts joined with users, sorted (include round for Math)
     final attemptsResponse = await supabase
       .from('test_attempts')
-      .select('score, duration_seconds, question_list, profiles(name)')
+      .select('score, duration_seconds, question_list, round, profiles(name)')
       .eq('topic_id', topicId)
       .order('score', ascending: false)
       .order('duration_seconds', ascending: true)
@@ -344,6 +373,10 @@ class _LeaderboardState extends State<Leaderboard> {
 
     return List<Map<String, dynamic>>.from(attemptsResponse);
   }
+
+  static const _mathRoundTopicNames = ['Grade 5 and 6', 'Grade 7 and 8', 'Grade 9 and 10', 'Grade 11 and 12'];
+  bool _isMathRoundTopic(String topicName) => _mathRoundTopicNames.contains(topicName);
+  static String _roundLabel(String? round) => round == 'sample' ? 'Sample Quiz' : round == 'final' ? 'Final Round' : 'Local Round';
 
   @override
   Widget build(BuildContext context) {
@@ -367,10 +400,31 @@ class _LeaderboardState extends State<Leaderboard> {
                 color: MyApp.homeTealGreen,
               ),
             )
-          : FutureBuilder<List<Map<String, dynamic>>>(
-              key: ValueKey(selectedTopic), // Rebuild when topic changes
-              future: fetchLeaderboard(selectedTopic!),
-              builder: (context, snapshot) {
+          : !_canShowResultsForTopic(selectedTopic!)
+              ? Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.lock_outline, size: 48, color: MyApp.homeDarkGreyText),
+                        SizedBox(height: 16),
+                        Text(
+                          'Rankings will be available after your admin releases results.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: isMobile ? 16 : 18,
+                            color: MyApp.homeDarkGreyText,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : FutureBuilder<List<Map<String, dynamic>>>(
+                  key: ValueKey(selectedTopic),
+                  future: fetchLeaderboard(selectedTopic!),
+                  builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(
               child: CircularProgressIndicator(
@@ -673,6 +727,7 @@ class _LeaderboardState extends State<Leaderboard> {
                             final totalQuestions = questionList.length;
                             final starCount = _getStarCount(score, totalQuestions);
                             final userName = user['profiles']?['name'] ?? 'Unknown';
+                            final roundLabel = _isMathRoundTopic(selectedTopic!) ? _roundLabel(user['round'] as String? ?? 'local') : null;
                             
                             return Container(
                               margin: EdgeInsets.only(bottom: isMobile ? 12 : 16),
@@ -715,9 +770,9 @@ class _LeaderboardState extends State<Leaderboard> {
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      // Topic name and points
+                                      // Topic name, round (if Math), and points
                                       Text(
-                                        '$selectedTopic: ${score.toInt()} pts',
+                                        selectedTopic! + (roundLabel != null ? ' • $roundLabel' : '') + ': ${score.toInt()} pts',
                                         style: TextStyle(
                                           fontSize: isMobile ? 14 : 16,
                                           color: MyApp.homeGreyText,

@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:timezone/timezone.dart' as tz;
 import 'main.dart';
+import 'math_text.dart';
 
 // Results page
 class Results extends StatefulWidget { // Results is a type of widget (Class) 
@@ -21,6 +24,8 @@ class TestAttempt { // Here we create a custom type (i.e. String is a type)
   final List<dynamic> selectedAnswers;
   final double score;
   final int topicId;
+  /// For Math: 'local' or 'final'. Other topics default to 'local'.
+  final String round;
 
   TestAttempt({ // Model for Constructor for the class: To create an object - this is what you require
     required this.dateTime,
@@ -29,6 +34,7 @@ class TestAttempt { // Here we create a custom type (i.e. String is a type)
     required this.selectedAnswers,
     required this.score,
     required this.topicId,
+    this.round = 'local',
   });
 }
 
@@ -61,11 +67,17 @@ class Questions {
 class Topics {
   final int topicId2;
   final String topicName;
+  final bool resultsReleased;
+  final bool isSampleQuiz;
 
   Topics({
     required this.topicId2,
     required this.topicName,
+    required this.resultsReleased,
+    required this.isSampleQuiz,
   });
+
+  bool get canShowResults => isSampleQuiz || resultsReleased;
 }
 
 class _ResultsState extends State<Results> { // 
@@ -76,78 +88,142 @@ class _ResultsState extends State<Results> { //
   List<Questions> questionList = []; // List of Test Attempt Data
   List<Topics> topicList = [];
   String? selectedFilter; // Selected filter option
+  bool _isLoadingAttempts = true;
+  String? _loadError; // Non-null when fetch failed (e.g. auth or network)
+  StreamSubscription<AuthState>? _authSubscription;
 
   // Check if screen is mobile
   bool _isMobile(BuildContext context) {
     return MediaQuery.of(context).size.width < 768;
   }
 
-  @override // Overriding the initState function
-  void initState() { // Function called before screen loads
+  static const _mathRoundTopicNames = ['Grade 5 and 6', 'Grade 7 and 8', 'Grade 9 and 10', 'Grade 11 and 12'];
+  bool _isMathRoundTopic(String topicName) => _mathRoundTopicNames.contains(topicName);
+  static String _roundLabel(String round) => round == 'sample' ? 'Sample Quiz' : round == 'final' ? 'Final Round' : 'Local Round';
+
+  @override
+  void initState() {
     super.initState();
-    fetchTestAttempts(); // Now, fetchTestAttempts will be apart of the function
-  }
-  Future<void> fetchTestAttempts() async {
-    final testRawData = await supabase.from('test_attempts').select().eq('user_id', supabase.auth.currentUser!.id); 
-    // Retrieve Raw Data Rows ONLY from currently signed in user_id from testRawData
-    final questionAnswers = await supabase.from('answers').select(); 
-    final questionData = await supabase.from('questions').select();
-    final topicData = await supabase.from('topics').select();
-    // questionAnswers pulls all rows from the answers table 
-    setState(() { // Rebuild UI
-      numRows = testRawData.length;
-      testList = testRawData.map<TestAttempt>((row) { // Each 'row' is now a separate function.
-      // Map each row in testRows to a TestAttempt Object. 
-      // Collect all TestAttempt Objects and save it in List<TestAttempt>: testList
-        return TestAttempt( 
-          dateTime: row['test_datetime']?.toString() ?? 'No Date',
-          questionList: List<dynamic>.from(row['question_list'] ?? []), // Make a List from row or leave empty
-          answerOrder: List<dynamic>.from(row['answer_order'] ?? []),
-          selectedAnswers: List<dynamic>.from(row['selected_answers'] ?? []),
-          score: row['score'] ?? 0,
-          topicId: row['topic_id'] ?? 0,
-        );
-        // ?.toString => Is not null: Keep value, Is null: "null"
-        // ?? 'No Date' => left side: "null" => switch to 'No Date' text, else, keep. 
-      }).toList(); // Converts to List<TestAttempt>.
-
-      answerList = questionAnswers.map<Answers>((row) {
-        return Answers(
-          answerID: row['answer_id'],
-          questionID: row['question_id'],
-          answerText: row['answer_text'],
-          isCorrect: row['is_correct'],
-        );
-      }).toList();
-
-      questionList = questionData.map<Questions>((row) {
-        return Questions(
-          questionID: row['question_id'],
-          topicID: row['topic_id'],
-          questionText: row['question_text'],
-        );
-      }).toList();
-      // numRows = number of user's testattempts
-
-      topicList = topicData.map<Topics>((row) {
-        return Topics(
-          topicId2: row['topic_id'],
-          topicName: row['topic_name'],
-        );
-      }).toList();
-      
-      // Apply default sorting (newest to oldest) after fetching
-      testList.sort((a, b) {
-        try {
-          final dateA = DateTime.parse(a.dateTime);
-          final dateB = DateTime.parse(b.dateTime);
-          return dateB.compareTo(dateA); // Descending (newest first)
-        } catch (e) {
-          return 0;
-        }
-      });
-      selectedFilter = 'newest'; // Set default filter
+    _authSubscription = supabase.auth.onAuthStateChange.listen((AuthState state) {
+      if (state.event == AuthChangeEvent.signedIn ||
+          state.event == AuthChangeEvent.initialSession ||
+          state.event == AuthChangeEvent.signedOut ||
+          state.event == AuthChangeEvent.userUpdated) {
+        fetchTestAttempts();
+      }
     });
+    fetchTestAttempts();
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> fetchTestAttempts() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) {
+      if (mounted) {
+        setState(() {
+          _isLoadingAttempts = false;
+          _loadError = 'Please sign in to see your quiz history.';
+          numRows = 0;
+          testList = [];
+          answerList = [];
+          questionList = [];
+          topicList = [];
+          selectedFilter = 'newest';
+        });
+      }
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _isLoadingAttempts = true;
+        _loadError = null;
+      });
+    }
+
+    try {
+      final testRawData = await supabase
+          .from('test_attempts')
+          .select()
+          .eq('user_id', user.id);
+
+      final questionAnswers = await supabase.from('answers').select();
+      final questionData = await supabase.from('questions').select();
+      final topicData = await supabase.from('topics').select('topic_id, topic_name, results_released, is_sample_quiz');
+
+      if (!mounted) return;
+      setState(() {
+        _isLoadingAttempts = false;
+        _loadError = null;
+        numRows = testRawData.length;
+        testList = testRawData.map<TestAttempt>((row) {
+          return TestAttempt(
+            dateTime: row['test_datetime']?.toString() ?? 'No Date',
+            questionList: List<dynamic>.from(row['question_list'] ?? []),
+            answerOrder: List<dynamic>.from(row['answer_order'] ?? []),
+            selectedAnswers: List<dynamic>.from(row['selected_answers'] ?? []),
+            score: (row['score'] ?? 0).toDouble(),
+            topicId: row['topic_id'] ?? 0,
+            round: (row['round'] as String?) ?? 'local',
+          );
+        }).toList();
+
+        answerList = questionAnswers.map<Answers>((row) {
+          return Answers(
+            answerID: row['answer_id'],
+            questionID: row['question_id'],
+            answerText: row['answer_text'],
+            isCorrect: row['is_correct'],
+          );
+        }).toList();
+
+        questionList = questionData.map<Questions>((row) {
+          return Questions(
+            questionID: row['question_id'],
+            topicID: row['topic_id'],
+            questionText: row['question_text'],
+          );
+        }).toList();
+
+        topicList = topicData.map<Topics>((row) {
+          return Topics(
+            topicId2: row['topic_id'],
+            topicName: row['topic_name'],
+            resultsReleased: row['results_released'] == true,
+            isSampleQuiz: row['is_sample_quiz'] == true,
+          );
+        }).toList();
+
+        testList.sort((a, b) {
+          try {
+            final dateA = DateTime.parse(a.dateTime);
+            final dateB = DateTime.parse(b.dateTime);
+            return dateB.compareTo(dateA);
+          } catch (e) {
+            return 0;
+          }
+        });
+        selectedFilter = 'newest';
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingAttempts = false;
+          _loadError = 'Could not load quiz history. Please try again.';
+          numRows = 0;
+          testList = [];
+          answerList = [];
+          questionList = [];
+          topicList = [];
+          selectedFilter = 'newest';
+        });
+      }
+    }
   }
   
   // Sort test list based on selected filter
@@ -198,39 +274,99 @@ class _ResultsState extends State<Results> { //
     });
   }
   
-  // Convert UTC DateTime to Toronto timezone
-  DateTime _convertToToronto(DateTime utcDateTime) {
-    // Toronto uses America/Toronto timezone (EST/EDT)
-    // EST is UTC-5, EDT is UTC-4
-    // We'll use a simple approach: check if date is in DST period (March-November)
-    final month = utcDateTime.month;
-    if (month >= 3 && month <= 11) {
-      // Likely EDT (UTC-4) for most of this period
-      // More precise: March 2nd Sunday to November 1st Sunday
-      return utcDateTime.subtract(Duration(hours: 4));
-    } else {
-      // EST (UTC-5) for winter months
-      return utcDateTime.subtract(Duration(hours: 5));
-    }
-  }
-  
   // Format date in Toronto timezone
   String _formatDateToronto(String dateTimeString) {
     try {
-      // Parse the datetime string - if it has timezone info, it will be parsed correctly
-      // If not, assume it's UTC (common for database timestamps)
-      DateTime utcDateTime;
-      if (dateTimeString.endsWith('Z') || dateTimeString.contains('+') || dateTimeString.contains('-', 10)) {
-        // Has timezone info, parse as-is
-        utcDateTime = DateTime.parse(dateTimeString).toUtc();
-      } else {
-        // No timezone info, assume UTC
-        utcDateTime = DateTime.parse(dateTimeString).toUtc();
+      // Parse the datetime string - handle ISO format (e.g., "2026-01-22T17:24:03.99345")
+      DateTime parsedDateTime;
+      
+      // Remove microseconds if present for easier parsing, but preserve timezone
+      String cleanDateTime = dateTimeString.trim();
+      
+      // Check if it has timezone info FIRST (before removing microseconds)
+      // Look for patterns like: "2026-01-22T17:40:00+00:00" or "2026-01-22T17:40:00Z"
+      bool hasTimezone = cleanDateTime.endsWith('Z') || 
+                         RegExp(r'[+-]\d{2}:\d{2}$').hasMatch(cleanDateTime);
+      
+      // Extract timezone part if present (e.g., "+00:00" or "-05:00")
+      String? timezonePart;
+      if (hasTimezone && !cleanDateTime.endsWith('Z')) {
+        final timezoneMatch = RegExp(r'([+-]\d{2}:\d{2})$').firstMatch(cleanDateTime);
+        if (timezoneMatch != null) {
+          timezonePart = timezoneMatch.group(1);
+        }
       }
-      final torontoDateTime = _convertToToronto(utcDateTime);
-      return DateFormat('MM/dd/yyyy h:mma').format(torontoDateTime);
+      
+      // Handle different formats from Supabase
+      // Supabase typically returns timestamps in ISO 8601 format
+      // Remove microseconds but preserve timezone
+      if (cleanDateTime.contains('.')) {
+        // Split on '.' but keep timezone if present
+        final parts = cleanDateTime.split('.');
+        cleanDateTime = parts[0];
+        // Re-add timezone if it was present
+        if (timezonePart != null) {
+          cleanDateTime += timezonePart;
+        } else if (hasTimezone && cleanDateTime.endsWith('Z')) {
+          // Z is already at the end, keep it
+        }
+      }
+      
+      if (!hasTimezone) {
+        // No timezone indicator - add 'Z' to indicate UTC
+        cleanDateTime += 'Z';
+      }
+      
+      // Parse the datetime - DateTime.parse handles timezone if present
+      parsedDateTime = DateTime.parse(cleanDateTime);
+      
+      // Always convert to UTC for consistent handling
+      // If it had timezone info, toUtc() converts it
+      // If it didn't, we already added 'Z' so it's treated as UTC
+      parsedDateTime = parsedDateTime.toUtc();
+      
+      // Convert to Toronto timezone using timezone package
+      final torontoLocation = tz.getLocation('America/Toronto');
+      
+      // Create TZDateTime in UTC from the parsed DateTime
+      final utcTZ = tz.TZDateTime.utc(
+        parsedDateTime.year,
+        parsedDateTime.month,
+        parsedDateTime.day,
+        parsedDateTime.hour,
+        parsedDateTime.minute,
+        parsedDateTime.second,
+      );
+      
+      // Convert UTC to Toronto time using the timezone package's proper method
+      // Create a TZDateTime in Toronto timezone directly from the UTC TZDateTime
+      final torontoTZ = tz.TZDateTime.fromMillisecondsSinceEpoch(
+        torontoLocation,
+        utcTZ.millisecondsSinceEpoch,
+      );
+      
+      // Create a regular DateTime from the TZDateTime for formatting
+      // Use the year, month, day, hour, minute, second from the Toronto TZDateTime
+      final torontoDateTime = DateTime(
+        torontoTZ.year,
+        torontoTZ.month,
+        torontoTZ.day,
+        torontoTZ.hour,
+        torontoTZ.minute,
+        torontoTZ.second,
+      );
+      
+      // Format as MM/dd/yyyy h:mm a with space between date and time (e.g., "01/22/2026 12:24 PM")
+      return DateFormat('MM/dd/yyyy h:mm a').format(torontoDateTime);
     } catch (e) {
-      return dateTimeString;
+      // If parsing fails, try to format the original string as-is
+      try {
+        final fallbackDateTime = DateTime.parse(dateTimeString);
+        return DateFormat('MM/dd/yyyy h:mma').format(fallbackDateTime);
+      } catch (_) {
+        // Last resort: return a formatted version of the original string
+        return dateTimeString;
+      }
     }
   }
   @override
@@ -249,61 +385,63 @@ class _ResultsState extends State<Results> { //
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: numRows == 0
-        ? LayoutBuilder(
-            builder: (context, constraints) {
-              return SingleChildScrollView(
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    // Decorative elements
-                    ..._buildDecorativeElements(screenWidth, screenHeight, isMobile, 0),
-                    // Main content
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isMobile ? 16.0 : 24.0,
-                        vertical: isMobile ? 16.0 : 24.0,
-                      ),
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            SizedBox(height: screenHeight * 0.15), // Add top spacing to center vertically
-                            // SVG Image
-                            SvgPicture.asset(
-                              'assets/images/grey_results.svg',
-                              height: 100,
+      body: _isLoadingAttempts
+        ? Center(child: CircularProgressIndicator(color: MyApp.homeDarkGreyText))
+        : (numRows == 0
+            ? LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        ..._buildDecorativeElements(screenWidth, screenHeight, isMobile, 0),
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isMobile ? 16.0 : 24.0,
+                            vertical: isMobile ? 16.0 : 24.0,
+                          ),
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                SizedBox(height: screenHeight * 0.15),
+                                SvgPicture.asset(
+                                  'assets/images/grey_results.svg',
+                                  height: 100,
+                                ),
+                                SizedBox(height: 20),
+                                Text(
+                                  _loadError ?? 'Empty History',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 20 : 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: MyApp.homeDarkGreyText,
+                                  ),
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  _loadError != null
+                                      ? 'Sign in or check your connection and open this screen again.'
+                                      : 'Try a quiz before coming back',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 14 : 16,
+                                    fontWeight: FontWeight.w500,
+                                    color: MyApp.homeGreyText,
+                                  ),
+                                ),
+                              ],
                             ),
-                            SizedBox(height: 20), // Space between the image and the text
-                            // Text message
-                            Text(
-                              'Empty History',
-                              style: TextStyle(
-                                fontSize: isMobile ? 20 : 24,
-                                fontWeight: FontWeight.bold,
-                                color: MyApp.homeDarkGreyText,
-                              ),
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              'Try a quiz before coming back',
-                              style: TextStyle(
-                                fontSize: isMobile ? 14 : 16,
-                                fontWeight: FontWeight.w500,
-                                color: MyApp.homeGreyText,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
-                ),
-              );
-            },
-          )
-        : LayoutBuilder(
+                  );
+                },
+              )
+            : LayoutBuilder(
             builder: (context, constraints) {
               // Calculate estimated content height based on number of items
               // Title header: ~80px, Each card: ~120px (collapsed), spacing: ~20px
@@ -419,7 +557,9 @@ class _ResultsState extends State<Results> { //
                                 numRows,
                                 (index) {
                                   String formattedDate = _formatDateToronto(testList[index].dateTime);
-                                  double scoreNumber = testList[index].score; 
+                                  double scoreNumber = testList[index].score;
+                                  final topic = topicList.firstWhere((t) => t.topicId2 == testList[index].topicId, orElse: () => Topics(topicId2: 0, topicName: 'Unknown', resultsReleased: false, isSampleQuiz: false));
+                                  final canShow = topic.canShowResults;
                                   return Container(
                                     margin: EdgeInsets.only(bottom: isMobile ? 16 : 20),
                                     decoration: BoxDecoration(
@@ -444,7 +584,7 @@ class _ResultsState extends State<Results> { //
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Text(
-                                            'Attempt ${index + 1} • ${topicList.firstWhere((t) => t.topicId2 == testList[index].topicId, orElse: () => Topics(topicId2: 0, topicName: 'Unknown')).topicName}',
+                                            'Attempt ${index + 1} • ${topic.topicName}${_isMathRoundTopic(topic.topicName) ? ' • ${_roundLabel(testList[index].round)}' : ''}',
                                             style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,
@@ -467,16 +607,29 @@ class _ResultsState extends State<Results> { //
                                               Row(
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
-                                                  Icon(Icons.star, color: MyApp.homeYellow, size: 18),
-                                                  SizedBox(width: 6),
-                                                  Text(
-                                                    'Score: ${scoreNumber.toInt()} pts',
-                                                    style: TextStyle(
-                                                      fontSize: 16,
-                                                      fontWeight: FontWeight.w600,
-                                                      color: MyApp.homeWhite,
+                                                  if (canShow) ...[
+                                                    Icon(Icons.star, color: MyApp.homeYellow, size: 18),
+                                                    SizedBox(width: 6),
+                                                    Text(
+                                                      'Score: ${scoreNumber.toInt()} pts',
+                                                      style: TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight: FontWeight.w600,
+                                                        color: MyApp.homeWhite,
+                                                      ),
                                                     ),
-                                                  ),
+                                                  ] else ...[
+                                                    Icon(Icons.lock_outline, color: MyApp.homeWhite.withOpacity(0.9), size: 18),
+                                                    SizedBox(width: 6),
+                                                    Text(
+                                                      'Results locked',
+                                                      style: TextStyle(
+                                                        fontSize: 14,
+                                                        fontWeight: FontWeight.w500,
+                                                        color: MyApp.homeWhite.withOpacity(0.9),
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ],
                                               ),
                                             ],
@@ -484,89 +637,107 @@ class _ResultsState extends State<Results> { //
                                         ],
                                       ),
                                       children: [
-                                        Padding( 
+                                        Padding(
                                           padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.center,
-                                            children: [
-                                              SizedBox(height: 8),
-                                              ...List.generate(
-                                                testList[index].questionList.length, 
-                                                (i) {
-                                                  int questionID = testList[index].questionList[i]; 
-                                                  int start = i * 4;
-                                                  int end = start + 4;
-                                                  List<int> correctAnswerOrder = testList[index].answerOrder.sublist(start, end).cast<int>();
-                                                  List<Answers> answerOptions = correctAnswerOrder.map((id) => answerList.firstWhere((a) => a.answerID == id)).toList();
-                                                  return Container(
-                                                    margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                                    padding: EdgeInsets.all(12),
-                                                    decoration: BoxDecoration(
-                                                      color: MyApp.homeWhite.withOpacity(0.9),
-                                                      borderRadius: BorderRadius.circular(12),
-                                                      border: Border.all(
-                                                        color: MyApp.homeWhite.withOpacity(0.3),
-                                                        width: 1,
-                                                      ),
-                                                      boxShadow: [
-                                                        BoxShadow(
-                                                          color: Colors.black12,
-                                                          blurRadius: 4,
-                                                          offset: Offset(0, 2),
-                                                        ),
-                                                      ],
-                                                    ),  
-                                                    child: Column(
-                                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                                      children: [
-                                                        Text(
+                                          child: canShow
+                                              ? Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                                  children: [
+                                                    SizedBox(height: 8),
+                                                    ...List.generate(
+                                                      testList[index].questionList.length,
+                                                      (i) {
+                                                        int questionID = testList[index].questionList[i];
+                                                        int start = i * 4;
+                                                        int end = start + 4;
+                                                        List<int> correctAnswerOrder = testList[index].answerOrder.sublist(start, end).cast<int>();
+                                                        List<Answers> answerOptions = correctAnswerOrder.map((id) => answerList.firstWhere((a) => a.answerID == id)).toList();
+                                                        return Container(
+                                                          margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                                          padding: EdgeInsets.all(12),
+                                                          decoration: BoxDecoration(
+                                                            color: MyApp.homeWhite.withOpacity(0.9),
+                                                            borderRadius: BorderRadius.circular(12),
+                                                            border: Border.all(
+                                                              color: MyApp.homeWhite.withOpacity(0.3),
+                                                              width: 1,
+                                                            ),
+                                                            boxShadow: [
+                                                              BoxShadow(
+                                                                color: Colors.black12,
+                                                                blurRadius: 4,
+                                                                offset: Offset(0, 2),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          child: Column(
+                                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                                            children: [
+                                                        MathText(
                                                           '${i + 1}. ${(questionList.firstWhere((q) => q.questionID == questionID).questionText)}',
-                                                          style: TextStyle(
+                                                          textStyle: TextStyle(
                                                             fontSize: 16,
                                                             fontWeight: FontWeight.w600,
                                                             color: MyApp.homeDarkGreyText,
                                                           ),
                                                         ),
-                                                        SizedBox(height: 4),
-                                                        ...answerOptions.map((row) {
-                                                          bool isSelected = testList[index].selectedAnswers.contains(row.answerID); 
-                                                          bool isCorrect = row.isCorrect;
-                                                          Icon iconChosen = Icon(Icons.check_circle_outline);
-                                                          Color colorChosen = MyApp.homeDarkGreyText;
-                                                          if (isSelected && isCorrect) {
-                                                            iconChosen = Icon(Icons.circle, color: Color(0xFF628B35));
-                                                            colorChosen = Color(0xFF628B35);
-                                                          } else if (isSelected && !isCorrect) {
-                                                            iconChosen = Icon(Icons.circle, color: Color(0xFFBD433E));
-                                                            colorChosen = Color(0xFFBD433E);
-                                                          } else if (!isSelected && isCorrect) {
-                                                            iconChosen = Icon(Icons.circle_outlined, color: Color(0xFF628B35));
-                                                            colorChosen = Color(0xFF628B35);
-                                                          } else if (!isSelected && !isCorrect) {
-                                                            iconChosen = Icon(Icons.circle_outlined, color: MyApp.homeDarkGreyText); 
-                                                            colorChosen = MyApp.homeDarkGreyText;
-                                                          }
-                                                          return Row(
-                                                            children: [
-                                                              iconChosen,
-                                                              SizedBox(width: 6),
-                                                              Flexible(
-                                                                child: Text(
+                                                              SizedBox(height: 4),
+                                                              ...answerOptions.map((row) {
+                                                                bool isSelected = testList[index].selectedAnswers.contains(row.answerID);
+                                                                bool isCorrect = row.isCorrect;
+                                                                Icon iconChosen = Icon(Icons.check_circle_outline);
+                                                                Color colorChosen = MyApp.homeDarkGreyText;
+                                                                if (isSelected && isCorrect) {
+                                                                  iconChosen = Icon(Icons.circle, color: Color(0xFF628B35));
+                                                                  colorChosen = Color(0xFF628B35);
+                                                                } else if (isSelected && !isCorrect) {
+                                                                  iconChosen = Icon(Icons.circle, color: Color(0xFFBD433E));
+                                                                  colorChosen = Color(0xFFBD433E);
+                                                                } else if (!isSelected && isCorrect) {
+                                                                  iconChosen = Icon(Icons.circle_outlined, color: Color(0xFF628B35));
+                                                                  colorChosen = Color(0xFF628B35);
+                                                                } else {
+                                                                  iconChosen = Icon(Icons.circle_outlined, color: MyApp.homeDarkGreyText);
+                                                                  colorChosen = MyApp.homeDarkGreyText;
+                                                                }
+                                                                return Row(
+                                                                  children: [
+                                                                    iconChosen,
+                                                                    SizedBox(width: 6),
+                                                                    Flexible(
+                                                                child: MathText(
                                                                   row.answerText,
-                                                                  style: TextStyle(color: colorChosen),
-                                                                  softWrap: true,
+                                                                  textStyle: TextStyle(color: colorChosen),
                                                                 ),
-                                                              ),
+                                                                    ),
+                                                                  ],
+                                                                );
+                                                              }),
                                                             ],
-                                                          );
-                                                        }),
-                                                      ],
+                                                          ),
+                                                        );
+                                                      },
                                                     ),
-                                                  );
-                                                },
-                                              ),
-                                            ],
-                                          ),
+                                                  ],
+                                                )
+                                              : Padding(
+                                                  padding: EdgeInsets.symmetric(vertical: 16),
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(Icons.info_outline, color: MyApp.homeWhite.withOpacity(0.9), size: 20),
+                                                      SizedBox(width: 8),
+                                                      Expanded(
+                                                        child: Text(
+                                                          'Results will be available when your admin releases them.',
+                                                          style: TextStyle(
+                                                            fontSize: 14,
+                                                            color: MyApp.homeWhite.withOpacity(0.95),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
                                         ),
                                       ],
                                     ),
@@ -582,7 +753,7 @@ class _ResultsState extends State<Results> { //
                 ),
               );
             },
-          ),
+          )),
     );
   }
 

@@ -5,6 +5,7 @@ import 'dart:async'; // Importing for Timer
 import 'post_quiz.dart';
 import 'results.dart';
 import 'main.dart';
+import 'math_text.dart';
 
 class QuizPage extends StatefulWidget {
   final int attemptId;
@@ -267,10 +268,10 @@ class _QuizPageState extends State<QuizPage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // Question number and text
-                                  Text(
+                                  // Question number and text (supports LaTeX when stored in DB)
+                                  MathText(
                                     '${_currentQuestionIndex + 1}. ${currentQuestion['question_text']}',
-                                    style: TextStyle(
+                                    textStyle: TextStyle(
                                       fontSize: isMobile ? 18 : 22,
                                       fontWeight: FontWeight.bold,
                                       color: MyApp.homeDarkGreyText,
@@ -333,11 +334,11 @@ class _QuizPageState extends State<QuizPage> {
                                                     : null,
                                               ),
                                               SizedBox(width: 12),
-                                              // Answer text
+                                              // Answer text (supports LaTeX when stored in DB)
                                               Expanded(
-                                                child: Text(
-                                                  ans['answer_text'],
-                                                  style: TextStyle(
+                                                child: MathText(
+                                                  ans['answer_text'] ?? '',
+                                                  textStyle: TextStyle(
                                                     fontSize: isMobile ? 15 : 17,
                                                     color: MyApp.homeDarkGreyText,
                                                     fontFamily: 'serif',

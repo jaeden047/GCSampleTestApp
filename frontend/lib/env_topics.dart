@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart'; //supabase flutter sdk
 import 'package:flutter_svg/flutter_svg.dart';
 import 'quiz.dart';
 import 'main.dart';
+import 'quiz_rules.dart';
 
 // EnvTopics page
 // Showcase all environmental quiz topics for the users to select
@@ -96,32 +97,6 @@ class _EnvTopicsState extends State<EnvTopics> {
 
     final topicId = topicResponse['topic_id'];
 
-    // List of quizzes that are restricted to a single attempt only
-    List<String> oneTryTopics = ['Plastic Pollution Focus'];
-
-    // Check if the user has already attempted the specific quizzes
-    if (oneTryTopics.contains(topicName)) {
-      try {
-        final response = await supabase.rpc('check_user_attempt', params: {
-          'p_user_id': user.id,  // Current user ID
-          'p_topic_id': topicId,  // Topic ID for the quiz
-        });
-        // If the response is true, user has already attempted the quiz
-        if (response == true) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('You have already attempted this quiz.')),
-          );
-          return;
-        }
-        // Proceed with starting the quiz
-      } catch (e) {
-        // Handle any errors (e.g., network, function error)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error checking previous attempts: $e')),
-        );
-      }
-    }
-
     try {
       // 1. Generate 10 question IDs for the quiz
       final questions = await supabase.rpc('generate_questions', params: {
@@ -146,21 +121,36 @@ class _EnvTopicsState extends State<EnvTopics> {
 
           if (quizQuestions is List) {
             final questionsWithAnswers = quizQuestions.cast<Map<String, dynamic>>();
-            // 4. Navigate to quiz page if the attempt ID is returned
+            // 4. Show quiz rules first, then navigate to quiz page
+            if (!mounted) return;
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => QuizPage(
-                  attemptId: quizAttempt,
-                  questions: questionsWithAnswers,
-                  topicName: topicName,
-                  onRedoQuiz: () => _startQuiz(context, topicName),
+                builder: (context) => QuizRulesScreen(
+                  onAgree: () {
+                    // After agreeing to rules, navigate to quiz
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => QuizPage(
+                          attemptId: quizAttempt,
+                          questions: questionsWithAnswers,
+                          topicName: topicName,
+                          onRedoQuiz: () => _startQuiz(context, topicName),
+                        ),
+                      ),
+                    ).then((_) {
+                      // Refresh taken quizzes after returning from quiz
+                      _fetchTakenQuizzes();
+                    });
+                  },
+                  onClose: () {
+                    // Close quiz rules and go back to quiz topic screen
+                    Navigator.pop(context);
+                  },
                 ),
               ),
-            ).then((_) {
-              // Refresh taken quizzes after returning from quiz
-              _fetchTakenQuizzes();
-            });
+            );
           }
         }
       }

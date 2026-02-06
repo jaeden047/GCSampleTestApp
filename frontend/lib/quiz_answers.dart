@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:logger/logger.dart';
 import 'main.dart';
+import 'math_text.dart';
 
 class QuizAnswers extends StatefulWidget {
   final int attemptId;
@@ -23,6 +26,8 @@ class TestAttempt {
   final List<dynamic> selectedAnswers;
   final double score;
   final int topicId;
+  /// For Math: 'local' or 'final'. Other topics default to 'local'.
+  final String round;
 
   TestAttempt({
     required this.dateTime,
@@ -31,6 +36,7 @@ class TestAttempt {
     required this.selectedAnswers,
     required this.score,
     required this.topicId,
+    this.round = 'local',
   });
 }
 
@@ -63,15 +69,31 @@ class Questions {
 class Topics {
   final int topicId2;
   final String topicName;
+  final bool resultsReleased;
+  final bool isSampleQuiz;
 
   Topics({
     required this.topicId2,
     required this.topicName,
+    required this.resultsReleased,
+    required this.isSampleQuiz,
   });
+
+  bool get canShowResults => isSampleQuiz || resultsReleased;
 }
 
 class _QuizAnswersState extends State<QuizAnswers> {
   final supabase = Supabase.instance.client;
+  final Logger _logger = Logger(
+    printer: PrettyPrinter(
+      methodCount: 0,
+      errorMethodCount: 5,
+      lineLength: 120,
+      colors: true,
+      printEmojis: true,
+      printTime: true,
+    ),
+  );
   TestAttempt? testAttempt;
   List<Answers> answerList = [];
   List<Questions> questionList = [];
@@ -82,6 +104,10 @@ class _QuizAnswersState extends State<QuizAnswers> {
   bool _isMobile(BuildContext context) {
     return MediaQuery.of(context).size.width < 768;
   }
+
+  static const _mathRoundTopicNames = ['Grade 5 and 6', 'Grade 7 and 8', 'Grade 9 and 10', 'Grade 11 and 12'];
+  bool _isMathRoundTopic(String? topicName) => topicName != null && _mathRoundTopicNames.contains(topicName);
+  static String _roundLabel(String round) => round == 'sample' ? 'Sample Quiz' : round == 'final' ? 'Final Round' : 'Local Round';
 
   @override
   void initState() {
@@ -101,7 +127,7 @@ class _QuizAnswersState extends State<QuizAnswers> {
       // Fetch all answers, questions, and topics
       final questionAnswers = await supabase.from('answers').select();
       final questionData = await supabase.from('questions').select();
-      final topicData = await supabase.from('topics').select();
+      final topicData = await supabase.from('topics').select('topic_id, topic_name, results_released, is_sample_quiz');
 
       setState(() {
         testAttempt = TestAttempt(
@@ -111,6 +137,7 @@ class _QuizAnswersState extends State<QuizAnswers> {
           selectedAnswers: List<dynamic>.from(testRawData['selected_answers'] ?? []),
           score: testRawData['score'] ?? 0,
           topicId: testRawData['topic_id'] ?? 0,
+          round: (testRawData['round'] as String?) ?? 'local',
         );
 
         answerList = questionAnswers.map<Answers>((row) {
@@ -132,11 +159,13 @@ class _QuizAnswersState extends State<QuizAnswers> {
 
         final topicRow = topicData.firstWhere(
           (t) => t['topic_id'] == testAttempt!.topicId,
-          orElse: () => {'topic_id': 0, 'topic_name': 'Unknown'},
+          orElse: () => {'topic_id': 0, 'topic_name': 'Unknown', 'results_released': false, 'is_sample_quiz': false},
         );
         topic = Topics(
           topicId2: topicRow['topic_id'],
           topicName: topicRow['topic_name'],
+          resultsReleased: topicRow['results_released'] == true,
+          isSampleQuiz: topicRow['is_sample_quiz'] == true,
         );
 
         isLoading = false;
@@ -153,29 +182,130 @@ class _QuizAnswersState extends State<QuizAnswers> {
     }
   }
 
-  // Convert UTC DateTime to Toronto timezone
-  DateTime _convertToToronto(DateTime utcDateTime) {
-    final month = utcDateTime.month;
-    if (month >= 3 && month <= 11) {
-      return utcDateTime.subtract(Duration(hours: 4));
-    } else {
-      return utcDateTime.subtract(Duration(hours: 5));
-    }
-  }
-
   // Format date in Toronto timezone
   String _formatDateToronto(String dateTimeString) {
     try {
-      DateTime utcDateTime;
-      if (dateTimeString.endsWith('Z') || dateTimeString.contains('+') || dateTimeString.contains('-', 10)) {
-        utcDateTime = DateTime.parse(dateTimeString).toUtc();
-      } else {
-        utcDateTime = DateTime.parse(dateTimeString).toUtc();
+      _logger.d('=== Timezone Conversion Debug ===');
+      _logger.d('Original timestamp string from Supabase: $dateTimeString');
+      
+      // Parse the datetime string - handle ISO format (e.g., "2026-01-22T17:24:03.99345")
+      DateTime parsedDateTime;
+      
+      // Remove microseconds if present for easier parsing, but preserve timezone
+      String cleanDateTime = dateTimeString.trim();
+      
+      // Check if it has timezone info FIRST (before removing microseconds)
+      // Look for patterns like: "2026-01-22T17:40:00+00:00" or "2026-01-22T17:40:00Z"
+      bool hasTimezone = cleanDateTime.endsWith('Z') || 
+                         RegExp(r'[+-]\d{2}:\d{2}$').hasMatch(cleanDateTime);
+      
+      // Extract timezone part if present (e.g., "+00:00" or "-05:00")
+      String? timezonePart;
+      if (hasTimezone && !cleanDateTime.endsWith('Z')) {
+        final timezoneMatch = RegExp(r'([+-]\d{2}:\d{2})$').firstMatch(cleanDateTime);
+        if (timezoneMatch != null) {
+          timezonePart = timezoneMatch.group(1);
+        }
       }
-      final torontoDateTime = _convertToToronto(utcDateTime);
-      return DateFormat('MM/dd/yyyy h:mma').format(torontoDateTime);
+      
+      // Handle different formats from Supabase
+      // Supabase typically returns timestamps in ISO 8601 format
+      // Remove microseconds but preserve timezone
+      if (cleanDateTime.contains('.')) {
+        // Split on '.' but keep timezone if present
+        final parts = cleanDateTime.split('.');
+        cleanDateTime = parts[0];
+        // Re-add timezone if it was present
+        if (timezonePart != null) {
+          cleanDateTime += timezonePart;
+        } else if (hasTimezone && cleanDateTime.endsWith('Z')) {
+          // Z is already at the end, keep it
+        }
+      }
+      
+      _logger.d('Has timezone info: $hasTimezone');
+      _logger.d('Cleaned datetime string: $cleanDateTime');
+      
+      if (!hasTimezone) {
+        // No timezone indicator - add 'Z' to indicate UTC
+        cleanDateTime += 'Z';
+        _logger.d('Added Z suffix, new string: $cleanDateTime');
+      }
+      
+      // Parse the datetime - DateTime.parse handles timezone if present
+      parsedDateTime = DateTime.parse(cleanDateTime);
+      _logger.d('Parsed DateTime (before UTC conversion): ${parsedDateTime.toString()}');
+      
+      // Always convert to UTC for consistent handling
+      // If it had timezone info, toUtc() converts it
+      // If it didn't, we already added 'Z' so it's treated as UTC
+      parsedDateTime = parsedDateTime.toUtc();
+      _logger.d('UTC DateTime: ${parsedDateTime.year}-${parsedDateTime.month.toString().padLeft(2, '0')}-${parsedDateTime.day.toString().padLeft(2, '0')} ${parsedDateTime.hour.toString().padLeft(2, '0')}:${parsedDateTime.minute.toString().padLeft(2, '0')}:${parsedDateTime.second.toString().padLeft(2, '0')}');
+      
+      // Convert to Toronto timezone using timezone package
+      final torontoLocation = tz.getLocation('America/Toronto');
+      
+      // Create TZDateTime in UTC from the parsed DateTime
+      final utcTZ = tz.TZDateTime.utc(
+        parsedDateTime.year,
+        parsedDateTime.month,
+        parsedDateTime.day,
+        parsedDateTime.hour,
+        parsedDateTime.minute,
+        parsedDateTime.second,
+      );
+      
+      // Get timezone information for Toronto at this UTC time
+      final timeZoneInfo = torontoLocation.timeZone(utcTZ.millisecondsSinceEpoch);
+      
+      // The timezone package's offset represents the offset FROM UTC TO local time
+      // For EST (UTC-5): offset should be negative (behind UTC)
+      // For EDT (UTC-4): offset should be negative (behind UTC)
+      final offsetMs = timeZoneInfo.offset;
+      final offsetHours = offsetMs / 3600000;
+      
+      _logger.d('UTC TZDateTime: ${utcTZ.year}-${utcTZ.month.toString().padLeft(2, '0')}-${utcTZ.day.toString().padLeft(2, '0')} ${utcTZ.hour.toString().padLeft(2, '0')}:${utcTZ.minute.toString().padLeft(2, '0')}:${utcTZ.second.toString().padLeft(2, '0')}');
+      _logger.d('Toronto timezone offset: $offsetMs ms ($offsetHours hours)');
+      _logger.d('Is DST: ${timeZoneInfo.isDst}');
+      
+      // Convert UTC to Toronto time using the timezone package's proper method
+      // Create a TZDateTime in Toronto timezone directly from the UTC TZDateTime
+      // This is the correct way to convert between timezones
+      final torontoTZ = tz.TZDateTime.fromMillisecondsSinceEpoch(
+        torontoLocation,
+        utcTZ.millisecondsSinceEpoch,
+      );
+      
+      _logger.d('Toronto TZDateTime: ${torontoTZ.year}-${torontoTZ.month.toString().padLeft(2, '0')}-${torontoTZ.day.toString().padLeft(2, '0')} ${torontoTZ.hour.toString().padLeft(2, '0')}:${torontoTZ.minute.toString().padLeft(2, '0')}:${torontoTZ.second.toString().padLeft(2, '0')}');
+      
+      // Create a regular DateTime from the TZDateTime for formatting
+      // Use the year, month, day, hour, minute, second from the Toronto TZDateTime
+      final torontoDateTime = DateTime(
+        torontoTZ.year,
+        torontoTZ.month,
+        torontoTZ.day,
+        torontoTZ.hour,
+        torontoTZ.minute,
+        torontoTZ.second,
+      );
+      
+      _logger.d('Toronto DateTime: ${torontoDateTime.year}-${torontoDateTime.month.toString().padLeft(2, '0')}-${torontoDateTime.day.toString().padLeft(2, '0')} ${torontoDateTime.hour.toString().padLeft(2, '0')}:${torontoDateTime.minute.toString().padLeft(2, '0')}:${torontoDateTime.second.toString().padLeft(2, '0')}');
+      
+      // Format as MM/dd/yyyy h:mm a with space between date and time (e.g., "01/22/2026 12:24 PM")
+      final formattedDate = DateFormat('MM/dd/yyyy h:mm a').format(torontoDateTime);
+      _logger.d('Formatted date string: $formattedDate');
+      _logger.d('=== End Timezone Conversion Debug ===');
+      
+      return formattedDate;
     } catch (e) {
-      return dateTimeString;
+      // If parsing fails, try to format the original string as-is
+      try {
+        final fallbackDateTime = DateTime.parse(dateTimeString);
+        return DateFormat('MM/dd/yyyy h:mma').format(fallbackDateTime);
+      } catch (_) {
+        // Last resort: return a formatted version of the original string
+        return dateTimeString;
+      }
     }
   }
 
@@ -199,6 +329,40 @@ class _QuizAnswersState extends State<QuizAnswers> {
         body: Center(
           child: CircularProgressIndicator(
             color: MyApp.homeTealGreen,
+          ),
+        ),
+      );
+    }
+
+    if (topic != null && !topic!.canShowResults) {
+      return Scaffold(
+        backgroundColor: MyApp.homeLightGreyBackground,
+        appBar: AppBar(
+          backgroundColor: MyApp.homeLightGreyBackground,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: MyApp.homeDarkGreyText),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.lock_outline, size: 48, color: MyApp.homeDarkGreyText),
+                SizedBox(height: 16),
+                Text(
+                  'Results will be available when your admin releases them.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: isMobile ? 16 : 18,
+                    color: MyApp.homeDarkGreyText,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -283,7 +447,7 @@ class _QuizAnswersState extends State<QuizAnswers> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  '${topic?.topicName ?? 'Quiz'} Answers',
+                                  '${topic?.topicName ?? 'Quiz'}${_isMathRoundTopic(topic?.topicName) ? ' • ${_roundLabel(testAttempt!.round)}' : ''} Answers',
                                   style: TextStyle(
                                     fontSize: isMobile ? 24 : 32,
                                     fontWeight: FontWeight.bold,
@@ -356,9 +520,9 @@ class _QuizAnswersState extends State<QuizAnswers> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
+                                    MathText(
                                       '${i + 1}. ${(questionList.firstWhere((q) => q.questionID == questionID).questionText)}',
-                                      style: TextStyle(
+                                      textStyle: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
                                         color: MyApp.homeDarkGreyText,
@@ -388,10 +552,9 @@ class _QuizAnswersState extends State<QuizAnswers> {
                                           iconChosen,
                                           SizedBox(width: 6),
                                           Flexible(
-                                            child: Text(
+                                            child: MathText(
                                               row.answerText,
-                                              style: TextStyle(color: colorChosen),
-                                              softWrap: true,
+                                              textStyle: TextStyle(color: colorChosen),
                                             ),
                                           ),
                                         ],

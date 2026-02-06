@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'api_service.dart';
-import 'home.dart';
+import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'login.dart';
+import 'platform_terms.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -11,8 +12,9 @@ void main() async {
     url: 'https://duvycvfjnirqtqvxkrxz.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1dnljdmZqbmlycXRxdnhrcnh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA5NjE5MDUsImV4cCI6MjA2NjUzNzkwNX0.YGyw8CvpQTVCADMc7EDv2ez2i2uQ0p0bT6cmI7_ZWxQ',
   );
-
-  runApp(const MyApp());
+  // Initialize timezone data
+  tz_data.initializeTimeZones();
+  runApp(MyApp());
 }
 class MyApp extends StatelessWidget {
   final Color bgColor = const Color(0xFFE5ECDF); // #E5ECDF
@@ -93,7 +95,7 @@ class AuthGate extends StatelessWidget { // “When the app starts, decide wheth
 
         final token = snapshot.data;
         if (token != null && token.isNotEmpty) { // if token exists, go to Home page
-          return const Home();
+          return const PlatformTermsScreen();
         }
         return const LoginPage(); // if no token exists, go to login page
       },
