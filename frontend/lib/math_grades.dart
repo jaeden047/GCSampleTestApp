@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:frontend/api_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; //supabase flutter sdk
@@ -83,10 +84,9 @@ class MathGrades extends StatelessWidget {
         final qRows = await supabase
             .from('questions')
             .select('question_id')
-            .eq('question_set_id', setId) // take only question from these set
-            .order('question_id');
-        questionIds =
-            (qRows as List).map<int>((r) => r['question_id'] as int).toList();
+            .eq('question_set_id', setId);
+        questionIds = (qRows as List).map<int>((r) => r['question_id'] as int).toList();
+        questionIds.shuffle(Random());
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -182,6 +182,7 @@ class MathGrades extends StatelessWidget {
                     questions: questionsWithAnswers,
                     topicName: topicName,
                     onRedoQuiz: () => _startQuiz(context, topicName, round),
+                    timeLimitSeconds: round == 'sample' ? 15 * 60 : 60 * 60, // sample 15 min, local/final 60 min
                   ),
                 ),
               );

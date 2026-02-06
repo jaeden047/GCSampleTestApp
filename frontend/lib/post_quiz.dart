@@ -36,6 +36,8 @@ class _PostQuizState extends State<PostQuiz> {
     _fetchReleaseStatus();
   }
 
+  static const _mathRoundTopicNames = ['Grade 5 and 6', 'Grade 7 and 8', 'Grade 9 and 10', 'Grade 11 and 12'];
+
   Future<void> _fetchReleaseStatus() async {
     try {
       final row = await Supabase.instance.client
@@ -46,7 +48,9 @@ class _PostQuizState extends State<PostQuiz> {
       if (mounted) {
         setState(() {
           _loadingRelease = false;
-          _canShowResults = row != null && (row['is_sample_quiz'] == true || row['results_released'] == true);
+          // Sample quiz always unlocked for math grade topics; otherwise use topic flags
+          _canShowResults = _mathRoundTopicNames.contains(widget.topicName) ||
+              (row != null && (row['is_sample_quiz'] == true || row['results_released'] == true));
         });
       }
     } catch (_) {

@@ -12,6 +12,8 @@ class QuizPage extends StatefulWidget {
   final List<dynamic> questions;
   final String topicName;
   final VoidCallback onRedoQuiz;
+  /// Time limit in seconds (e.g. 900 = 15 min, 3600 = 60 min). Default 1800 (30 min).
+  final int? timeLimitSeconds;
 
   const QuizPage({
     super.key,
@@ -19,6 +21,7 @@ class QuizPage extends StatefulWidget {
     required this.questions,
     required this.topicName,
     required this.onRedoQuiz,
+    this.timeLimitSeconds,
   });
 
   @override
@@ -32,8 +35,9 @@ class _QuizPageState extends State<QuizPage> {
   bool _loading = true;
   int _currentQuestionIndex = 0; // Track current question
 
-  int _timeLeft = 1800; // set 30 mins (1800 seconds)
-  late Timer _timer; // Timer instance
+  late int _timeLeft;
+  late int _initialTimeSeconds;
+  late Timer _timer;
 
   @override
   void initState() {
@@ -41,8 +45,9 @@ class _QuizPageState extends State<QuizPage> {
     _attemptId = widget.attemptId;
     _questions = widget.questions;
     _loading = false;
+    _initialTimeSeconds = widget.timeLimitSeconds ?? 1800; // default 30 min
+    _timeLeft = _initialTimeSeconds;
 
-    // Start the timer
     _startTimer();
   }
 
@@ -84,7 +89,7 @@ class _QuizPageState extends State<QuizPage> {
 
   Future<void> _submitQuiz() async {
     final supabase = Supabase.instance.client;
-    int timePast = 1800 - _timeLeft; // calculate how many seconds it took to finish the quiz
+    int timePast = _initialTimeSeconds - _timeLeft;
     try {
       final scoreRaw = await supabase.rpc('calculate_score', params: {
         'input_time': timePast,
@@ -95,6 +100,7 @@ class _QuizPageState extends State<QuizPage> {
       final double score = (scoreRaw as num).toDouble();
       print(score);
       if (mounted) {
+        Navigator.pop(context); // Remove quiz page so PostQuiz is on top (same for timer or back exit)
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -132,6 +138,21 @@ class _QuizPageState extends State<QuizPage> {
     if (_loading) {
       return Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+    if (_questions.isEmpty) {
+      return Scaffold(
+        backgroundColor: MyApp.homeLightPink,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Text(
+              'No questions were loaded. Please go back and try again.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, color: MyApp.homeDarkGreyText),
+            ),
+          ),
+        ),
+      );
+    }
 
     final isMobile = _isMobile(context);
     final screenWidth = MediaQuery.of(context).size.width;
@@ -147,7 +168,13 @@ class _QuizPageState extends State<QuizPage> {
     final isLastQuestion = _currentQuestionIndex == _questions.length - 1;
     final progress = (_currentQuestionIndex + 1) / _questions.length;
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        if (didPop) return;
+        await _submitQuiz();
+      },
+      child: Scaffold(
       backgroundColor: MyApp.homeLightPink, // Light pink background like design
       body: Stack(
         clipBehavior: Clip.none,
@@ -167,10 +194,10 @@ class _QuizPageState extends State<QuizPage> {
                   ),
                   child: Row(
                     children: [
-                      // Back button
+                      // Back button — submit quiz then go to results (same as timer expiry)
                       IconButton(
                         icon: Icon(Icons.arrow_back, color: MyApp.homeDarkGreyText),
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () async => await _submitQuiz(),
                       ),
                       
                       // Progress bar
@@ -267,8 +294,9 @@ class _QuizPageState extends State<QuizPage> {
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  // Question number and text (supports LaTeX when stored in DB)
+                                  // Question number and text (wraps to new lines within card width)
                                   MathText(
                                     '${_currentQuestionIndex + 1}. ${currentQuestion['question_text']}',
                                     textStyle: TextStyle(
@@ -278,7 +306,6 @@ class _QuizPageState extends State<QuizPage> {
                                       fontFamily: 'serif',
                                     ),
                                   ),
-                                  
                                   SizedBox(height: isMobile ? 20 : 24),
                                   
                                   // Answer options
@@ -420,6 +447,7 @@ class _QuizPageState extends State<QuizPage> {
           ),
         ],
       ),
+    ),
     );
   }
 

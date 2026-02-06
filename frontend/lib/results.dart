@@ -16,18 +16,17 @@ class Results extends StatefulWidget { // Results is a type of widget (Class)
   State<Results> createState() => _ResultsState(); //
 }
 
-class TestAttempt { // Here we create a custom type (i.e. String is a type)
-  // Data fields, 'dynamic' => can hold any type of value
+class TestAttempt {
   final String dateTime;
   final List<dynamic> questionList;
   final List<dynamic> answerOrder;
-  final List<dynamic> selectedAnswers;
+  /// From DB: Map (question_id -> answer_id) or legacy List of answer_ids.
+  final dynamic selectedAnswers;
   final double score;
   final int topicId;
-  /// For Math: 'local' or 'final'. Other topics default to 'local'.
   final String round;
 
-  TestAttempt({ // Model for Constructor for the class: To create an object - this is what you require
+  TestAttempt({
     required this.dateTime,
     required this.questionList,
     required this.answerOrder,
@@ -101,6 +100,103 @@ class _ResultsState extends State<Results> { //
   bool _isMathRoundTopic(String topicName) => _mathRoundTopicNames.contains(topicName);
   static String _roundLabel(String round) => round == 'sample' ? 'Sample Quiz' : round == 'final' ? 'Final Round' : 'Local Round';
 
+  /// Answered question IDs in display order (only those with an entry in selected_answers). Supports partial attempts.
+  List<int> _getAnsweredQuestionIdsInOrder(TestAttempt a) {
+    if (a.selectedAnswers is Map) {
+      final m = a.selectedAnswers as Map;
+      return [
+        for (var qid in a.questionList)
+          if (m.containsKey(qid.toString()))
+            (qid is int ? qid : int.tryParse(qid.toString()) ?? 0)
+      ];
+    }
+    return List<int>.from(a.questionList);
+  }
+
+  bool _isAnswerSelected(TestAttempt a, int questionId, int answerId) {
+    if (a.selectedAnswers is Map) return (a.selectedAnswers as Map)[questionId.toString()] == answerId;
+    if (a.selectedAnswers is List) return (a.selectedAnswers as List).contains(answerId);
+    return false;
+  }
+
+  /// For math grade topics: sample round always visible; local/final visible only when topic.resultsReleased.
+  /// For other topics (e.g. Plastic): use topic.canShowResults.
+  bool _canShowResultsForAttempt(Topics topic, String topicName, TestAttempt attempt) {
+    if (_isMathRoundTopic(topicName)) {
+      if (attempt.round == 'sample') return true;
+      if (attempt.round == 'local' || attempt.round == 'final') return topic.resultsReleased;
+      return topic.resultsReleased;
+    }
+    return topic.canShowResults;
+  }
+
+  List<Widget> _buildAttemptAnswerTiles(int index) {
+    final attempt = testList[index];
+    final answeredIds = _getAnsweredQuestionIdsInOrder(attempt);
+    return List.generate(answeredIds.length, (i) {
+      int questionID = answeredIds[i];
+      int origIndex = attempt.questionList.indexOf(questionID);
+      if (origIndex < 0) return SizedBox.shrink();
+      int start = origIndex * 4;
+      int end = start + 4;
+      if (end > attempt.answerOrder.length) return SizedBox.shrink();
+      List<int> correctAnswerOrder = attempt.answerOrder.sublist(start, end).cast<int>();
+      List<Answers> answerOptions = [];
+      for (final id in correctAnswerOrder) {
+        final match = answerList.where((a) => a.answerID == id).toList();
+        if (match.isNotEmpty) answerOptions.add(match.first);
+      }
+      final questionMatch = questionList.where((q) => q.questionID == questionID).toList();
+      final questionText = questionMatch.isEmpty ? 'Question (unavailable)' : questionMatch.first.questionText;
+      return Container(
+        margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: MyApp.homeWhite.withOpacity(0.9),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: MyApp.homeWhite.withOpacity(0.3), width: 1),
+          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            MathText(
+              '${i + 1}. $questionText',
+              textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: MyApp.homeDarkGreyText),
+            ),
+            SizedBox(height: 4),
+            ...answerOptions.map((row) {
+              bool isSelected = _isAnswerSelected(attempt, questionID, row.answerID);
+              bool isCorrect = row.isCorrect;
+              Icon iconChosen = Icon(Icons.check_circle_outline);
+              Color colorChosen = MyApp.homeDarkGreyText;
+              if (isSelected && isCorrect) {
+                iconChosen = Icon(Icons.circle, color: Color(0xFF628B35));
+                colorChosen = Color(0xFF628B35);
+              } else if (isSelected && !isCorrect) {
+                iconChosen = Icon(Icons.circle, color: Color(0xFFBD433E));
+                colorChosen = Color(0xFFBD433E);
+              } else if (!isSelected && isCorrect) {
+                iconChosen = Icon(Icons.circle_outlined, color: Color(0xFF628B35));
+                colorChosen = Color(0xFF628B35);
+              } else {
+                iconChosen = Icon(Icons.circle_outlined, color: MyApp.homeDarkGreyText);
+                colorChosen = MyApp.homeDarkGreyText;
+              }
+              return Row(
+                children: [
+                  iconChosen,
+                  SizedBox(width: 6),
+                  Flexible(child: MathText(row.answerText, textStyle: TextStyle(color: colorChosen))),
+                ],
+              );
+            }),
+          ],
+        ),
+      );
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -166,7 +262,7 @@ class _ResultsState extends State<Results> { //
             dateTime: row['test_datetime']?.toString() ?? 'No Date',
             questionList: List<dynamic>.from(row['question_list'] ?? []),
             answerOrder: List<dynamic>.from(row['answer_order'] ?? []),
-            selectedAnswers: List<dynamic>.from(row['selected_answers'] ?? []),
+            selectedAnswers: row['selected_answers'],
             score: (row['score'] ?? 0).toDouble(),
             topicId: row['topic_id'] ?? 0,
             round: (row['round'] as String?) ?? 'local',
@@ -559,7 +655,7 @@ class _ResultsState extends State<Results> { //
                                   String formattedDate = _formatDateToronto(testList[index].dateTime);
                                   double scoreNumber = testList[index].score;
                                   final topic = topicList.firstWhere((t) => t.topicId2 == testList[index].topicId, orElse: () => Topics(topicId2: 0, topicName: 'Unknown', resultsReleased: false, isSampleQuiz: false));
-                                  final canShow = topic.canShowResults;
+                                  final canShow = _canShowResultsForAttempt(topic, topic.topicName, testList[index]);
                                   return Container(
                                     margin: EdgeInsets.only(bottom: isMobile ? 16 : 20),
                                     decoration: BoxDecoration(
@@ -644,80 +740,7 @@ class _ResultsState extends State<Results> { //
                                                   crossAxisAlignment: CrossAxisAlignment.center,
                                                   children: [
                                                     SizedBox(height: 8),
-                                                    ...List.generate(
-                                                      testList[index].questionList.length,
-                                                      (i) {
-                                                        int questionID = testList[index].questionList[i];
-                                                        int start = i * 4;
-                                                        int end = start + 4;
-                                                        List<int> correctAnswerOrder = testList[index].answerOrder.sublist(start, end).cast<int>();
-                                                        List<Answers> answerOptions = correctAnswerOrder.map((id) => answerList.firstWhere((a) => a.answerID == id)).toList();
-                                                        return Container(
-                                                          margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                                          padding: EdgeInsets.all(12),
-                                                          decoration: BoxDecoration(
-                                                            color: MyApp.homeWhite.withOpacity(0.9),
-                                                            borderRadius: BorderRadius.circular(12),
-                                                            border: Border.all(
-                                                              color: MyApp.homeWhite.withOpacity(0.3),
-                                                              width: 1,
-                                                            ),
-                                                            boxShadow: [
-                                                              BoxShadow(
-                                                                color: Colors.black12,
-                                                                blurRadius: 4,
-                                                                offset: Offset(0, 2),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                          child: Column(
-                                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                                            children: [
-                                                        MathText(
-                                                          '${i + 1}. ${(questionList.firstWhere((q) => q.questionID == questionID).questionText)}',
-                                                          textStyle: TextStyle(
-                                                            fontSize: 16,
-                                                            fontWeight: FontWeight.w600,
-                                                            color: MyApp.homeDarkGreyText,
-                                                          ),
-                                                        ),
-                                                              SizedBox(height: 4),
-                                                              ...answerOptions.map((row) {
-                                                                bool isSelected = testList[index].selectedAnswers.contains(row.answerID);
-                                                                bool isCorrect = row.isCorrect;
-                                                                Icon iconChosen = Icon(Icons.check_circle_outline);
-                                                                Color colorChosen = MyApp.homeDarkGreyText;
-                                                                if (isSelected && isCorrect) {
-                                                                  iconChosen = Icon(Icons.circle, color: Color(0xFF628B35));
-                                                                  colorChosen = Color(0xFF628B35);
-                                                                } else if (isSelected && !isCorrect) {
-                                                                  iconChosen = Icon(Icons.circle, color: Color(0xFFBD433E));
-                                                                  colorChosen = Color(0xFFBD433E);
-                                                                } else if (!isSelected && isCorrect) {
-                                                                  iconChosen = Icon(Icons.circle_outlined, color: Color(0xFF628B35));
-                                                                  colorChosen = Color(0xFF628B35);
-                                                                } else {
-                                                                  iconChosen = Icon(Icons.circle_outlined, color: MyApp.homeDarkGreyText);
-                                                                  colorChosen = MyApp.homeDarkGreyText;
-                                                                }
-                                                                return Row(
-                                                                  children: [
-                                                                    iconChosen,
-                                                                    SizedBox(width: 6),
-                                                                    Flexible(
-                                                                child: MathText(
-                                                                  row.answerText,
-                                                                  textStyle: TextStyle(color: colorChosen),
-                                                                ),
-                                                                    ),
-                                                                  ],
-                                                                );
-                                                              }),
-                                                            ],
-                                                          ),
-                                                        );
-                                                      },
-                                                    ),
+                                                    ..._buildAttemptAnswerTiles(index),
                                                   ],
                                                 )
                                               : Padding(

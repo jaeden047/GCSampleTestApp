@@ -17,10 +17,14 @@ class Leaderboard extends StatefulWidget {
 
 class _LeaderboardState extends State<Leaderboard> {
   String? selectedTopic;
+  /// For math grade topics: 'sample', 'local', or 'final'. Null for non-math (e.g. Plastic).
+  String? selectedRound;
   List<Map<String, dynamic>> topicList = [];
   bool isLoadingTopics = true;
 
+  /// Sample quiz is always unlocked: show leaderboard for math grade topics and when results released or is_sample_quiz.
   bool _canShowResultsForTopic(String topicName) {
+    if (_mathRoundTopicNames.contains(topicName)) return true;
     try {
       final t = topicList.firstWhere((e) => e['topic_name'] == topicName);
       return t['is_sample_quiz'] == true || t['results_released'] == true;
@@ -36,10 +40,9 @@ class _LeaderboardState extends State<Leaderboard> {
     _fetchTopics();
   }
 
-  // Custom sort order for topics
+  // Custom sort order for topics (Sample Quiz is no longer a topic; grades then Plastic)
   int _getTopicSortOrder(String topicName) {
     const order = [
-      'Sample Quiz',
       'Grade 5 and 6',
       'Grade 7 and 8',
       'Grade 9 and 10',
@@ -47,7 +50,6 @@ class _LeaderboardState extends State<Leaderboard> {
       'Plastic Pollution Focus',
     ];
     final index = order.indexOf(topicName);
-    // If topic not in predefined order, put it at the end
     return index == -1 ? 999 : index;
   }
 
@@ -71,9 +73,14 @@ class _LeaderboardState extends State<Leaderboard> {
         if (selectedTopic != null && !topicList.any((t) => t['topic_name'] == selectedTopic)) {
           if (topicList.isNotEmpty) {
             selectedTopic = topicList[0]['topic_name'] as String;
+            selectedRound = _isMathRoundTopic(selectedTopic!) ? 'sample' : null;
           }
         } else if (selectedTopic == null && topicList.isNotEmpty) {
           selectedTopic = topicList[0]['topic_name'] as String;
+          selectedRound = _isMathRoundTopic(selectedTopic!) ? 'sample' : null;
+        }
+        if (selectedTopic != null && _isMathRoundTopic(selectedTopic!) && selectedRound == null) {
+          selectedRound = 'sample';
         }
       });
     } catch (e) {
@@ -350,10 +357,10 @@ class _LeaderboardState extends State<Leaderboard> {
     return elements;
   }
 
-  Future<List<Map<String, dynamic>>> fetchLeaderboard(String topicName) async {
+  /// Fetches leaderboard for [topicName]. For math grade topics, [round] filters by 'sample', 'local', or 'final'.
+  Future<List<Map<String, dynamic>>> fetchLeaderboard(String topicName, [String? round]) async {
     final supabase = Supabase.instance.client;
 
-    // Step 1: Get topic_id for given topicName
     final topicResponse = await supabase
         .from('topics')
         .select('topic_id')
@@ -362,14 +369,19 @@ class _LeaderboardState extends State<Leaderboard> {
 
     final topicId = topicResponse['topic_id'];
 
-    // Step 2: Get top 10 test_attempts joined with users, sorted (include round for Math)
-    final attemptsResponse = await supabase
-      .from('test_attempts')
-      .select('score, duration_seconds, question_list, round, profiles(name)')
-      .eq('topic_id', topicId)
-      .order('score', ascending: false)
-      .order('duration_seconds', ascending: true)
-      .limit(10);
+    var query = supabase
+        .from('test_attempts')
+        .select('score, duration_seconds, question_list, round, profiles(name)')
+        .eq('topic_id', topicId);
+
+    if (round != null && round.isNotEmpty) {
+      query = query.eq('round', round);
+    }
+
+    final attemptsResponse = await query
+        .order('score', ascending: false)
+        .order('duration_seconds', ascending: true)
+        .limit(10);
 
     return List<Map<String, dynamic>>.from(attemptsResponse);
   }
@@ -377,6 +389,148 @@ class _LeaderboardState extends State<Leaderboard> {
   static const _mathRoundTopicNames = ['Grade 5 and 6', 'Grade 7 and 8', 'Grade 9 and 10', 'Grade 11 and 12'];
   bool _isMathRoundTopic(String topicName) => _mathRoundTopicNames.contains(topicName);
   static String _roundLabel(String? round) => round == 'sample' ? 'Sample Quiz' : round == 'final' ? 'Final Round' : 'Local Round';
+
+  Widget _buildSoonReleasedView(bool isMobile, double screenWidth, double screenHeight) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              ..._buildDecorativeElements(screenWidth, screenHeight, isMobile, 0),
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isMobile ? 16.0 : 24.0,
+                  vertical: isMobile ? 16.0 : 24.0,
+                ),
+                child: Center(
+                  child: Container(
+                    constraints: BoxConstraints(maxWidth: isMobile ? double.infinity : 600),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildHeaderRow(isMobile),
+                        SizedBox(height: isMobile ? 24 : 32),
+                        Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.schedule, size: 48, color: MyApp.homeDarkGreyText),
+                              SizedBox(height: 16),
+                              Text(
+                                'Rankings will soon be released by the admin.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: isMobile ? 16 : 18,
+                                  color: MyApp.homeDarkGreyText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildHeaderRow(bool isMobile) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 20, vertical: isMobile ? 12 : 16),
+      margin: EdgeInsets.only(bottom: isMobile ? 16 : 20),
+      decoration: BoxDecoration(
+        color: MyApp.homeLightPink,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Global Leaderboard',
+                  style: TextStyle(
+                    fontSize: isMobile ? 24 : 32,
+                    fontWeight: FontWeight.bold,
+                    color: MyApp.homeDarkGreyText,
+                    fontFamily: 'serif',
+                  ),
+                ),
+                SizedBox(height: 5),
+                Text(
+                  'futuremind 2.0',
+                  style: TextStyle(
+                    fontSize: isMobile ? 16 : 20,
+                    color: MyApp.homeGreyText,
+                    fontFamily: 'sans-serif',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12),
+            decoration: BoxDecoration(
+              color: MyApp.homeLightPink,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: MyApp.homeDarkGreyText.withOpacity(0.3), width: 1),
+            ),
+            child: DropdownButton<String>(
+              value: selectedTopic,
+              hint: Text('Select topic', style: TextStyle(fontSize: isMobile ? 12 : 14, color: MyApp.homeDarkGreyText.withOpacity(0.7))),
+              underline: SizedBox(),
+              icon: Icon(Icons.arrow_drop_down, color: MyApp.homeDarkGreyText, size: isMobile ? 20 : 24),
+              style: TextStyle(fontSize: isMobile ? 12 : 14, color: MyApp.homeDarkGreyText),
+              dropdownColor: MyApp.homeLightPink,
+              items: topicList.map<DropdownMenuItem<String>>((t) => DropdownMenuItem(value: t['topic_name'] as String, child: Text(t['topic_name'] as String))).toList(),
+              onChanged: (String? newValue) {
+                if (newValue != null) setState(() {
+                  selectedTopic = newValue;
+                  selectedRound = _isMathRoundTopic(newValue) ? (selectedRound ?? 'sample') : null;
+                });
+              },
+            ),
+          ),
+          if (_isMathRoundTopic(selectedTopic!)) ...[
+            SizedBox(width: isMobile ? 8 : 12),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12),
+              decoration: BoxDecoration(
+                color: MyApp.homeLightPink,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: MyApp.homeDarkGreyText.withOpacity(0.3), width: 1),
+              ),
+              child: DropdownButton<String>(
+                value: selectedRound ?? 'sample',
+                underline: SizedBox(),
+                icon: Icon(Icons.arrow_drop_down, color: MyApp.homeDarkGreyText, size: isMobile ? 20 : 24),
+                style: TextStyle(fontSize: isMobile ? 12 : 14, color: MyApp.homeDarkGreyText),
+                dropdownColor: MyApp.homeLightPink,
+                items: [
+                  DropdownMenuItem(value: 'sample', child: Text('Sample Quiz')),
+                  DropdownMenuItem(value: 'local', child: Text('Local Round')),
+                  DropdownMenuItem(value: 'final', child: Text('Final Round')),
+                ],
+                onChanged: (String? newValue) {
+                  if (newValue != null) setState(() => selectedRound = newValue);
+                },
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -401,30 +555,23 @@ class _LeaderboardState extends State<Leaderboard> {
               ),
             )
           : !_canShowResultsForTopic(selectedTopic!)
-              ? Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.lock_outline, size: 48, color: MyApp.homeDarkGreyText),
-                        SizedBox(height: 16),
-                        Text(
-                          'Rankings will be available after your admin releases results.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: isMobile ? 16 : 18,
-                            color: MyApp.homeDarkGreyText,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
+              ? _buildSoonReleasedView(isMobile, screenWidth, screenHeight)
               : FutureBuilder<List<Map<String, dynamic>>>(
-                  key: ValueKey(selectedTopic),
-                  future: fetchLeaderboard(selectedTopic!),
+                  key: ValueKey('$selectedTopic-$selectedRound'),
+                  future: fetchLeaderboard(
+                    selectedTopic!,
+                    _isMathRoundTopic(selectedTopic!) ? (selectedRound ?? 'sample') : null,
+                  ),
                   builder: (context, snapshot) {
+          // Local and Final round: show rankings only when admin has released (topic.results_released)
+          if (_isMathRoundTopic(selectedTopic!) && (selectedRound == 'local' || selectedRound == 'final')) {
+            try {
+              final t = topicList.firstWhere((e) => e['topic_name'] == selectedTopic);
+              if (t['results_released'] != true) return _buildSoonReleasedView(isMobile, screenWidth, screenHeight);
+            } catch (_) {
+              return _buildSoonReleasedView(isMobile, screenWidth, screenHeight);
+            }
+          }
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(
               child: CircularProgressIndicator(
@@ -545,11 +692,41 @@ class _LeaderboardState extends State<Leaderboard> {
                                             if (newValue != null) {
                                               setState(() {
                                                 selectedTopic = newValue;
+                                                selectedRound = _isMathRoundTopic(newValue) ? (selectedRound ?? 'sample') : null;
                                               });
                                             }
                                           },
                                         ),
                                       ),
+                                      if (_isMathRoundTopic(selectedTopic!)) ...[
+                                        SizedBox(width: isMobile ? 8 : 12),
+                                        Container(
+                                          padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12),
+                                          decoration: BoxDecoration(
+                                            color: MyApp.homeLightPink,
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(
+                                              color: MyApp.homeDarkGreyText.withOpacity(0.3),
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: DropdownButton<String>(
+                                            value: selectedRound ?? 'sample',
+                                            underline: SizedBox(),
+                                            icon: Icon(Icons.arrow_drop_down, color: MyApp.homeDarkGreyText, size: isMobile ? 20 : 24),
+                                            style: TextStyle(fontSize: isMobile ? 12 : 14, color: MyApp.homeDarkGreyText),
+                                            dropdownColor: MyApp.homeLightPink,
+                                            items: [
+                                              DropdownMenuItem(value: 'sample', child: Text('Sample Quiz')),
+                                              DropdownMenuItem(value: 'local', child: Text('Local Round')),
+                                              DropdownMenuItem(value: 'final', child: Text('Final Round')),
+                                            ],
+                                            onChanged: (String? newValue) {
+                                              if (newValue != null) setState(() => selectedRound = newValue);
+                                            },
+                                          ),
+                                        ),
+                                      ],
                                     ],
                                   ),
                                 ),
@@ -711,11 +888,51 @@ class _LeaderboardState extends State<Leaderboard> {
                                       if (newValue != null) {
                                         setState(() {
                                           selectedTopic = newValue;
+                                          selectedRound = _isMathRoundTopic(newValue) ? (selectedRound ?? 'sample') : null;
                                         });
                                       }
                                     },
                                   ),
                                 ),
+                                // Round filter (only for math grade topics)
+                                if (_isMathRoundTopic(selectedTopic!)) ...[
+                                  SizedBox(width: isMobile ? 8 : 12),
+                                  Container(
+                                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12),
+                                    decoration: BoxDecoration(
+                                      color: MyApp.homeLightPink,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: MyApp.homeDarkGreyText.withOpacity(0.3),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: DropdownButton<String>(
+                                      value: selectedRound ?? 'sample',
+                                      underline: SizedBox(),
+                                      icon: Icon(
+                                        Icons.arrow_drop_down,
+                                        color: MyApp.homeDarkGreyText,
+                                        size: isMobile ? 20 : 24,
+                                      ),
+                                      style: TextStyle(
+                                        fontSize: isMobile ? 12 : 14,
+                                        color: MyApp.homeDarkGreyText,
+                                      ),
+                                      dropdownColor: MyApp.homeLightPink,
+                                      items: [
+                                        DropdownMenuItem(value: 'sample', child: Text('Sample Quiz')),
+                                        DropdownMenuItem(value: 'local', child: Text('Local Round')),
+                                        DropdownMenuItem(value: 'final', child: Text('Final Round')),
+                                      ],
+                                      onChanged: (String? newValue) {
+                                        if (newValue != null) {
+                                          setState(() => selectedRound = newValue);
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
