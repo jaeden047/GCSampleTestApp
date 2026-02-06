@@ -105,6 +105,14 @@ class _EnvTopicsState extends State<EnvTopics> {
 
       if (questions is List) {
         final questionIds = questions.cast<int>();
+        if (questionIds.isEmpty) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('No questions found for this topic. Come back later.')),
+            );
+          }
+          return;
+        }
 
         // 2. Create the quiz and generate an ID
         final quizAttempt = await supabase.rpc('create_new_quiz', params: {
@@ -121,6 +129,14 @@ class _EnvTopicsState extends State<EnvTopics> {
 
           if (quizQuestions is List) {
             final questionsWithAnswers = quizQuestions.cast<Map<String, dynamic>>();
+            if (questionsWithAnswers.isEmpty) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('No questions could be loaded. Please try again.')),
+                );
+              }
+              return;
+            }
             // 4. Show quiz rules first, then navigate to quiz page
             if (!mounted) return;
             Navigator.push(

@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; //supabase flutter sdk
 import 'package:flutter_svg/flutter_svg.dart';
@@ -139,9 +140,9 @@ class _MathGradesState extends State<MathGrades> {
         final qRows = await supabase
             .from('questions')
             .select('question_id')
-            .eq('question_set_id', setId)
-            .order('question_id');
+            .eq('question_set_id', setId);
         questionIds = (qRows as List).map<int>((r) => r['question_id'] as int).toList();
+        questionIds.shuffle(Random());
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -236,6 +237,7 @@ class _MathGradesState extends State<MathGrades> {
                     questions: questionsWithAnswers,
                     topicName: topicName,
                     onRedoQuiz: () => _startQuiz(context, topicName, round),
+                    timeLimitSeconds: round == 'sample' ? 15 * 60 : 60 * 60, // sample 15 min, local/final 60 min
                   ),
                 ),
               ).then((_) {

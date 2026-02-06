@@ -23,10 +23,10 @@ class TestAttempt {
   final String dateTime;
   final List<dynamic> questionList;
   final List<dynamic> answerOrder;
-  final List<dynamic> selectedAnswers;
+  /// From DB: Map (question_id -> answer_id) or legacy List.
+  final dynamic selectedAnswers;
   final double score;
   final int topicId;
-  /// For Math: 'local' or 'final'. Other topics default to 'local'.
   final String round;
 
   TestAttempt({
@@ -84,6 +84,39 @@ class Topics {
 
 class _QuizAnswersState extends State<QuizAnswers> {
   final supabase = Supabase.instance.client;
+  static const _mathRoundTopicNames = ['Grade 5 and 6', 'Grade 7 and 8', 'Grade 9 and 10', 'Grade 11 and 12'];
+  static String _roundLabel(String? round) => round == 'sample' ? 'Sample Quiz' : round == 'final' ? 'Final Round' : 'Local Round';
+
+  bool _isMathRoundTopic(String? topicName) => topicName != null && _mathRoundTopicNames.contains(topicName);
+  /// For math grade topics: sample round always visible; local/final only when topic.resultsReleased.
+  bool _canShowResultsForPage(Topics t, TestAttempt? attempt) {
+    if (_isMathRoundTopic(t.topicName)) {
+      if (attempt == null) return t.resultsReleased;
+      if (attempt.round == 'sample') return true;
+      if (attempt.round == 'local' || attempt.round == 'final') return t.resultsReleased;
+      return t.resultsReleased;
+    }
+    return t.canShowResults;
+  }
+
+  List<int> _getAnsweredQuestionIdsInOrder(TestAttempt a) {
+    if (a.selectedAnswers is Map) {
+      final m = a.selectedAnswers as Map;
+      return [
+        for (var qid in a.questionList)
+          if (m.containsKey(qid.toString()))
+            (qid is int ? qid : int.tryParse(qid.toString()) ?? 0)
+      ];
+    }
+    return List<int>.from(a.questionList);
+  }
+
+  bool _isAnswerSelected(TestAttempt a, int questionId, int answerId) {
+    if (a.selectedAnswers is Map) return (a.selectedAnswers as Map)[questionId.toString()] == answerId;
+    if (a.selectedAnswers is List) return (a.selectedAnswers as List).contains(answerId);
+    return false;
+  }
+
   final Logger _logger = Logger(
     printer: PrettyPrinter(
       methodCount: 0,
@@ -104,10 +137,6 @@ class _QuizAnswersState extends State<QuizAnswers> {
   bool _isMobile(BuildContext context) {
     return MediaQuery.of(context).size.width < 768;
   }
-
-  static const _mathRoundTopicNames = ['Grade 5 and 6', 'Grade 7 and 8', 'Grade 9 and 10', 'Grade 11 and 12'];
-  bool _isMathRoundTopic(String? topicName) => topicName != null && _mathRoundTopicNames.contains(topicName);
-  static String _roundLabel(String round) => round == 'sample' ? 'Sample Quiz' : round == 'final' ? 'Final Round' : 'Local Round';
 
   @override
   void initState() {
@@ -134,7 +163,7 @@ class _QuizAnswersState extends State<QuizAnswers> {
           dateTime: testRawData['test_datetime']?.toString() ?? 'No Date',
           questionList: List<dynamic>.from(testRawData['question_list'] ?? []),
           answerOrder: List<dynamic>.from(testRawData['answer_order'] ?? []),
-          selectedAnswers: List<dynamic>.from(testRawData['selected_answers'] ?? []),
+          selectedAnswers: testRawData['selected_answers'],
           score: testRawData['score'] ?? 0,
           topicId: testRawData['topic_id'] ?? 0,
           round: (testRawData['round'] as String?) ?? 'local',
@@ -334,7 +363,7 @@ class _QuizAnswersState extends State<QuizAnswers> {
       );
     }
 
-    if (topic != null && !topic!.canShowResults) {
+    if (topic != null && !_canShowResultsForPage(topic!, testAttempt)) {
       return Scaffold(
         backgroundColor: MyApp.homeLightGreyBackground,
         appBar: AppBar(
@@ -391,7 +420,8 @@ class _QuizAnswersState extends State<QuizAnswers> {
       );
     }
 
-    final estimatedContentHeight = 200.0 + (testAttempt!.questionList.length * 140.0);
+    final answeredIds = _getAnsweredQuestionIdsInOrder(testAttempt!);
+    final estimatedContentHeight = 200.0 + (answeredIds.length * 140.0);
     final actualContentHeight = estimatedContentHeight > screenHeight 
         ? estimatedContentHeight 
         : screenHeight;
@@ -416,7 +446,7 @@ class _QuizAnswersState extends State<QuizAnswers> {
               clipBehavior: Clip.none,
               children: [
                 // Decorative elements - dynamically distributed
-                ..._buildDecorativeElements(screenWidth, actualContentHeight, isMobile, testAttempt!.questionList.length),
+                ..._buildDecorativeElements(screenWidth, actualContentHeight, isMobile, answeredIds.length),
                 // Main content
                 Padding(
                   padding: EdgeInsets.symmetric(
@@ -488,17 +518,24 @@ class _QuizAnswersState extends State<QuizAnswers> {
                               ],
                             ),
                           ),
-                          // Questions and answers
+                          // Questions and answers (only those the student answered, e.g. 15/37)
                           ...List.generate(
-                            testAttempt!.questionList.length,
+                            answeredIds.length,
                             (i) {
-                              int questionID = testAttempt!.questionList[i];
-                              int start = i * 4;
+                              int questionID = answeredIds[i];
+                              int origIndex = testAttempt!.questionList.indexOf(questionID);
+                              if (origIndex < 0) return SizedBox.shrink();
+                              int start = origIndex * 4;
                               int end = start + 4;
+                              if (end > testAttempt!.answerOrder.length) return SizedBox.shrink();
                               List<int> correctAnswerOrder = testAttempt!.answerOrder.sublist(start, end).cast<int>();
-                              List<Answers> answerOptions = correctAnswerOrder
-                                  .map((id) => answerList.firstWhere((a) => a.answerID == id))
-                                  .toList();
+                              List<Answers> answerOptions = [];
+                              for (final id in correctAnswerOrder) {
+                                final match = answerList.where((a) => a.answerID == id).toList();
+                                if (match.isNotEmpty) answerOptions.add(match.first);
+                              }
+                              final questionMatch = questionList.where((q) => q.questionID == questionID).toList();
+                              final questionText = questionMatch.isEmpty ? 'Question (unavailable)' : questionMatch.first.questionText;
                               return Container(
                                 margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 padding: EdgeInsets.all(12),
@@ -521,7 +558,7 @@ class _QuizAnswersState extends State<QuizAnswers> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     MathText(
-                                      '${i + 1}. ${(questionList.firstWhere((q) => q.questionID == questionID).questionText)}',
+                                      '${i + 1}. $questionText',
                                       textStyle: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
@@ -530,7 +567,7 @@ class _QuizAnswersState extends State<QuizAnswers> {
                                     ),
                                     SizedBox(height: 4),
                                     ...answerOptions.map((row) {
-                                      bool isSelected = testAttempt!.selectedAnswers.contains(row.answerID);
+                                      bool isSelected = _isAnswerSelected(testAttempt!, questionID, row.answerID);
                                       bool isCorrect = row.isCorrect;
                                       Icon iconChosen = Icon(Icons.check_circle_outline);
                                       Color colorChosen = MyApp.homeDarkGreyText;
