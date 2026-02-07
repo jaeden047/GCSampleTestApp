@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+//import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'auth/token_store.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ApiService {
@@ -10,7 +11,7 @@ class ApiService {
   // PROD base URL from doc:
   static const String baseUrl = 'https://www.greencontributor.org/api/v1';
 
-  final _storage = const FlutterSecureStorage();
+  final TokenStore _tokenStore = PlatformTokenStore();
 
   final Dio _dio = Dio(
     BaseOptions(
@@ -22,11 +23,11 @@ class ApiService {
   );
 
   // ----- Token storage -----
-  Future<void> saveToken(String token) => _storage.write(key: 'jwt', value: token);
+  Future<void> saveToken(String token) => _tokenStore.save(token);
   //stores jwt key from strage
-  Future<String?> getToken() => _storage.read(key: 'jwt');
+  Future<String?> getToken() => _tokenStore.read();
   //reads jwt key from storage
-  Future<void> clearToken() => _storage.delete(key: 'jwt');
+  Future<void> clearToken() => _tokenStore.clear();
   // removes jwt key
   // ----- API calls -----
 

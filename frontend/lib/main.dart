@@ -11,6 +11,8 @@ void main() async {
    await Supabase.initialize(
     url: 'https://duvycvfjnirqtqvxkrxz.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1dnljdmZqbmlycXRxdnhrcnh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA5NjE5MDUsImV4cCI6MjA2NjUzNzkwNX0.YGyw8CvpQTVCADMc7EDv2ez2i2uQ0p0bT6cmI7_ZWxQ',
+    authOptions: const FlutterAuthClientOptions(localStorage: EmptyLocalStorage(), // <- session NOT persisted
+  ),
   );
   // Initialize timezone data
   tz_data.initializeTimeZones();
@@ -87,14 +89,19 @@ class AuthGate extends StatelessWidget { // “When the app starts, decide wheth
   Widget build(BuildContext context) {
     return FutureBuilder<String?>(
       future: ApiService.instance.getToken(), // start reading the saved token from secure storage
-      builder: (context, snapshot) { // build the result whil token being read
+      builder: (context, snapshot) { // build the result while token being read
         // simple loading
         if (snapshot.connectionState != ConnectionState.done) { // still waiting for the token read to finish
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
 
-        final token = snapshot.data;
-        if (token != null && token.isNotEmpty) { // if token exists, go to Home page
+        final apiToken = snapshot.data;
+        final supaUser = Supabase.instance.client.auth.currentUser;
+
+        final hasApi = apiToken != null && apiToken.isNotEmpty;
+        final hasSupa = supaUser != null;
+        
+        if (hasApi && hasSupa) {
           return const PlatformTermsScreen();
         }
         return const LoginPage(); // if no token exists, go to login page

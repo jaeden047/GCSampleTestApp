@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -6,6 +7,20 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:logger/logger.dart';
 import 'main.dart';
 import 'math_text.dart';
+
+List<dynamic> _toListDynamic(dynamic value) {
+  if (value == null) return [];
+  if (value is List) return List<dynamic>.from(value);
+  if (value is String) {
+    try {
+      final decoded = jsonDecode(value);
+      return decoded is List ? List<dynamic>.from(decoded) : [];
+    } catch (_) {
+      return [];
+    }
+  }
+  return [];
+}
 
 class QuizAnswers extends StatefulWidget {
   final int attemptId;
@@ -117,6 +132,48 @@ class _QuizAnswersState extends State<QuizAnswers> {
     return false;
   }
 
+  static int _parseId(dynamic v) {
+    if (v == null) return 0;
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return int.tryParse(v.toString()) ?? 0;
+  }
+
+  /// answer_order can be nested [[a1,a2,a3,a4],[...],...] or flat [a1,a2,...,a4,a5,...]. Returns answer IDs for question at [questionIndex].
+  static int _parseAnswerId(dynamic e) {
+    if (e is int) return e;
+    if (e is num) return e.toInt();
+    return int.tryParse(e.toString()) ?? 0;
+  }
+
+  List<int> _getAnswerIdsForQuestion(List<dynamic> answerOrder, int questionIndex) {
+    if (questionIndex < 0 || questionIndex >= answerOrder.length) return [];
+    final raw = answerOrder[questionIndex];
+    if (raw is List) {
+      return raw.map(_parseAnswerId).where((id) => id != 0).toList();
+    }
+    int start = questionIndex * 4;
+    int end = start + 4;
+    if (end <= answerOrder.length) {
+      return answerOrder.sublist(start, end).map(_parseAnswerId).toList();
+    }
+    if (raw is int || raw is num) {
+      final id = raw is int ? raw : (raw as num).toInt();
+      return id != 0 ? [id] : [];
+    }
+    if (raw == null) return [];
+    return [];
+  }
+
+  int _questionListIndex(List<dynamic> questionList, int questionId) {
+    for (int i = 0; i < questionList.length; i++) {
+      final q = questionList[i];
+      final qId = q is int ? q : int.tryParse(q?.toString() ?? '');
+      if (qId == questionId) return i;
+    }
+    return -1;
+  }
+
   final Logger _logger = Logger(
     printer: PrettyPrinter(
       methodCount: 0,
@@ -153,41 +210,50 @@ class _QuizAnswersState extends State<QuizAnswers> {
           .eq('attempt_id', widget.attemptId)
           .single();
 
-      // Fetch all answers, questions, and topics
-      final questionAnswers = await supabase.from('answers').select();
+      final qList = _toListDynamic(testRawData['question_list']);
+      final allQuestionIds = qList.map<int>((q) => _parseId(q)).toSet().toList();
+      final questionAnswersRaw = allQuestionIds.isEmpty
+          ? <dynamic>[]
+          : (await supabase.rpc(
+                'get_answers_for_question_ids',
+                params: {'p_question_ids': allQuestionIds},
+              ) as List<dynamic>?)
+              ?? <dynamic>[];
+
       final questionData = await supabase.from('questions').select();
       final topicData = await supabase.from('topics').select('topic_id, topic_name, results_released, is_sample_quiz');
 
       setState(() {
         testAttempt = TestAttempt(
           dateTime: testRawData['test_datetime']?.toString() ?? 'No Date',
-          questionList: List<dynamic>.from(testRawData['question_list'] ?? []),
-          answerOrder: List<dynamic>.from(testRawData['answer_order'] ?? []),
+          questionList: qList,
+          answerOrder: _toListDynamic(testRawData['answer_order']),
           selectedAnswers: testRawData['selected_answers'],
-          score: testRawData['score'] ?? 0,
-          topicId: testRawData['topic_id'] ?? 0,
+          score: (testRawData['score'] as num?)?.toDouble() ?? 0,
+          topicId: _parseId(testRawData['topic_id']),
           round: (testRawData['round'] as String?) ?? 'local',
         );
 
-        answerList = questionAnswers.map<Answers>((row) {
+        answerList = questionAnswersRaw.map<Answers>((row) {
+          final m = row as Map<String, dynamic>;
           return Answers(
-            answerID: row['answer_id'],
-            questionID: row['question_id'],
-            answerText: row['answer_text'],
-            isCorrect: row['is_correct'],
+            answerID: _parseId(m['answer_id']),
+            questionID: _parseId(m['question_id']),
+            answerText: m['answer_text']?.toString() ?? '',
+            isCorrect: m['is_correct'] == true,
           );
         }).toList();
 
         questionList = questionData.map<Questions>((row) {
           return Questions(
-            questionID: row['question_id'],
-            topicID: row['topic_id'],
-            questionText: row['question_text'],
+            questionID: _parseId(row['question_id']),
+            topicID: _parseId(row['topic_id']),
+            questionText: row['question_text']?.toString() ?? '',
           );
         }).toList();
 
         final topicRow = topicData.firstWhere(
-          (t) => t['topic_id'] == testAttempt!.topicId,
+          (t) => _parseId(t['topic_id']) == testAttempt!.topicId,
           orElse: () => {'topic_id': 0, 'topic_name': 'Unknown', 'results_released': false, 'is_sample_quiz': false},
         );
         topic = Topics(
@@ -523,18 +589,19 @@ class _QuizAnswersState extends State<QuizAnswers> {
                             answeredIds.length,
                             (i) {
                               int questionID = answeredIds[i];
-                              int origIndex = testAttempt!.questionList.indexOf(questionID);
+                              final origIndex = _questionListIndex(testAttempt!.questionList, questionID);
                               if (origIndex < 0) return SizedBox.shrink();
-                              int start = origIndex * 4;
-                              int end = start + 4;
-                              if (end > testAttempt!.answerOrder.length) return SizedBox.shrink();
-                              List<int> correctAnswerOrder = testAttempt!.answerOrder.sublist(start, end).cast<int>();
+                              List<int> correctAnswerOrder = _getAnswerIdsForQuestion(testAttempt!.answerOrder, origIndex);
                               List<Answers> answerOptions = [];
                               for (final id in correctAnswerOrder) {
-                                final match = answerList.where((a) => a.answerID == id).toList();
+                                final match = answerList.where((a) => _parseId(a.answerID) == id).toList();
                                 if (match.isNotEmpty) answerOptions.add(match.first);
                               }
-                              final questionMatch = questionList.where((q) => q.questionID == questionID).toList();
+                              final allForQuestion = answerList.where((a) => _parseId(a.questionID) == questionID).toList();
+                              if (answerOptions.length < allForQuestion.length) {
+                                answerOptions = allForQuestion;
+                              }
+                              final questionMatch = questionList.where((q) => _parseId(q.questionID) == questionID).toList();
                               final questionText = questionMatch.isEmpty ? 'Question (unavailable)' : questionMatch.first.questionText;
                               return Container(
                                 margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
