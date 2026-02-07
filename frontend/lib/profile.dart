@@ -20,16 +20,22 @@ class _ProfilePageState extends State<ProfilePage> {
   String email = '';
   String phone = '';
   String school = '';
-  String gender = '';
+  //String gender = '';
   String address = '';
   String country = '';
+  String? _selectedGender; // Hold the users gender
 
+  static const List<String> _genderOptions = [ // The dropdown list for gender
+    'Male',
+    'Female',
+    'Other',
+    'Prefer not to say',
+  ]; // In the dropdown, the user will select a value (see buildGender) and upon selected, value saved to _selectedGender
   CountryCode _selectedCountryCode = CountryCodes.getDefault(); // for user country, CA if default.
-  
   final nameController = TextEditingController();
   final phoneController = TextEditingController();
   final schoolController = TextEditingController();
-  final genderController = TextEditingController();
+  //final genderController = TextEditingController(); // A textbox.
   final addressController = TextEditingController();
   
   bool isLoading = true;
@@ -50,7 +56,7 @@ class _ProfilePageState extends State<ProfilePage> {
     nameController.dispose();
     phoneController.dispose();
     schoolController.dispose();
-    genderController.dispose();
+    //genderController.dispose(); Not a controller we use
     addressController.dispose();
     super.dispose();
   }
@@ -70,16 +76,19 @@ class _ProfilePageState extends State<ProfilePage> {
         email = profile['email'] ?? '';
         phone = profile['phone_number'] ?? '';
         school = profile['school'] ?? '';
-        gender = profile['gender'] ?? '';
+        //gender = profile['gender'] ?? '';
+        _selectedGender = profile['gender'] ?? ''; // From supabase take user's gender, (profile['gender']), 
+        // We store the profile gender here.
         address = profile['address'] ?? '';
         country = profile['country'] ?? '';
 
         nameController.text = name;
         phoneController.text = phone;
         schoolController.text = school;
-        genderController.text = gender;
+        //genderController.text = gender;
         addressController.text = address;
         _selectedCountryCode = CountryCodes.findByCode(country) ?? CountryCodes.getDefault(); // back to Default if fails to find user Country     
+        // This selected country code line is for when you come back to country page.
         isLoading = false;
       });
     } else {
@@ -99,7 +108,7 @@ class _ProfilePageState extends State<ProfilePage> {
             .select('name, email, phone_number, school, country, gender, address')
             .eq('id', user.id)
             .single();
-        return response;
+        return response; // collect user id from currentuser
       } catch (e) {
         // If some fields don't exist in database, return what we can get
         try {
@@ -119,30 +128,33 @@ class _ProfilePageState extends State<ProfilePage> {
 
   // Function to update the user profile information
   Future<void> updateUserProfile() async {
+    debugPrint("UPDATE tapped -> selected=${_selectedCountryCode.code} (${_selectedCountryCode.name})");
+
     final user = supabase.auth.currentUser;
     if (user == null) return;
 
     final phone = phoneController.text.trim();
     final school = schoolController.text.trim();
-    final gender = genderController.text.trim();
+    final gender = _selectedGender; // User's inputted gender (from builDgender)
     final address = addressController.text.trim();
-    final name = nameController.text.trim();
+    //final name = nameController.text.trim();
 
     try {
       // Build update map with only non-empty fields
       final updateData = <String, dynamic>{};
-      if (name.isNotEmpty) updateData['name'] = name;
+      //if (name.isNotEmpty) updateData['name'] = name;
       if (phone.isNotEmpty) updateData['phone_number'] = phone;
       if (school.isNotEmpty) updateData['school'] = school;
-      if (gender.isNotEmpty) updateData['gender'] = gender;
+      updateData['gender'] = gender; // saved into profile
       if (address.isNotEmpty) updateData['address'] = address;
+      //updateData['country'] = _selectedCountryCode.code;
       
       await ApiService.instance.updateProfileFromProfilePage(
         phone: phone,
         institution: school,
         address: address,
         gender: gender,
-        country: _selectedCountryCode.code,
+        //country: _selectedCountryCode.code, // country code (when updated) is saved to API profile (changes through build)
       );
             /*
       Reads JWT from secure storage
@@ -305,31 +317,10 @@ class _ProfilePageState extends State<ProfilePage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 // Name
-                                TextField(
-                                  controller: nameController,
-                                  style: TextStyle(
-                                    fontSize: isMobile ? 18 : 22,
-                                    fontWeight: FontWeight.bold,
-                                    color: MyApp.homeDarkGreyText,
-                                  ),
-                                  decoration: InputDecoration(
-                                    labelText: 'Name',
-                                    labelStyle: TextStyle(
-                                      color: MyApp.homeGreyText,
-                                      fontSize: isMobile ? 14 : 16,
-                                    ),
-                                    enabledBorder: UnderlineInputBorder(
-                                      borderSide: BorderSide(
-                                        color: MyApp.homeDarkGreyText.withOpacity(0.3),
-                                      ),
-                                    ),
-                                    focusedBorder: UnderlineInputBorder(
-                                      borderSide: BorderSide(
-                                        color: MyApp.homeTealGreen,
-                                        width: 2,
-                                      ),
-                                    ),
-                                  ),
+                                _buildReadOnlyField(
+                                  label: 'Name',
+                                  value: nameController.text, // or just `name`
+                                  isMobile: isMobile,
                                 ),
                                 SizedBox(height: 8),
                                 // Email (read-only)
@@ -383,11 +374,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   isMobile: isMobile,
                                 ),
                                 SizedBox(height: isMobile ? 16 : 20),
-                                _buildTextField(
-                                  controller: genderController,
-                                  label: 'Gender',
-                                  isMobile: isMobile,
-                                ),
+                                _buildGenderDropdown(isMobile: isMobile),
                                 SizedBox(height: isMobile ? 16 : 20),
                                 _buildTextField(
                                   controller: addressController,
@@ -402,7 +389,11 @@ class _ProfilePageState extends State<ProfilePage> {
                                   isMobile: isMobile,
                                 ),
                                 SizedBox(height: isMobile ? 16 : 20),
-                                _buildCountryDropdown(isMobile: isMobile)
+                                _buildReadOnlyField(
+                                  label: 'Country',
+                                  value: '${_selectedCountryCode.code} — ${_selectedCountryCode.name}',
+                                  isMobile: isMobile,
+                                ),  
                               ],
                             ),
                           ),
@@ -482,51 +473,80 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-    Widget _buildCountryDropdown({required bool isMobile}) {
-    return DropdownButtonFormField<CountryCode>(
-      value: _selectedCountryCode,
-      isExpanded: true,
-      decoration: InputDecoration(
-        labelText: 'Country',
-        labelStyle: TextStyle(
-          color: MyApp.homeGreyText,
-          fontSize: isMobile ? 14 : 16,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(
-            color: MyApp.homeDarkGreyText.withOpacity(0.3),
-            width: 1,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(
-            color: MyApp.homeTealGreen,
-            width: 2,
-          ),
-        ),
-        filled: true,
-        fillColor: MyApp.homeLightGreyBackground,
+    Widget _buildReadOnlyField({
+  required String label,
+  required String value,
+  required bool isMobile,
+}) {
+  return InputDecorator(
+    decoration: InputDecoration(
+      labelText: label,
+      labelStyle: TextStyle(
+        color: MyApp.homeGreyText,
+        fontSize: isMobile ? 14 : 16,
       ),
-      items: CountryCodes.codes.map((c) {
-        return DropdownMenuItem<CountryCode>( // selectable entries
-          value: c,
-          child: Text('${c.code} — ${c.name}'),
-        );
-      }).toList(),
-      onChanged: (val) {
-        if (val == null) return;
-        setState(() => _selectedCountryCode = val);
-      },
-      /*
-      Flutter calls onChanged with the chosen CountryCode
-      you store it in _selectedCountryCode
-      setState triggers rebuild
-      because value: now points to the new object, the UI updates
-      */
-    );
-  }
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(
+          color: MyApp.homeDarkGreyText.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(
+          color: MyApp.homeTealGreen,
+          width: 2,
+        ),
+      ),
+      filled: true,
+      fillColor: MyApp.homeLightGreyBackground,
+    ),
+    child: Text(
+      value.isEmpty ? '-' : value,
+      style: TextStyle(
+        fontSize: isMobile ? 14 : 16,
+        color: MyApp.homeDarkGreyText,
+      ),
+    ),
+  );
+}
+
+
+  Widget _buildGenderDropdown({required bool isMobile}) {
+  return DropdownButtonFormField<String>(
+    value: _selectedGender,
+    isExpanded: true,
+    decoration: InputDecoration(
+      labelText: 'Gender',
+      labelStyle: TextStyle(
+        color: MyApp.homeGreyText,
+        fontSize: isMobile ? 14 : 16,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(
+          color: MyApp.homeDarkGreyText.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(
+          color: MyApp.homeTealGreen,
+          width: 2,
+        ),
+      ),
+      filled: true,
+      fillColor: MyApp.homeLightGreyBackground,
+    ),
+    items: _genderOptions
+        .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+        .toList(),
+    onChanged: (val) => setState(() => _selectedGender = val),
+  );
+}
+
 
   // Build decorative clouds and stars dynamically distributed along content height
   List<Widget> _buildDecorativeElements(

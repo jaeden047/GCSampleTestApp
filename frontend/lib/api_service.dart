@@ -177,11 +177,11 @@ class ApiService {
     if (gender != null && gender.trim().isNotEmpty) data['gender'] = gender.trim();
     if (photo != null && photo.trim().isNotEmpty) data['photo'] = photo.trim();
     if (country != null && country.trim().isNotEmpty) data['country'] = country.trim(); 
-
+    print("PUT /user/profile payload = $data");
     final res = await _dio.put(
       '/user/profile', // baseUrl already has /api/v1
       data: data,
-      options: Options(headers: {'Authorization': 'Bearer $token', 'Content-Type': 'Application/json'}),
+      options: Options(headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'}),
     );
     print (res.data);
 

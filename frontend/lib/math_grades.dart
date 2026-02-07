@@ -254,7 +254,7 @@ class MathGrades extends StatelessWidget {
           // ignore: unused_local_variable
           final _ = country;
           // ignore: unused_local_variable
-          final __ = allowedTopic;
+          
 
           return SingleChildScrollView(
             child: Padding(
@@ -379,14 +379,22 @@ class MathGrades extends StatelessWidget {
                             ...topics.map((topic) {
                               final topicName = topic['title']!;
                               final isTaken = _isQuizTaken(topicName);
-                              final useRoundSelection =
-                                  _mathRoundTopicNames.contains(topicName);
+                              final useRoundSelection = _mathRoundTopicNames.contains(topicName);
+
+                              final isLocked = topicName != allowedTopic;
 
                               return _HoverableQuizCard(
                                 topic: topic,
                                 isTaken: isTaken,
                                 isMobile: isMobile,
+                                isLocked: isLocked,
                                 onTap: () {
+                                  if (isLocked){ // We do this because onTap here cannot be nullable
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Locked. Allowed topic: $allowedTopic')),
+                                    );
+                                    return;
+                                  }
                                   if (useRoundSelection) {
                                     final mathGradesContext = context;
                                     Navigator.push(
@@ -629,6 +637,7 @@ class _HoverableQuizCard extends StatefulWidget {
   final Map<String, String> topic;
   final bool isTaken;
   final bool isMobile;
+  final bool isLocked;
   final VoidCallback onTap;
 
   const _HoverableQuizCard({
@@ -636,6 +645,7 @@ class _HoverableQuizCard extends StatefulWidget {
     required this.isTaken,
     required this.isMobile,
     required this.onTap,
+    this.isLocked = false, //
   });
 
   @override
@@ -645,13 +655,20 @@ class _HoverableQuizCard extends StatefulWidget {
 class _HoverableQuizCardState extends State<_HoverableQuizCard> {
   bool _isHovered = false;
 
+  /*
+  MouseRegion = hover detection wrapper
+  GestureDetector = tap/click wrapper
+  AnimatedContainer = the actual “card body” (the styled rectangle)
+  Opacity/Row/Column/Text = the content inside the card
+  */
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) { // builds card
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
+      onExit: (_) => setState(() => _isHovered = false), // mouse hover
+      child: GestureDetector( // makes card clickable/tappable
+        onTap: widget.onTap, // cals function on tap
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeInOut,
@@ -680,6 +697,10 @@ class _HoverableQuizCardState extends State<_HoverableQuizCard> {
                     children: [
                       Row(
                         children: [
+                          if (widget.isLocked) ...[
+                            Icon(Icons.lock_outline, color: MyApp.homeDarkGreyText, size: widget.isMobile ? 20 : 24),
+                            SizedBox(width: 8),
+                          ],
                           Expanded(
                             child: Text(
                               widget.topic['title']!,
