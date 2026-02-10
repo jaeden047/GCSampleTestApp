@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:frontend/api_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; //supabase flutter sdk
 import 'quiz.dart';
@@ -237,8 +238,18 @@ class MathGrades extends StatelessWidget {
       }
     ];
 
+    final isMobile = _isMobile(context);
+
     return Scaffold(
-      appBar: AppBar(),
+      backgroundColor: MyApp.homeLightGreyBackground,
+      appBar: AppBar(
+        backgroundColor: MyApp.homeLightGreyBackground,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: MyApp.homeDarkGreyText),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: FutureBuilder<Map<String, dynamic>>(
         future: ApiService.instance.getProfile(),
         builder: (context, snap) {
@@ -247,185 +258,193 @@ class MathGrades extends StatelessWidget {
           }
 
           final grade = snap.data!['user']?['grade']?.toString();
-          final country = snap.data!['user']?['country']?.toString();
           final allowedTopic = allowedTopicFromGrade(grade);
 
-          // keep them used to avoid analyzer warnings (remove if you actually use them later)
-          // ignore: unused_local_variable
-          final _ = country;
-          // ignore: unused_local_variable
-          
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final screenWidth = MediaQuery.of(context).size.width;
+              final screenHeight = MediaQuery.of(context).size.height;
+              final numTopics = 4;
+              final estimatedContentHeight = 200.0 + 80.0 + (numTopics * 140.0);
+              final actualContentHeight = estimatedContentHeight > screenHeight
+                  ? estimatedContentHeight
+                  : screenHeight;
 
-          return SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.only(bottom: 16, left: 15, right: 15),
-                    padding: const EdgeInsets.all(16.0),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFFDF5),
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 5,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        const Text(
-                          "Global Competition and Challenge",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          "Math Series 2025",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          "In partnership with Saddle River Day School, New Jersey, USA",
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Column(
+              return SingleChildScrollView(
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    ..._buildDecorativeElements(screenWidth, actualContentHeight, isMobile, numTopics),
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isMobile ? 16.0 : 24.0,
+                        vertical: isMobile ? 16.0 : 24.0,
+                      ),
+                      child: Center(
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Image.asset(
-                                  'assets/images/gc_logo.jpg',
-                                  height: 50,
-                                ),
-                                const SizedBox(width: 16),
-                                Image.asset(
-                                  'assets/images/school_logo.png',
-                                  height: 50,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Main container with teal background + isMobile computed safely here
-                  Builder(
-                    builder: (context) {
-                      final isMobile = _isMobile(context);
-
-                      return Container(
-                        constraints: BoxConstraints(
-                          maxWidth: isMobile ? double.infinity : 800,
-                        ),
-                        padding: EdgeInsets.all(isMobile ? 16.0 : 24.0),
-                        decoration: BoxDecoration(
-                          color: MyApp.homeTealGreen,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.15),
-                              blurRadius: 10,
-                              offset: const Offset(0, 5),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
+                            // Header card - Global Competition and Challenge (teal, dl_android style)
                             Container(
-                              width: double.infinity,
-                              padding: EdgeInsets.symmetric(
-                                horizontal: isMobile ? 16 : 20,
-                                vertical: isMobile ? 12 : 16,
+                              constraints: BoxConstraints(
+                                maxWidth: isMobile ? double.infinity : 800,
                               ),
-                              margin: EdgeInsets.only(
-                                bottom: isMobile ? 16 : 20,
-                              ),
+                              margin: EdgeInsets.only(bottom: isMobile ? 20 : 24),
+                              padding: EdgeInsets.all(isMobile ? 16.0 : 20.0),
                               decoration: BoxDecoration(
-                                color: MyApp.homeLightPink,
+                                color: MyApp.homeTealGreen,
                                 borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 8,
+                                    offset: Offset(0, 4),
+                                  ),
+                                ],
                               ),
-                              child: Text(
-                                'Math Problems',
-                                style: TextStyle(
-                                  fontSize: isMobile ? 24 : 32,
-                                  fontWeight: FontWeight.bold,
-                                  color: MyApp.homeDarkGreyText,
-                                  fontFamily: 'serif',
-                                ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'Global Competition and Challenge',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: isMobile ? 18 : 22,
+                                      color: MyApp.homeWhite,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    'Math Series 2025',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: isMobile ? 15 : 18,
+                                      color: MyApp.homeWhite,
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'In partnership with Saddle River Day School, New Jersey, USA',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: isMobile ? 12 : 14,
+                                      color: MyApp.homeWhite.withOpacity(0.9),
+                                    ),
+                                  ),
+                                  SizedBox(height: 12),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Image.asset(
+                                        'assets/images/gc_logo.jpg',
+                                        height: isMobile ? 45 : 50,
+                                      ),
+                                      SizedBox(width: 16),
+                                      Image.asset(
+                                        'assets/images/school_logo.png',
+                                        height: isMobile ? 45 : 50,
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
 
-                            ...topics.map((topic) {
-                              final topicName = topic['title']!;
-                              final isTaken = _isQuizTaken(topicName);
-                              final useRoundSelection = _mathRoundTopicNames.contains(topicName);
-
-                              final isLocked = topicName != allowedTopic;
-
-                              return _HoverableQuizCard(
-                                topic: topic,
-                                isTaken: isTaken,
-                                isMobile: isMobile,
-                                isLocked: isLocked,
-                                onTap: () {
-                                  if (isLocked){ // We do this because onTap here cannot be nullable
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Locked. Allowed topic: $allowedTopic')),
-                                    );
-                                    return;
-                                  }
-                                  if (useRoundSelection) {
-                                    final mathGradesContext = context;
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => MathRoundSelection(
-                                          topicName: topicName,
-                                          onStartSampleQuiz: (roundSelectionContext) =>
-                                              _startQuiz(
-                                            mathGradesContext,
-                                            topicName,
-                                            'sample',
-                                            roundSelectionContext,
-                                          ),
-                                        ),
+                            // Main container with teal background (Math Problems + quiz cards)
+                            Container(
+                              constraints: BoxConstraints(
+                                maxWidth: isMobile ? double.infinity : 800,
+                              ),
+                              padding: EdgeInsets.all(isMobile ? 16.0 : 24.0),
+                              decoration: BoxDecoration(
+                                color: MyApp.homeTealGreen,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.15),
+                                    blurRadius: 10,
+                                    offset: Offset(0, 5),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    width: double.infinity,
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: isMobile ? 16 : 20,
+                                      vertical: isMobile ? 12 : 16,
+                                    ),
+                                    margin: EdgeInsets.only(bottom: isMobile ? 16 : 20),
+                                    decoration: BoxDecoration(
+                                      color: MyApp.homeLightPink,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      'Math Problems',
+                                      style: TextStyle(
+                                        fontSize: isMobile ? 24 : 32,
+                                        fontWeight: FontWeight.bold,
+                                        color: MyApp.homeDarkGreyText,
+                                        fontFamily: 'serif',
                                       ),
+                                    ),
+                                  ),
+                                  ...topics.map((topic) {
+                                    final topicName = topic['title']!;
+                                    final isTaken = _isQuizTaken(topicName);
+                                    final useRoundSelection = _mathRoundTopicNames.contains(topicName);
+                                    final isLocked = topicName != allowedTopic;
+
+                                    return _HoverableQuizCard(
+                                      topic: topic,
+                                      isTaken: isTaken,
+                                      isMobile: isMobile,
+                                      isLocked: isLocked,
+                                      onTap: () {
+                                        if (isLocked) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Locked. Your grade allows: $allowedTopic')),
+                                          );
+                                          return;
+                                        }
+                                        if (useRoundSelection) {
+                                          final mathGradesContext = context;
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => MathRoundSelection(
+                                                topicName: topicName,
+                                                onStartSampleQuiz: (roundSelectionContext) =>
+                                                    _startQuiz(
+                                                  mathGradesContext,
+                                                  topicName,
+                                                  'sample',
+                                                  roundSelectionContext,
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        } else {
+                                          _startQuiz(context, topicName);
+                                        }
+                                      },
                                     );
-                                  } else {
-                                    _startQuiz(context, topicName);
-                                  }
-                                },
-                              );
-                            }),
+                                  }),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           );
         },
       ),
@@ -523,7 +542,11 @@ class MathGrades extends StatelessWidget {
               Positioned(
                 left: screenWidth * leftPos,
                 top: y,
-                child: const SizedBox.shrink(), // placeholder (SvgPicture omitted)
+                child: SvgPicture.asset(
+                  'assets/images/cloud.svg',
+                  width: cloudSize['w']!.toDouble(),
+                  height: cloudSize['h']!.toDouble(),
+                ),
               ),
             );
           } else {
@@ -532,7 +555,11 @@ class MathGrades extends StatelessWidget {
               Positioned(
                 left: screenWidth * leftPos,
                 top: y,
-                child: const SizedBox.shrink(), // placeholder (SvgPicture omitted)
+                child: SvgPicture.asset(
+                  'assets/images/pinkstar.svg',
+                  width: starSize['w']!,
+                  height: starSize['h']!,
+                ),
               ),
             );
           }
@@ -560,7 +587,11 @@ class MathGrades extends StatelessWidget {
               Positioned(
                 right: screenWidth * rightPos,
                 top: rightY,
-                child: const SizedBox.shrink(), // placeholder (SvgPicture omitted)
+                child: SvgPicture.asset(
+                  'assets/images/cloud.svg',
+                  width: cloudSize['w']!.toDouble(),
+                  height: cloudSize['h']!.toDouble(),
+                ),
               ),
             );
           } else {
@@ -569,7 +600,11 @@ class MathGrades extends StatelessWidget {
               Positioned(
                 right: screenWidth * rightPos,
                 top: rightY,
-                child: const SizedBox.shrink(), // placeholder (SvgPicture omitted)
+                child: SvgPicture.asset(
+                  'assets/images/pinkstar.svg',
+                  width: starSize['w']!,
+                  height: starSize['h']!,
+                ),
               ),
             );
           }
@@ -581,7 +616,11 @@ class MathGrades extends StatelessWidget {
       Positioned(
         left: centerX - 100,
         top: 30,
-        child: const SizedBox.shrink(),
+        child: SvgPicture.asset(
+          'assets/images/pinkstar.svg',
+          width: isMobile ? 11.0 : 16.0,
+          height: isMobile ? 10.4 : 15.1,
+        ),
       ),
     );
 
@@ -589,7 +628,11 @@ class MathGrades extends StatelessWidget {
       Positioned(
         left: centerX + 50,
         top: 50,
-        child: const SizedBox.shrink(),
+        child: SvgPicture.asset(
+          'assets/images/cloud.svg',
+          width: isMobile ? 30 : 42,
+          height: isMobile ? 20 : 28,
+        ),
       ),
     );
 
@@ -597,7 +640,11 @@ class MathGrades extends StatelessWidget {
       Positioned(
         left: centerX - 50,
         top: 20,
-        child: const SizedBox.shrink(),
+        child: SvgPicture.asset(
+          'assets/images/pinkstar.svg',
+          width: isMobile ? 9.0 : 14.0,
+          height: isMobile ? 8.5 : 13.2,
+        ),
       ),
     );
 
@@ -607,7 +654,11 @@ class MathGrades extends StatelessWidget {
         Positioned(
           left: centerX - 80,
           top: bottomY - 20,
-          child: const SizedBox.shrink(),
+          child: SvgPicture.asset(
+            'assets/images/pinkstar.svg',
+            width: isMobile ? 13.0 : 18.0,
+            height: isMobile ? 12.3 : 17.0,
+          ),
         ),
       );
 
@@ -615,7 +666,11 @@ class MathGrades extends StatelessWidget {
         Positioned(
           right: centerX - 120,
           top: bottomY - 10,
-          child: const SizedBox.shrink(),
+          child: SvgPicture.asset(
+            'assets/images/pinkstar.svg',
+            width: isMobile ? 10.0 : 14.0,
+            height: isMobile ? 9.4 : 13.2,
+          ),
         ),
       );
 
@@ -623,7 +678,11 @@ class MathGrades extends StatelessWidget {
         Positioned(
           left: centerX + 30,
           top: bottomY - 30,
-          child: const SizedBox.shrink(),
+          child: SvgPicture.asset(
+            'assets/images/cloud.svg',
+            width: isMobile ? 28 : 40,
+            height: isMobile ? 19 : 27,
+          ),
         ),
       );
     }
@@ -714,13 +773,24 @@ class _HoverableQuizCardState extends State<_HoverableQuizCard> {
                           ),
                           if (widget.isTaken)
                             Text(
-                              widget.topic['description']!,
+                              'Completed',
                               style: TextStyle(
-                                color: Colors.grey[700],
-                                fontSize: 14,
+                                fontSize: widget.isMobile ? 14 : 16,
+                                color: MyApp.homeGreyText,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'sans-serif',
                               ),
                             ),
                         ],
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        widget.topic['description']!,
+                        style: TextStyle(
+                          fontSize: widget.isMobile ? 13 : 15,
+                          color: MyApp.homeDarkGreyText,
+                          fontFamily: 'sans-serif',
+                        ),
                       ),
                     ],
                   ),
