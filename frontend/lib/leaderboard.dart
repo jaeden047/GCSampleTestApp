@@ -441,6 +441,56 @@ class _LeaderboardState extends State<Leaderboard> {
   }
 
   Widget _buildHeaderRow(bool isMobile) {
+    final gradeDropdown = Container(
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12),
+      decoration: BoxDecoration(
+        color: MyApp.homeLightPink,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: MyApp.homeDarkGreyText.withOpacity(0.3), width: 1),
+      ),
+      child: DropdownButton<String>(
+        value: selectedTopic,
+        hint: Text('Select topic', style: TextStyle(fontSize: isMobile ? 12 : 14, color: MyApp.homeDarkGreyText.withOpacity(0.7))),
+        underline: SizedBox(),
+        icon: Icon(Icons.arrow_drop_down, color: MyApp.homeDarkGreyText, size: isMobile ? 20 : 24),
+        style: TextStyle(fontSize: isMobile ? 12 : 14, color: MyApp.homeDarkGreyText),
+        dropdownColor: MyApp.homeLightPink,
+        items: topicList.map<DropdownMenuItem<String>>((t) => DropdownMenuItem(value: t['topic_name'] as String, child: Text(t['topic_name'] as String))).toList(),
+        onChanged: (String? newValue) {
+          if (newValue != null) setState(() {
+            selectedTopic = newValue;
+            selectedRound = _isMathRoundTopic(newValue) ? (selectedRound ?? 'sample') : null;
+          });
+        },
+      ),
+    );
+
+    final roundDropdown = _isMathRoundTopic(selectedTopic!)
+        ? Container(
+            padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12),
+            decoration: BoxDecoration(
+              color: MyApp.homeLightPink,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: MyApp.homeDarkGreyText.withOpacity(0.3), width: 1),
+            ),
+            child: DropdownButton<String>(
+              value: selectedRound ?? 'sample',
+              underline: SizedBox(),
+              icon: Icon(Icons.arrow_drop_down, color: MyApp.homeDarkGreyText, size: isMobile ? 20 : 24),
+              style: TextStyle(fontSize: isMobile ? 12 : 14, color: MyApp.homeDarkGreyText),
+              dropdownColor: MyApp.homeLightPink,
+              items: [
+                DropdownMenuItem(value: 'sample', child: Text('Sample Quiz')),
+                DropdownMenuItem(value: 'local', child: Text('Local Round')),
+                DropdownMenuItem(value: 'final', child: Text('Final Round')),
+              ],
+              onChanged: (String? newValue) {
+                if (newValue != null) setState(() => selectedRound = newValue);
+              },
+            ),
+          )
+        : null;
+
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 20, vertical: isMobile ? 12 : 16),
@@ -449,86 +499,77 @@ class _LeaderboardState extends State<Leaderboard> {
         color: MyApp.homeLightPink,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: isMobile
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   'Global Leaderboard',
                   style: TextStyle(
-                    fontSize: isMobile ? 24 : 32,
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: MyApp.homeDarkGreyText,
                     fontFamily: 'serif',
                   ),
                 ),
-                SizedBox(height: 5),
+                SizedBox(height: 4),
                 Text(
                   'futuremind 2.0',
                   style: TextStyle(
-                    fontSize: isMobile ? 16 : 20,
+                    fontSize: 15,
                     color: MyApp.homeGreyText,
                     fontFamily: 'sans-serif',
                   ),
                 ),
+                SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(child: gradeDropdown),
+                    if (roundDropdown != null) ...[
+                      SizedBox(width: 8),
+                      Expanded(child: roundDropdown),
+                    ],
+                  ],
+                ),
+              ],
+            )
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Global Leaderboard',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: MyApp.homeDarkGreyText,
+                          fontFamily: 'serif',
+                        ),
+                      ),
+                      SizedBox(height: 5),
+                      Text(
+                        'futuremind 2.0',
+                        style: TextStyle(
+                          fontSize: 20,
+                          color: MyApp.homeGreyText,
+                          fontFamily: 'sans-serif',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                gradeDropdown,
+                if (roundDropdown != null) ...[
+                  SizedBox(width: 12),
+                  roundDropdown,
+                ],
               ],
             ),
-          ),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12),
-            decoration: BoxDecoration(
-              color: MyApp.homeLightPink,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: MyApp.homeDarkGreyText.withOpacity(0.3), width: 1),
-            ),
-            child: DropdownButton<String>(
-              value: selectedTopic,
-              hint: Text('Select topic', style: TextStyle(fontSize: isMobile ? 12 : 14, color: MyApp.homeDarkGreyText.withOpacity(0.7))),
-              underline: SizedBox(),
-              icon: Icon(Icons.arrow_drop_down, color: MyApp.homeDarkGreyText, size: isMobile ? 20 : 24),
-              style: TextStyle(fontSize: isMobile ? 12 : 14, color: MyApp.homeDarkGreyText),
-              dropdownColor: MyApp.homeLightPink,
-              items: topicList.map<DropdownMenuItem<String>>((t) => DropdownMenuItem(value: t['topic_name'] as String, child: Text(t['topic_name'] as String))).toList(),
-              onChanged: (String? newValue) {
-                if (newValue != null) setState(() {
-                  selectedTopic = newValue;
-                  selectedRound = _isMathRoundTopic(newValue) ? (selectedRound ?? 'sample') : null;
-                });
-              },
-            ),
-          ),
-          if (_isMathRoundTopic(selectedTopic!)) ...[
-            SizedBox(width: isMobile ? 8 : 12),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12),
-              decoration: BoxDecoration(
-                color: MyApp.homeLightPink,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: MyApp.homeDarkGreyText.withOpacity(0.3), width: 1),
-              ),
-              child: DropdownButton<String>(
-                value: selectedRound ?? 'sample',
-                underline: SizedBox(),
-                icon: Icon(Icons.arrow_drop_down, color: MyApp.homeDarkGreyText, size: isMobile ? 20 : 24),
-                style: TextStyle(fontSize: isMobile ? 12 : 14, color: MyApp.homeDarkGreyText),
-                dropdownColor: MyApp.homeLightPink,
-                items: [
-                  DropdownMenuItem(value: 'sample', child: Text('Sample Quiz')),
-                  DropdownMenuItem(value: 'local', child: Text('Local Round')),
-                  DropdownMenuItem(value: 'final', child: Text('Final Round')),
-                ],
-                onChanged: (String? newValue) {
-                  if (newValue != null) setState(() => selectedRound = newValue);
-                },
-              ),
-            ),
-          ],
-        ],
-      ),
     );
   }
 
@@ -611,125 +652,7 @@ class _LeaderboardState extends State<Leaderboard> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Header section with filter on same line
-                                Container(
-                                  width: double.infinity,
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: isMobile ? 16 : 20,
-                                    vertical: isMobile ? 12 : 16,
-                                  ),
-                                  margin: EdgeInsets.only(bottom: isMobile ? 16 : 20),
-                                  decoration: BoxDecoration(
-                                    color: MyApp.homeLightPink,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'Global Leaderboard',
-                                              style: TextStyle(
-                                                fontSize: isMobile ? 24 : 32,
-                                                fontWeight: FontWeight.bold,
-                                                color: MyApp.homeDarkGreyText,
-                                                fontFamily: 'serif',
-                                              ),
-                                            ),
-                                            SizedBox(height: 5),
-                                            Text(
-                                              'futuremind 2.0',
-                                              style: TextStyle(
-                                                fontSize: isMobile ? 16 : 20,
-                                                color: MyApp.homeGreyText,
-                                                fontFamily: 'sans-serif',
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      // Topic filter dropdown on the same line
-                                      Container(
-                                        padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12),
-                                        decoration: BoxDecoration(
-                                          color: MyApp.homeLightPink,
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(
-                                            color: MyApp.homeDarkGreyText.withOpacity(0.3),
-                                            width: 1,
-                                          ),
-                                        ),
-                                        child: DropdownButton<String>(
-                                          value: selectedTopic,
-                                          hint: Text(
-                                            'Select topic',
-                                            style: TextStyle(
-                                              fontSize: isMobile ? 12 : 14,
-                                              color: MyApp.homeDarkGreyText.withOpacity(0.7),
-                                            ),
-                                          ),
-                                          underline: SizedBox(), // Remove default underline
-                                          icon: Icon(
-                                            Icons.arrow_drop_down,
-                                            color: MyApp.homeDarkGreyText,
-                                            size: isMobile ? 20 : 24,
-                                          ),
-                                          style: TextStyle(
-                                            fontSize: isMobile ? 12 : 14,
-                                            color: MyApp.homeDarkGreyText,
-                                          ),
-                                          dropdownColor: MyApp.homeLightPink,
-                                          items: topicList.map<DropdownMenuItem<String>>((topic) {
-                                            return DropdownMenuItem<String>(
-                                              value: topic['topic_name'] as String,
-                                              child: Text(topic['topic_name'] as String),
-                                            );
-                                          }).toList(),
-                                          onChanged: (String? newValue) {
-                                            if (newValue != null) {
-                                              setState(() {
-                                                selectedTopic = newValue;
-                                                selectedRound = _isMathRoundTopic(newValue) ? (selectedRound ?? 'sample') : null;
-                                              });
-                                            }
-                                          },
-                                        ),
-                                      ),
-                                      if (_isMathRoundTopic(selectedTopic!)) ...[
-                                        SizedBox(width: isMobile ? 8 : 12),
-                                        Container(
-                                          padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12),
-                                          decoration: BoxDecoration(
-                                            color: MyApp.homeLightPink,
-                                            borderRadius: BorderRadius.circular(8),
-                                            border: Border.all(
-                                              color: MyApp.homeDarkGreyText.withOpacity(0.3),
-                                              width: 1,
-                                            ),
-                                          ),
-                                          child: DropdownButton<String>(
-                                            value: selectedRound ?? 'sample',
-                                            underline: SizedBox(),
-                                            icon: Icon(Icons.arrow_drop_down, color: MyApp.homeDarkGreyText, size: isMobile ? 20 : 24),
-                                            style: TextStyle(fontSize: isMobile ? 12 : 14, color: MyApp.homeDarkGreyText),
-                                            dropdownColor: MyApp.homeLightPink,
-                                            items: [
-                                              DropdownMenuItem(value: 'sample', child: Text('Sample Quiz')),
-                                              DropdownMenuItem(value: 'local', child: Text('Local Round')),
-                                              DropdownMenuItem(value: 'final', child: Text('Final Round')),
-                                            ],
-                                            onChanged: (String? newValue) {
-                                              if (newValue != null) setState(() => selectedRound = newValue);
-                                            },
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
+                                _buildHeaderRow(isMobile),
                                 
                                 // Empty state message
                                 Center(
@@ -807,135 +730,7 @@ class _LeaderboardState extends State<Leaderboard> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Header section with filter on same line
-                          Container(
-                            width: double.infinity,
-                            padding: EdgeInsets.symmetric(
-                              horizontal: isMobile ? 16 : 20,
-                              vertical: isMobile ? 12 : 16,
-                            ),
-                            margin: EdgeInsets.only(bottom: isMobile ? 16 : 20),
-                            decoration: BoxDecoration(
-                              color: MyApp.homeLightPink,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Global Leaderboard',
-                                        style: TextStyle(
-                                          fontSize: isMobile ? 24 : 32,
-                                          fontWeight: FontWeight.bold,
-                                          color: MyApp.homeDarkGreyText,
-                                          fontFamily: 'serif',
-                                        ),
-                                      ),
-                                      SizedBox(height: 5),
-                                      Text(
-                                        'futuremind 2.0',
-                                        style: TextStyle(
-                                          fontSize: isMobile ? 16 : 20,
-                                          color: MyApp.homeGreyText,
-                                          fontFamily: 'sans-serif',
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                // Topic filter dropdown on the same line
-                                Container(
-                                  padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12),
-                                  decoration: BoxDecoration(
-                                    color: MyApp.homeLightPink,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: MyApp.homeDarkGreyText.withOpacity(0.3),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: DropdownButton<String>(
-                                    value: selectedTopic,
-                                    hint: Text(
-                                      'Select topic',
-                                      style: TextStyle(
-                                        fontSize: isMobile ? 12 : 14,
-                                        color: MyApp.homeDarkGreyText.withOpacity(0.7),
-                                      ),
-                                    ),
-                                    underline: SizedBox(), // Remove default underline
-                                    icon: Icon(
-                                      Icons.arrow_drop_down,
-                                      color: MyApp.homeDarkGreyText,
-                                      size: isMobile ? 20 : 24,
-                                    ),
-                                    style: TextStyle(
-                                      fontSize: isMobile ? 12 : 14,
-                                      color: MyApp.homeDarkGreyText,
-                                    ),
-                                    dropdownColor: MyApp.homeLightPink,
-                                    items: topicList.map<DropdownMenuItem<String>>((topic) {
-                                      return DropdownMenuItem<String>(
-                                        value: topic['topic_name'] as String,
-                                        child: Text(topic['topic_name'] as String),
-                                      );
-                                    }).toList(),
-                                    onChanged: (String? newValue) {
-                                      if (newValue != null) {
-                                        setState(() {
-                                          selectedTopic = newValue;
-                                          selectedRound = _isMathRoundTopic(newValue) ? (selectedRound ?? 'sample') : null;
-                                        });
-                                      }
-                                    },
-                                  ),
-                                ),
-                                // Round filter (only for math grade topics)
-                                if (_isMathRoundTopic(selectedTopic!)) ...[
-                                  SizedBox(width: isMobile ? 8 : 12),
-                                  Container(
-                                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12),
-                                    decoration: BoxDecoration(
-                                      color: MyApp.homeLightPink,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: MyApp.homeDarkGreyText.withOpacity(0.3),
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: DropdownButton<String>(
-                                      value: selectedRound ?? 'sample',
-                                      underline: SizedBox(),
-                                      icon: Icon(
-                                        Icons.arrow_drop_down,
-                                        color: MyApp.homeDarkGreyText,
-                                        size: isMobile ? 20 : 24,
-                                      ),
-                                      style: TextStyle(
-                                        fontSize: isMobile ? 12 : 14,
-                                        color: MyApp.homeDarkGreyText,
-                                      ),
-                                      dropdownColor: MyApp.homeLightPink,
-                                      items: [
-                                        DropdownMenuItem(value: 'sample', child: Text('Sample Quiz')),
-                                        DropdownMenuItem(value: 'local', child: Text('Local Round')),
-                                        DropdownMenuItem(value: 'final', child: Text('Final Round')),
-                                      ],
-                                      onChanged: (String? newValue) {
-                                        if (newValue != null) {
-                                          setState(() => selectedRound = newValue);
-                                        }
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
+                          _buildHeaderRow(isMobile),
                           
                           // Leaderboard cards
                           ...leaderboard.map((user) {

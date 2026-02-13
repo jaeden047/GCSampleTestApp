@@ -146,7 +146,7 @@ class _LoginPageState extends State<LoginPage> { // stateful because transitions
     final verticalPadding = isMobile ? 32.0 : 48.0;
     final titleFontSize = isMobile ? 28.0 : 36.0;
     final subtitleFontSize = isMobile ? 14.0 : 16.0;
-    final logoHeight = isMobile ? 80.0 : 120.0;
+    final logoHeight = isMobile ? 140.0 : 170.0;
     
 //--
 // The following is the fields for the login screen, signup fields are on signup page.
@@ -187,7 +187,7 @@ class _LoginPageState extends State<LoginPage> { // stateful because transitions
                 Text(
                   'Login to your account!', 
                   style: TextStyle(
-                    color: pinkTitle,
+                    color: Colors.white,
                     fontSize: titleFontSize,
                     fontWeight: FontWeight.bold,
                     height: 1.2,

@@ -67,194 +67,38 @@ class _PostQuizState extends State<PostQuiz> {
     return MediaQuery.of(context).size.width < 768;
   }
 
-  // Build decorative white clouds and stars around content
+  /// Build decorative clouds and stars in safe zones only—never over content.
+  /// Places decorations in left/right margins (0–4% and 96–100% width) and in
+  /// top/bottom bands, avoiding the center content area (main text and icons).
   List<Widget> _buildDecorativeElements(double screenWidth, double screenHeight, bool isMobile) {
     final elements = <Widget>[];
-    
-    // Top area decorations (around clipboard)
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.05,
-        top: 50,
-        child: SvgPicture.asset(
-          'assets/images/white_star.svg',
-          width: isMobile ? 12.0 : 18.0,
-          height: isMobile ? 11.3 : 17.0,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        right: screenWidth * 0.05,
-        top: 60,
-        child: SvgPicture.asset(
-          'assets/images/white_cloud.svg',
-          width: isMobile ? 35 : 48,
-          height: isMobile ? 24 : 33,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.08,
-        top: 120,
-        child: SvgPicture.asset(
-          'assets/images/white_cloud.svg',
-          width: isMobile ? 40 : 55,
-          height: isMobile ? 28 : 38,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        right: screenWidth * 0.08,
-        top: 140,
-        child: SvgPicture.asset(
-          'assets/images/white_star.svg',
-          width: isMobile ? 14.0 : 20.0,
-          height: isMobile ? 13.2 : 18.9,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.02,
-        top: 200,
-        child: SvgPicture.asset(
-          'assets/images/white_cloud.svg',
-          width: isMobile ? 28 : 40,
-          height: isMobile ? 19 : 27,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.04,
-        top: 280,
-        child: SvgPicture.asset(
-          'assets/images/white_cloud.svg',
-          width: isMobile ? 32 : 45,
-          height: isMobile ? 22 : 31,
-        ),
-      ),
-    );
-    
-    // Middle area decorations (around text)
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.03,
-        top: screenHeight * 0.45,
-        child: SvgPicture.asset(
-          'assets/images/white_star.svg',
-          width: isMobile ? 11.0 : 16.0,
-          height: isMobile ? 10.4 : 15.1,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.12,
-        top: screenHeight * 0.42,
-        child: SvgPicture.asset(
-          'assets/images/white_star.svg',
-          width: isMobile ? 10.0 : 14.0,
-          height: isMobile ? 9.5 : 13.2,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        right: screenWidth * 0.03,
-        top: screenHeight * 0.48,
-        child: SvgPicture.asset(
-          'assets/images/white_cloud.svg',
-          width: isMobile ? 32 : 45,
-          height: isMobile ? 22 : 31,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        right: screenWidth * 0.12,
-        top: screenHeight * 0.50,
-        child: SvgPicture.asset(
-          'assets/images/white_star.svg',
-          width: isMobile ? 12.0 : 17.0,
-          height: isMobile ? 11.3 : 16.1,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.15,
-        top: screenHeight * 0.55,
-        child: SvgPicture.asset(
-          'assets/images/white_star.svg',
-          width: isMobile ? 9.0 : 13.0,
-          height: isMobile ? 8.5 : 12.3,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        right: screenWidth * 0.15,
-        top: screenHeight * 0.58,
-        child: SvgPicture.asset(
-          'assets/images/white_star.svg',
-          width: isMobile ? 11.0 : 15.0,
-          height: isMobile ? 10.4 : 14.2,
-        ),
-      ),
-    );
-    
-    // Bottom area decorations (above navigation) 
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.06,
-        top: screenHeight * 0.75,
-        child: SvgPicture.asset(
-          'assets/images/white_star.svg',
-          width: isMobile ? 13.0 : 18.0,
-          height: isMobile ? 12.3 : 17.0,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        right: screenWidth * 0.06,
-        top: screenHeight * 0.77,
-        child: SvgPicture.asset(
-          'assets/images/white_cloud.svg',
-          width: isMobile ? 30 : 42,
-          height: isMobile ? 20 : 28,
-        ),
-      ),
-    );
-    
-    // Additional star near bottom left
-    elements.add(
-      Positioned(
-        left: screenWidth * 0.10,
-        top: screenHeight * 0.80,
-        child: SvgPicture.asset(
-          'assets/images/white_star.svg',
-          width: isMobile ? 10.0 : 14.0,
-          height: isMobile ? 9.5 : 13.2,
-        ),
-      ),
-    );
-    
+    final starW = isMobile ? 12.0 : 18.0;
+    final starH = isMobile ? 11.3 : 17.0;
+    final cloudW = isMobile ? 28.0 : 40.0;
+    final cloudH = isMobile ? 19.0 : 27.0;
+
+    // Content exclusion: center 92% of width (4% margin each side), vertical band 28%-72% (main text)
+    final leftMargin = screenWidth * 0.02;
+    final rightMargin = screenWidth * 0.02;
+    final topSafe = screenHeight * 0.12;
+    final bottomSafe = screenHeight * 0.72;
+
+    // Top-left (above content)
+    elements.add(Positioned(left: leftMargin, top: topSafe * 0.3, child: SvgPicture.asset('assets/images/white_star.svg', width: starW, height: starH)));
+    elements.add(Positioned(left: leftMargin, top: topSafe * 0.6, child: SvgPicture.asset('assets/images/white_cloud.svg', width: cloudW, height: cloudH)));
+
+    // Top-right
+    elements.add(Positioned(right: rightMargin, top: topSafe * 0.25, child: SvgPicture.asset('assets/images/white_cloud.svg', width: cloudW * 1.2, height: cloudH * 1.2)));
+    elements.add(Positioned(right: rightMargin, top: topSafe * 0.55, child: SvgPicture.asset('assets/images/white_star.svg', width: starW * 1.1, height: starH * 1.1)));
+
+    // Bottom-left (below main text, above nav)
+    elements.add(Positioned(left: leftMargin, top: bottomSafe + screenHeight * 0.08, child: SvgPicture.asset('assets/images/white_star.svg', width: starW * 1.1, height: starH * 1.1)));
+    elements.add(Positioned(left: leftMargin, top: bottomSafe + screenHeight * 0.18, child: SvgPicture.asset('assets/images/white_cloud.svg', width: cloudW * 0.9, height: cloudH * 0.9)));
+
+    // Bottom-right
+    elements.add(Positioned(right: rightMargin, top: bottomSafe + screenHeight * 0.05, child: SvgPicture.asset('assets/images/white_cloud.svg', width: cloudW, height: cloudH)));
+    elements.add(Positioned(right: rightMargin, top: bottomSafe + screenHeight * 0.15, child: SvgPicture.asset('assets/images/white_star.svg', width: starW, height: starH)));
+
     return elements;
   }
 
@@ -492,36 +336,6 @@ class _PostQuizState extends State<PostQuiz> {
                             SizedBox(height: isMobile ? 8 : 12),
                             Text(
                               canShow ? 'Answers' : 'After release',
-                              style: TextStyle(
-                                fontSize: isMobile ? 14 : 16,
-                                color: MyApp.homeDarkGreyText,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                        
-                        SizedBox(width: isMobile ? 24 : 32),
-                        
-                        // Share button
-                        Column(
-                          children: [
-                            GestureDetector(
-                              onTap: () {
-                                // Share functionality - do nothing for now
-                              },
-                              child: SizedBox(
-                                width: isMobile ? 60 : 80,
-                                height: isMobile ? 60 : 80,
-                                child: SvgPicture.asset(
-                                  'assets/images/share_icon.svg',
-                                  fit: BoxFit.contain,
-                                ),
-                              ),
-                            ),
-                            SizedBox(height: isMobile ? 8 : 12),
-                            Text(
-                              'Share',
                               style: TextStyle(
                                 fontSize: isMobile ? 14 : 16,
                                 color: MyApp.homeDarkGreyText,
