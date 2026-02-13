@@ -35,8 +35,120 @@ class _SignupScreen4State extends State<SignupScreen4> {
     final maskedPart = '*' * (username.length - 3);
     return '$maskedPart$visiblePart@$domain';
   }
-  
-  
+
+  /// Content layout heights (from top of Column) - used for collision bounds
+  static const _iconTop = 40.0;
+  static const _iconH = 100.0;
+  static const _iconToHurray = 40.0;
+  static const _hurrayH = 48.0;
+  static const _hurrayToCheck = 16.0;
+  static const _checkH = 36.0;
+  static const _checkToInstruction = 24.0;
+  static const _instructionH = 44.0;
+  static const _instructionToEmail = 24.0;
+  static const _emailH = 22.0;
+  static const _emailToButton = 0.0;
+  static const _buttonH = 48.0;
+
+  /// Builds decorations with collision avoidance. Content bounds are computed from
+  /// the known layout; decorations are placed only in safe zones.
+  List<Widget> _buildDecorations({
+    required double screenWidth,
+    required double screenHeight,
+    required double contentWidth,
+    required bool isMobile,
+  }) {
+    const margin = 12.0;
+    final starW = isMobile ? 18.0 : 20.0;
+    final starH = isMobile ? 17.0 : 19.0;
+    final cloudW = isMobile ? 50.0 : 60.0;
+    final cloudH = isMobile ? 14.0 : 17.0;
+
+    // Content area: centered in the scroll view's child (contentWidth = screenWidth - 2*padding)
+    final contentAreaWidth = contentWidth;
+    const maxTextWidth = 280.0;
+    final actualContentWidth = contentAreaWidth < maxTextWidth ? contentAreaWidth : maxTextWidth;
+    final contentLeft = (contentAreaWidth - actualContentWidth) / 2;
+    final contentRight = contentLeft + actualContentWidth;
+
+    // Vertical: Column is centered in minHeight. Approximate content top.
+    final minHeight = screenHeight - 64;
+    const contentHeight = _iconTop + _iconH + _iconToHurray + _hurrayH + _hurrayToCheck +
+        _checkH + _checkToInstruction + _instructionH + _instructionToEmail + _emailH +
+        _emailToButton + _buttonH;
+    final contentTop = (minHeight - contentHeight) / 2;
+    final contentBottom = contentTop + contentHeight;
+
+    final contentRect = _Rect(contentLeft - margin, contentTop - margin,
+        contentRight + margin, contentBottom + margin);
+
+    bool overlapsAny(double left, double top, double w, double h, List<_Rect> placed) {
+      final r = _Rect(left, top, left + w, top + h);
+      if (contentRect.overlaps(r)) return true;
+      for (final p in placed) {
+        if (p.overlaps(r)) return true;
+      }
+      return false;
+    }
+
+    final placed = <_Rect>[];
+    final decorations = <Widget>[];
+
+    // Candidate positions: (onLeft, top as fraction of screenHeight)
+    // Top/bottom zones avoid center content; algorithm skips any that overlap
+    final starCandidates = [
+      (true, 0.04), (false, 0.04), (true, 0.10), (false, 0.10),
+      (true, 0.56), (false, 0.56), (true, 0.62), (false, 0.62),
+    ];
+    final cloudCandidates = [
+      (true, 0.07), (false, 0.07), (true, 0.58), (false, 0.58),
+      (true, 0.64), (false, 0.64),
+    ];
+
+    void tryPlaceStar(bool onLeft, double topFrac) {
+      final top = screenHeight * topFrac;
+      final left = onLeft ? 0.0 : contentAreaWidth - starW;
+      if (overlapsAny(left, top, starW, starH, placed)) return;
+      placed.add(_Rect(left, top, left + starW, top + starH));
+      decorations.add(Positioned(
+        left: onLeft ? left : null,
+        right: onLeft ? null : 0.0,
+        top: top,
+        child: SvgPicture.asset('assets/images/pinkstar.svg', width: starW, height: starH),
+      ));
+    }
+
+    void tryPlaceCloud(bool onLeft, double topFrac) {
+      final top = screenHeight * topFrac;
+      final left = onLeft ? 0.0 : contentAreaWidth - cloudW;
+      if (overlapsAny(left, top, cloudW, cloudH, placed)) return;
+      placed.add(_Rect(left, top, left + cloudW, top + cloudH));
+      decorations.add(Positioned(
+        left: onLeft ? left : null,
+        right: onLeft ? null : 0.0,
+        top: top,
+        child: SvgPicture.asset('assets/images/cloud.svg', width: cloudW, height: cloudH),
+      ));
+    }
+
+    int starsPlaced = 0;
+    int cloudsPlaced = 0;
+    for (final (onLeft, topFrac) in starCandidates) {
+      if (starsPlaced >= 4) break;
+      final before = decorations.length;
+      tryPlaceStar(onLeft, topFrac);
+      if (decorations.length > before) starsPlaced++;
+    }
+    for (final (onLeft, topFrac) in cloudCandidates) {
+      if (cloudsPlaced >= 2) break;
+      final before = decorations.length;
+      tryPlaceCloud(onLeft, topFrac);
+      if (decorations.length > before) cloudsPlaced++;
+    }
+
+    return decorations;
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -137,61 +249,12 @@ class _SignupScreen4State extends State<SignupScreen4> {
                         ),
                       ],
                     ),
-                    // Decorative SVG elements - positioned after Column so they render on top
-                    // Using percentage-based positioning similar to signup_screen2.dart
-                    Positioned(
-                      top: screenHeight * 0.06,
-                      left: screenWidth * 0.10,
-                      child: SvgPicture.asset(
-                        'assets/images/pinkstar.svg',
-                        width: isMobile ? 18 : 20,
-                        height: isMobile ? 17 : 19,
-                      ),
-                    ),
-                    Positioned(
-                      top: screenHeight * 0.14,
-                      left: screenWidth * 0.25,
-                      child: SvgPicture.asset(
-                        'assets/images/cloud.svg',
-                        width: isMobile ? 50 : 60,
-                        height: isMobile ? 14 : 17,
-                      ),
-                    ),
-                    Positioned(
-                      top: screenHeight * 0.10,
-                      right: screenWidth * 0.12,
-                      child: SvgPicture.asset(
-                        'assets/images/pinkstar.svg',
-                        width: isMobile ? 18 : 20,
-                        height: isMobile ? 17 : 19,
-                      ),
-                    ),
-                    Positioned(
-                      top: screenHeight * 0.22,
-                      right: screenWidth * 0.18,
-                      child: SvgPicture.asset(
-                        'assets/images/pinkstar.svg',
-                        width: isMobile ? 18 : 20,
-                        height: isMobile ? 17 : 19,
-                      ),
-                    ),
-                    Positioned(
-                      top: screenHeight * 0.30,
-                      left: screenWidth * 0.15,
-                      child: SvgPicture.asset(
-                        'assets/images/cloud.svg',
-                        width: isMobile ? 50 : 60,
-                        height: isMobile ? 14 : 17,
-                      ),
-                    ),
-                    Positioned(
-                      top: screenHeight * 0.38,
-                      right: screenWidth * 0.08,
-                      child: SvgPicture.asset(
-                        'assets/images/pinkstar.svg',
-                        width: isMobile ? 18 : 20,
-                        height: isMobile ? 17 : 19,
-                      ),
+                    // Decorative SVG elements - collision-aware placement
+                    ..._buildDecorations(
+                      screenWidth: screenWidth,
+                      screenHeight: screenHeight,
+                      contentWidth: (screenWidth - 2 * horizontalPadding).clamp(0, 500),
+                      isMobile: isMobile,
                     ),
                   ],
                 ),
@@ -201,6 +264,19 @@ class _SignupScreen4State extends State<SignupScreen4> {
         ),
       ),
     );
+  }
+}
+
+class _Rect {
+  final double left;
+  final double top;
+  final double right;
+  final double bottom;
+
+  _Rect(this.left, this.top, this.right, this.bottom);
+
+  bool overlaps(_Rect other) {
+    return left < other.right && right > other.left && top < other.bottom && bottom > other.top;
   }
 }
 
