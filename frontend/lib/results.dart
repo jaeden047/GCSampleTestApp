@@ -755,6 +755,8 @@ class _ResultsState extends State<Results> { //
                                         children: [
                                           Text(
                                             'Attempt ${index + 1} • ${topic.topicName}${_isMathRoundTopic(topic.topicName) ? ' • ${_roundLabel(testList[index].round)}' : ''}',
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
                                             style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,
@@ -766,41 +768,55 @@ class _ResultsState extends State<Results> { //
                                             children: [
                                               Icon(Icons.calendar_today, color: MyApp.homeWhite, size: 16),
                                               SizedBox(width: 6),
-                                              Text(
-                                                formattedDate,
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  color: MyApp.homeWhite.withOpacity(0.9),
+                                              Expanded(
+                                                child: Text(
+                                                  formattedDate,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  maxLines: 1,
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: MyApp.homeWhite.withOpacity(0.9),
+                                                  ),
                                                 ),
                                               ),
-                                              Spacer(),
-                                              Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  if (canShow) ...[
-                                                    Icon(Icons.star, color: MyApp.homeYellow, size: 18),
-                                                    SizedBox(width: 6),
-                                                    Text(
-                                                      'Score: ${scoreNumber.toInt()} pts',
-                                                      style: TextStyle(
-                                                        fontSize: 16,
-                                                        fontWeight: FontWeight.w600,
-                                                        color: MyApp.homeWhite,
+                                              SizedBox(width: 8),
+                                              Flexible(
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    if (canShow) ...[
+                                                      Icon(Icons.star, color: MyApp.homeYellow, size: 18),
+                                                      SizedBox(width: 6),
+                                                      Flexible(
+                                                        child: Text(
+                                                          'Score: ${scoreNumber.toInt()} pts',
+                                                          overflow: TextOverflow.ellipsis,
+                                                          maxLines: 1,
+                                                          style: TextStyle(
+                                                            fontSize: 16,
+                                                            fontWeight: FontWeight.w600,
+                                                            color: MyApp.homeWhite,
+                                                          ),
+                                                        ),
                                                       ),
-                                                    ),
-                                                  ] else ...[
-                                                    Icon(Icons.lock_outline, color: MyApp.homeWhite.withOpacity(0.9), size: 18),
-                                                    SizedBox(width: 6),
-                                                    Text(
-                                                      'Results locked',
-                                                      style: TextStyle(
-                                                        fontSize: 14,
-                                                        fontWeight: FontWeight.w500,
-                                                        color: MyApp.homeWhite.withOpacity(0.9),
+                                                    ] else ...[
+                                                      Icon(Icons.lock_outline, color: MyApp.homeWhite.withOpacity(0.9), size: 18),
+                                                      SizedBox(width: 6),
+                                                      Flexible(
+                                                        child: Text(
+                                                          'Results locked',
+                                                          overflow: TextOverflow.ellipsis,
+                                                          maxLines: 1,
+                                                          style: TextStyle(
+                                                            fontSize: 14,
+                                                            fontWeight: FontWeight.w500,
+                                                            color: MyApp.homeWhite.withOpacity(0.9),
+                                                          ),
+                                                        ),
                                                       ),
-                                                    ),
+                                                    ],
                                                   ],
-                                                ],
+                                                ),
                                               ),
                                             ],
                                           ),

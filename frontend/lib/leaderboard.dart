@@ -443,27 +443,31 @@ class _LeaderboardState extends State<Leaderboard> {
   Widget _buildHeaderRow(bool isMobile) {
     final gradeDropdown = Container(
       padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12),
-      decoration: BoxDecoration(
-        color: MyApp.homeLightPink,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: MyApp.homeDarkGreyText.withOpacity(0.3), width: 1),
-      ),
-      child: DropdownButton<String>(
-        value: selectedTopic,
-        hint: Text('Select topic', style: TextStyle(fontSize: isMobile ? 12 : 14, color: MyApp.homeDarkGreyText.withOpacity(0.7))),
-        underline: SizedBox(),
-        icon: Icon(Icons.arrow_drop_down, color: MyApp.homeDarkGreyText, size: isMobile ? 20 : 24),
-        style: TextStyle(fontSize: isMobile ? 12 : 14, color: MyApp.homeDarkGreyText),
-        dropdownColor: MyApp.homeLightPink,
-        items: topicList.map<DropdownMenuItem<String>>((t) => DropdownMenuItem(value: t['topic_name'] as String, child: Text(t['topic_name'] as String))).toList(),
-        onChanged: (String? newValue) {
-          if (newValue != null) setState(() {
-            selectedTopic = newValue;
-            selectedRound = _isMathRoundTopic(newValue) ? (selectedRound ?? 'sample') : null;
-          });
-        },
-      ),
-    );
+          decoration: BoxDecoration(
+            color: MyApp.homeLightPink,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: MyApp.homeDarkGreyText.withOpacity(0.3), width: 1),
+          ),
+          child: DropdownButton<String>(
+            value: selectedTopic,
+            isExpanded: true,
+            hint: Text('Select topic', overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: isMobile ? 12 : 14, color: MyApp.homeDarkGreyText.withOpacity(0.7))),
+            underline: SizedBox(),
+            icon: Icon(Icons.arrow_drop_down, color: MyApp.homeDarkGreyText, size: isMobile ? 20 : 24),
+            style: TextStyle(fontSize: isMobile ? 12 : 14, color: MyApp.homeDarkGreyText),
+            dropdownColor: MyApp.homeLightPink,
+            items: topicList.map<DropdownMenuItem<String>>((t) => DropdownMenuItem(
+              value: t['topic_name'] as String,
+              child: Text(t['topic_name'] as String, overflow: TextOverflow.ellipsis),
+            )).toList(),
+            onChanged: (String? newValue) {
+              if (newValue != null) setState(() {
+                selectedTopic = newValue;
+                selectedRound = _isMathRoundTopic(newValue) ? (selectedRound ?? 'sample') : null;
+              });
+            },
+          ),
+        );
 
     final roundDropdown = _isMathRoundTopic(selectedTopic!)
         ? Container(
@@ -475,14 +479,15 @@ class _LeaderboardState extends State<Leaderboard> {
             ),
             child: DropdownButton<String>(
               value: selectedRound ?? 'sample',
+              isExpanded: true,
               underline: SizedBox(),
               icon: Icon(Icons.arrow_drop_down, color: MyApp.homeDarkGreyText, size: isMobile ? 20 : 24),
               style: TextStyle(fontSize: isMobile ? 12 : 14, color: MyApp.homeDarkGreyText),
               dropdownColor: MyApp.homeLightPink,
               items: [
-                DropdownMenuItem(value: 'sample', child: Text('Sample Quiz')),
-                DropdownMenuItem(value: 'local', child: Text('Local Round')),
-                DropdownMenuItem(value: 'final', child: Text('Final Round')),
+                DropdownMenuItem(value: 'sample', child: Text('Sample Quiz', overflow: TextOverflow.ellipsis)),
+                DropdownMenuItem(value: 'local', child: Text('Local Round', overflow: TextOverflow.ellipsis)),
+                DropdownMenuItem(value: 'final', child: Text('Final Round', overflow: TextOverflow.ellipsis)),
               ],
               onChanged: (String? newValue) {
                 if (newValue != null) setState(() => selectedRound = newValue);
@@ -563,10 +568,14 @@ class _LeaderboardState extends State<Leaderboard> {
                     ],
                   ),
                 ),
-                gradeDropdown,
+                Flexible(
+                  child: gradeDropdown,
+                ),
                 if (roundDropdown != null) ...[
                   SizedBox(width: 12),
-                  roundDropdown,
+                  Flexible(
+                    child: roundDropdown,
+                  ),
                 ],
               ],
             ),

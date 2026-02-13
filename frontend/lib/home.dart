@@ -117,7 +117,13 @@ class _HomeState extends State<Home> {
                   clipBehavior: Clip.none,
                   children: [
                     // Decorative stars and clouds — drawn first so they stay behind header and cards
-                    ..._buildDecorativeElements(screenWidth, screenHeight, isMobile),
+                    ..._buildDecorativeElements(
+                      screenWidth,
+                      screenHeight,
+                      isMobile,
+                      MediaQuery.of(context).padding.top + 20,
+                      isMobile ? (screenHeight * 1.5) : screenHeight,
+                    ),
                     // Main content
                     Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -548,30 +554,35 @@ class _HomeState extends State<Home> {
     return value.clamp(min, max).toDouble();
   }
 
-  // Decorative stars and clouds — scattered across screen, wrapping around content; never cover text or cards.
-  List<Widget> _buildDecorativeElements(double screenWidth, double screenHeight, bool isMobile) {
-    const double marginFrac = 0.09;
-    const double cardsTopFrac = 0.40;
-    const double cardsBottomFrac = 0.88;
-    // Very tight text rect — hugs "Welcome" / "Continue with Quiz" / "Future Mind Challenges" so stars fill the gap around them
+  // Decorative stars and clouds — evenly distributed across full screen/scroll area.
+  // Band-based algorithm: guarantees same density when scrolling on mobile.
+  // topBoundary: grey leaf + profile button line — decorations at or below.
+  List<Widget> _buildDecorativeElements(double screenWidth, double screenHeight, bool isMobile, double topBoundary, double contentHeight) {
     const double textWidthFrac = 0.32;
-    const double textTopFrac = 0.13;
-    const double textBottomFrac = 0.30;
+    const double edgeMargin = 24.0;
+    final pad = isMobile ? 12.0 : 16.0;
+    final centerX = screenWidth / 2;
+
+    final usableHeight = (contentHeight - topBoundary).clamp(1.0, double.infinity);
+    final textTop = topBoundary + 0.08 * usableHeight;
+    final textBottom = topBoundary + 0.25 * usableHeight;
+    final cardsTop = topBoundary + 0.28 * usableHeight;
+    final cardsBottom = contentHeight - 0.05 * usableHeight;
 
     final textRect = Rect.fromLTWH(
-      screenWidth * (1 - textWidthFrac) / 2,
-      screenHeight * textTopFrac,
+      centerX - screenWidth * textWidthFrac / 2,
+      textTop,
       screenWidth * textWidthFrac,
-      screenHeight * (textBottomFrac - textTopFrac),
+      textBottom - textTop,
     );
+    final cardWidth = isMobile ? 260.0 : (screenWidth * 0.82).clamp(400.0, 1200.0);
     final cardsRect = Rect.fromLTWH(
-      screenWidth * marginFrac,
-      screenHeight * cardsTopFrac,
-      screenWidth * (1 - marginFrac * 2),
-      screenHeight * (cardsBottomFrac - cardsTopFrac),
+      centerX - cardWidth / 2 - 12,
+      cardsTop,
+      cardWidth + 24,
+      (cardsBottom - cardsTop).clamp(0.0, double.infinity),
     );
 
-    // Forbid only the actual content: center text block and card area. Rest of screen is free.
     bool overlapsContent(double left, double top, double w, double h) {
       final r = Rect.fromLTWH(left, top, w, h);
       return r.overlaps(textRect) || r.overlaps(cardsRect);
@@ -579,30 +590,45 @@ class _HomeState extends State<Home> {
 
     final textLeft = textRect.left;
     final textRight = textRect.right;
-    final textTop = textRect.top;
-    final textBottom = textRect.bottom;
     final cardsLeft = cardsRect.left;
     final cardsRight = cardsRect.right;
-    final cardsTop = cardsRect.top;
-    final cardsBottom = cardsRect.bottom;
+
+    final leftStripMin = edgeMargin;
+    final leftStripMax = (cardsLeft - pad).clamp(edgeMargin + 4, centerX - 4);
+    final rightStripMin = (cardsRight + pad).clamp(0.0, screenWidth);
+    final rightStripMax = (screenWidth - edgeMargin).clamp(4.0, screenWidth - 4);
+    final gapTop = textBottom + pad;
+    final gapBottom = (cardsTop - pad).clamp(gapTop, contentHeight);
 
     final elements = <Widget>[];
-    final pad = isMobile ? 8.0 : 12.0;
-    // Larger jitter so stars are scattered and even, not clustered (ref: second image)
-    final jitterPx = isMobile ? 52.0 : 68.0;
+
+    // Minimum spacing between decorations to prevent clustering (responsive to screen size)
+    final minStarSpacing = isMobile ? 14.0 : (screenWidth * 0.05).clamp(22.0, 36.0);
+    final starRects = <Rect>[];
 
     void addStarIfSafe(double left, double top, double w, double h) {
+      if (top < topBoundary) return;
+      if (left < edgeMargin || left + w > screenWidth - edgeMargin) return;
+      if (top + h > contentHeight - 8) return;
       if (overlapsContent(left, top, w, h)) return;
+      final r = Rect.fromLTWH(left, top, w, h);
+      for (final s in starRects) {
+        final dx = (r.center.dx - s.center.dx).abs();
+        final dy = (r.center.dy - s.center.dy).abs();
+        if (dx < minStarSpacing && dy < minStarSpacing) return;
+      }
+      starRects.add(r);
       elements.add(
         Positioned(left: left, top: top, child: SvgPicture.asset('assets/images/pinkstar.svg', width: w, height: h)),
       );
     }
 
-    // Clouds: spread across screen (same zones as stars), never on text or cards; keep distance from each other.
     final cloudRects = <Rect>[];
-    final minCloudDx = screenWidth * 0.28;
-    final minCloudDy = screenHeight * 0.24;
+    final minCloudDx = isMobile ? 22.0 : (screenWidth * 0.18).clamp(32.0, 100.0);
+    final minCloudDy = isMobile ? 18.0 : (contentHeight * 0.07).clamp(28.0, 80.0);
     bool canPlaceCloud(double left, double top, double w, double h) {
+      if (top < topBoundary) return false;
+      if (left < edgeMargin || left + w > screenWidth - edgeMargin) return false;
       final r = Rect.fromLTWH(left, top, w, h);
       if (overlapsContent(left, top, w, h)) return false;
       for (final c in cloudRects) {
@@ -610,174 +636,208 @@ class _HomeState extends State<Home> {
         final dy = (r.center.dy - c.center.dy).abs();
         if (dx < minCloudDx && dy < minCloudDy) return false;
       }
+      for (final s in starRects) {
+        final dx = (r.center.dx - s.center.dx).abs();
+        final dy = (r.center.dy - s.center.dy).abs();
+        if (dx < minCloudDx * 0.8 && dy < minCloudDy * 0.8) return false;
+      }
       cloudRects.add(r);
       return true;
     }
 
-    // ---- Stars: scattered across full screen, wrapping around content (no overlap with text or cards) ----
-    // Star size; responsive
-    double starW(int i, int s) => (isMobile ? 9.0 : 12.0) + _scatter2(i, s) * (isMobile ? 5.0 : 6.0);
+    double starW(int band, int slot) => (isMobile ? 9.0 : 12.0) + _scatter2(band * 7 + slot, 1) * (isMobile ? 5.0 : 6.0);
     double starH(double w) => w * (11.3 / 12);
 
-    // Zone 1: Top band — fewer stars, more scattered (natural look)
-    final topBandBottom = (textTop - pad - 6).clamp(0.0, screenHeight);
-    if (topBandBottom > 12) {
-      final nTop = isMobile ? 3 : 4;
-      for (int i = 0; i < nTop; i++) {
-        final w = starW(i, 1);
-        final h = starH(w);
-        final left = _safeClamp(_scatter(i, 2) * (screenWidth - w - 4) + _jitter(i, 3, jitterPx), 0.0, screenWidth - w - 4);
-        final top = _safeClamp(_scatter2(i, 4) * (topBandBottom - h) + _jitter(i, 5, jitterPx * 0.6), 0.0, topBandBottom - h);
-        addStarIfSafe(left, top, w, h);
+    // Band-based placement: divide vertical space into bands for even density when scrolling
+    // For web: scale decoration count by screen area — reduce on small screens to prevent clustering
+    final numBands = isMobile ? 16 : 10;
+    final bandHeight = (contentHeight - topBoundary - 24) / numBands;
+    final screenArea = screenWidth * screenHeight;
+    final starsPerBand = isMobile ? 2 : ((screenArea / 65000).round().clamp(1, 2));
+    final totalStars = numBands * starsPerBand;
+
+    // Web: zone widths for balanced placement (skip narrow zones)
+    final leftStripWidth = (leftStripMax - leftStripMin).clamp(0.0, screenWidth);
+    final rightStripWidth = (rightStripMax - rightStripMin).clamp(0.0, screenWidth);
+    final gapCenterWidth = (textRight - textLeft - pad * 2).clamp(0.0, screenWidth);
+    final minZoneWidth = 28.0;
+    final useLeftZone = !isMobile ? leftStripWidth >= minZoneWidth : true;
+    final useRightZone = !isMobile ? rightStripWidth >= minZoneWidth : true;
+
+    for (int i = 0; i < totalStars; i++) {
+      final band = i ~/ starsPerBand;
+      final slot = i % starsPerBand;
+      final bandTop = topBoundary + band * bandHeight + 12;
+      final bandBottom = topBoundary + (band + 1) * bandHeight - 12;
+      if (bandBottom <= bandTop + 8) continue;
+
+      final w = starW(band, slot);
+      final h = starH(w);
+      final bandCenterY = (bandTop + bandBottom) / 2;
+
+      // Web: balanced zones — center 60%, left 25%, right 15% (avoid right clustering)
+      int hZone;
+      if (isMobile) {
+        hZone = (band + slot) % 3;
+      } else {
+        final seq = (band + slot) % 10;
+        if (seq < 6) {
+          hZone = 1;
+        } else if (seq < 8 && useLeftZone) {
+          hZone = 0;
+        } else if (seq < 10 && useRightZone) {
+          hZone = 2;
+        } else {
+          hZone = 1;
+        }
       }
+      double left;
+      double top = bandTop + _safeClamp(
+        _scatter2(i, 2) * (bandBottom - bandTop - h) + _jitter(i, 3, bandHeight * 0.3),
+        0.0, bandBottom - bandTop - h,
+      );
+
+      if (hZone == 0 && useLeftZone && leftStripMax > leftStripMin + w + 4) {
+        final stripW = leftStripMax - leftStripMin - w;
+        left = leftStripMin + _safeClamp(
+          _scatter(i, 4) * stripW + _jitter(i, 5, stripW * 0.4),
+          0.0, stripW,
+        );
+      } else if (hZone == 1) {
+        // Center zone: wrap around text and cards — gap, left/right of content
+        final inGap = bandCenterY >= gapTop && bandCenterY <= gapBottom;
+        final inCardBand = bandCenterY >= cardsTop && bandCenterY <= cardsBottom;
+        final contentL = inCardBand ? cardsLeft : textLeft;
+        final contentR = inCardBand ? cardsRight : textRight;
+        final centerL = (contentL - leftStripMax - pad).clamp(0.0, screenWidth);
+        final centerR = (rightStripMin - contentR - pad).clamp(0.0, screenWidth);
+
+        if (inGap && gapCenterWidth > w + 12) {
+          left = textLeft + pad + _safeClamp(
+            _scatter(i, 6) * (textRight - textLeft - w - pad * 2) + _jitter(i, 7, 18),
+            0.0, textRight - textLeft - w - pad * 2,
+          );
+        } else if (centerL > w + 8) {
+          left = leftStripMax + pad + _safeClamp(
+            _scatter(i, 8) * (centerL - w) + _jitter(i, 9, 14),
+            0.0, centerL - w,
+          );
+        } else if (centerR > w + 8) {
+          left = contentR + pad + _safeClamp(
+            _scatter(i, 10) * (centerR - w) + _jitter(i, 11, 14),
+            0.0, centerR - w,
+          );
+        } else if (useRightZone && rightStripMax > rightStripMin + w + 4) {
+          final stripW = (rightStripMax - rightStripMin - w).clamp(0.0, screenWidth);
+          left = rightStripMin + _safeClamp(_scatter(i, 12) * stripW, 0.0, stripW);
+        } else if (useLeftZone && leftStripMax > leftStripMin + w + 4) {
+          left = leftStripMin + _safeClamp(_scatter(i, 12) * (leftStripMax - leftStripMin - w), 0.0, leftStripMax - leftStripMin - w);
+        } else {
+          continue;
+        }
+      } else if (hZone == 2 && (useRightZone || isMobile) && rightStripMax > rightStripMin + w + 4) {
+        if (rightStripMax > rightStripMin + w + 4) {
+          final stripW = (rightStripMax - rightStripMin - w).clamp(0.0, screenWidth);
+          left = rightStripMin + _safeClamp(
+            _scatter(i, 14) * stripW + _jitter(i, 15, stripW * 0.6),
+            0.0, stripW,
+          );
+        } else {
+          // Fallback: alternate left/right when right strip too narrow
+          if ((band + slot) % 2 == 0 && leftStripMax > leftStripMin + w + 4) {
+            left = leftStripMin + _safeClamp(_scatter(i, 16) * (leftStripMax - leftStripMin - w), 0.0, leftStripMax - leftStripMin - w);
+          } else if (rightStripMax > rightStripMin + w + 4) {
+            final stripW = (rightStripMax - rightStripMin - w).clamp(0.0, screenWidth);
+            left = rightStripMin + _safeClamp(_scatter(i, 17) * stripW, 0.0, stripW);
+          } else {
+            continue;
+          }
+        }
+      } else {
+        // Fallback: alternate left/right
+        if ((band + slot) % 2 == 0 && leftStripMax > leftStripMin + w + 4) {
+          left = leftStripMin + _safeClamp(_scatter(i, 16) * (leftStripMax - leftStripMin - w), 0.0, leftStripMax - leftStripMin - w);
+        } else if (rightStripMax > rightStripMin + w + 4) {
+          final stripW = (rightStripMax - rightStripMin - w).clamp(0.0, screenWidth);
+          left = rightStripMin + _safeClamp(_scatter(i, 17) * stripW, 0.0, stripW);
+        } else {
+          continue;
+        }
+      }
+      addStarIfSafe(left, top, w, h);
     }
 
-    // Zone 1b: Header frame — a few stars just above and just below "Future Mind Challenges" (closer to title, scattered)
-    const double headerFramePad = 4.0;
-    final justAboveTop = (textTop - 28).clamp(0.0, screenHeight);
-    final justAboveBottom = (textTop - headerFramePad - 6).clamp(0.0, screenHeight);
-    if (justAboveBottom > justAboveTop + 8) {
-      final nFrame = isMobile ? 2 : 3;
-      for (int i = 0; i < nFrame; i++) {
-        final w = starW(i + 80, 1);
-        final h = starH(w);
-        final left = _safeClamp(_scatter(i + 80, 2) * (screenWidth - w - 4) + _jitter(i + 80, 3, jitterPx * 0.8), 0.0, screenWidth - w - 4);
-        final top = _safeClamp(justAboveTop + _scatter2(i + 80, 4) * (justAboveBottom - justAboveTop - h) + _jitter(i + 80, 5, 10), justAboveTop, justAboveBottom - h);
-        addStarIfSafe(left, top, w, h);
-      }
-    }
-    final justBelowTop = (textBottom + headerFramePad).clamp(0.0, screenHeight);
-    final justBelowBottom = (textBottom + 32).clamp(0.0, screenHeight);
-    if (justBelowBottom > justBelowTop + 8) {
-      final nFrame = isMobile ? 2 : 3;
-      for (int i = 0; i < nFrame; i++) {
-        final w = starW(i + 85, 1);
-        final h = starH(w);
-        final left = _safeClamp(_scatter(i + 85, 2) * (screenWidth - w - 4) + _jitter(i + 85, 3, jitterPx * 0.8), 0.0, screenWidth - w - 4);
-        final top = _safeClamp(justBelowTop + _scatter2(i + 85, 4) * (justBelowBottom - justBelowTop - h) + _jitter(i + 85, 5, 10), justBelowTop, justBelowBottom - h);
-        addStarIfSafe(left, top, w, h);
-      }
-    }
-
-    // Zone 2: Beside header (left/right of "Future Mind Challenges") — few stars, well scattered
-    final leftOfTextMax = (textLeft - pad - 6).clamp(0.0, screenWidth);
-    final rightOfTextMin = (textRight + pad).clamp(0.0, screenWidth);
-    if (leftOfTextMax > 10) {
-      final nSide = isMobile ? 2 : 3;
-      for (int i = 0; i < nSide; i++) {
-        final w = starW(i + 20, 1);
-        final h = starH(w);
-        final left = _safeClamp(_scatter(i + 20, 2) * leftOfTextMax + _jitter(i + 20, 3, jitterPx * 0.7), 0.0, leftOfTextMax);
-        final top = _safeClamp(textTop + _scatter2(i + 20, 4) * (textRect.height - h) + _jitter(i + 20, 5, jitterPx * 0.4), textTop, textBottom - h);
-        addStarIfSafe(left, top, w, h);
-      }
-    }
-    if (screenWidth - rightOfTextMin > 10) {
-      final nSide = isMobile ? 2 : 3;
-      for (int i = 0; i < nSide; i++) {
-        final w = starW(i + 30, 1);
-        final h = starH(w);
-        final rightSpace = (screenWidth - rightOfTextMin - w).clamp(0.0, screenWidth);
-        final left = screenWidth - rightSpace - w + _safeClamp(_scatter(i + 30, 2) * (rightSpace - 2) + _jitter(i + 30, 3, jitterPx * 0.7), 0.0, rightSpace - 2);
-        final top = _safeClamp(textTop + _scatter2(i + 30, 4) * (textRect.height - h) + _jitter(i + 30, 5, jitterPx * 0.4), textTop, textBottom - h);
-        addStarIfSafe(left, top, w, h);
-      }
-    }
-
-    // Zone 3: Gap between header and cards — fewer stars, even spread
-    final gapTop = (textBottom + pad).clamp(0.0, screenHeight);
-    final gapBottom = (cardsTop - pad - 6).clamp(0.0, screenHeight);
-    if (gapBottom > gapTop + 12) {
-      final nGap = isMobile ? 2 : 3;
-      for (int i = 0; i < nGap; i++) {
-        final w = starW(i + 40, 1);
-        final h = starH(w);
-        final left = _safeClamp(_scatter(i + 40, 2) * (screenWidth - w - 4) + _jitter(i + 40, 3, jitterPx), 0.0, screenWidth - w - 4);
-        final top = _safeClamp(gapTop + _scatter2(i + 40, 4) * (gapBottom - gapTop - h) + _jitter(i + 40, 5, jitterPx * 0.5), gapTop, gapBottom - h);
-        addStarIfSafe(left, top, w, h);
-      }
-    }
-
-    // Zone 4: Beside cards — fewer stars, scattered
-    final leftOfCardsMax = (cardsLeft - pad - 6).clamp(0.0, screenWidth);
-    final rightOfCardsMin = (cardsRight + pad).clamp(0.0, screenWidth);
-    if (leftOfCardsMax > 10) {
-      final nSide = isMobile ? 2 : 3;
-      for (int i = 0; i < nSide; i++) {
-        final w = starW(i + 50, 1);
-        final h = starH(w);
-        final left = _safeClamp(_scatter(i + 50, 2) * leftOfCardsMax + _jitter(i + 50, 3, jitterPx * 0.7), 0.0, leftOfCardsMax);
-        final top = _safeClamp(cardsTop + _scatter2(i + 50, 4) * (cardsRect.height - h) + _jitter(i + 50, 5, jitterPx * 0.5), cardsTop, cardsBottom - h);
-        addStarIfSafe(left, top, w, h);
-      }
-    }
-    if (screenWidth - rightOfCardsMin > 10) {
-      final nSide = isMobile ? 2 : 3;
-      for (int i = 0; i < nSide; i++) {
-        final w = starW(i + 60, 1);
-        final h = starH(w);
-        final rightSpace = (screenWidth - rightOfCardsMin - w).clamp(0.0, screenWidth);
-        final left = screenWidth - rightSpace - w + _safeClamp(_scatter(i + 60, 2) * (rightSpace - 2) + _jitter(i + 60, 3, jitterPx * 0.7), 0.0, rightSpace - 2);
-        final top = _safeClamp(cardsTop + _scatter2(i + 60, 4) * (cardsRect.height - h) + _jitter(i + 60, 5, jitterPx * 0.5), cardsTop, cardsBottom - h);
-        addStarIfSafe(left, top, w, h);
-      }
-    }
-
-    // Zone 5: Bottom band — fewer stars, even spread
-    final bottomBandTop = (cardsBottom + pad).clamp(0.0, screenHeight);
-    final bottomBandBottom = (screenHeight - 16).clamp(0.0, screenHeight);
-    if (bottomBandBottom > bottomBandTop + 12) {
-      final nBottom = isMobile ? 4 : 5;
-      for (int i = 0; i < nBottom; i++) {
-        final w = starW(i + 70, 1);
-        final h = starH(w);
-        final left = _safeClamp(_scatter(i + 70, 2) * (screenWidth - w - 4) + _jitter(i + 70, 3, jitterPx), 0.0, screenWidth - w - 4);
-        final top = _safeClamp(bottomBandTop + _scatter2(i + 70, 4) * (bottomBandBottom - bottomBandTop - h) + _jitter(i + 70, 5, jitterPx * 0.6), bottomBandTop, bottomBandBottom - h);
-        addStarIfSafe(left, top, w, h);
-      }
-    }
-
-    // Clouds: spread across same zones as stars (top full width, beside header, gap, beside cards, bottom full width).
-    final cloudCount = isMobile ? 5 : 6;
-    final cw = isMobile ? 26.0 : 32.0;
+    // Clouds: scale by screen size on web — fewer on small screens to prevent clustering
+    final cloudCount = isMobile ? 16 : ((screenArea / 80000).round().clamp(3, 6));
+    final cw = isMobile ? 26.0 : (screenWidth * 0.035).clamp(24.0, 36.0);
     final ch = cw * 0.68;
     for (int i = 0; i < cloudCount; i++) {
-      double left;
-      double top;
-      final zone = i % cloudCount;
-      if (zone == 0) {
-        // Top band (full width)
-        final topBandB = (textTop - pad - ch).clamp(0.0, screenHeight);
-        if (topBandB > ch + 4) {
-          left = _safeClamp(_scatter(i + 120, 1) * (screenWidth - cw - 8) + _jitter(i + 120, 2, 20), 0.0, screenWidth - cw - 8);
-          top = _safeClamp(_scatter2(i + 120, 3) * (topBandB - ch) + _jitter(i + 120, 4, 8), 0.0, topBandB - ch);
-        } else { continue; }
-      } else if (zone == 1) {
-        // Beside header (left)
-        final leftMax = (textLeft - pad - cw).clamp(0.0, screenWidth);
-        if (leftMax <= 0) continue;
-        left = _safeClamp(_scatter(i + 120, 5) * leftMax + _jitter(i + 120, 6, 12), 0.0, leftMax);
-        top = _safeClamp(textTop + _scatter2(i + 120, 7) * (textRect.height - ch) + _jitter(i + 120, 8, 6), textTop, textBottom - ch);
-      } else if (zone == 2) {
-        // Gap between header and cards (full width)
-        final gTop = (textBottom + pad).clamp(0.0, screenHeight);
-        final gBottom = (cardsTop - pad - ch).clamp(0.0, screenHeight);
-        if (gBottom <= gTop + ch) continue;
-        left = _safeClamp(_scatter(i + 120, 9) * (screenWidth - cw - 8) + _jitter(i + 120, 10, 24), 0.0, screenWidth - cw - 8);
-        top = _safeClamp(gTop + _scatter2(i + 120, 11) * (gBottom - gTop - ch) + _jitter(i + 120, 12, 6), gTop, gBottom - ch);
-      } else if (zone == 3) {
-        // Beside cards (right)
-        final rightSpace = (screenWidth - cardsRight - pad - cw).clamp(0.0, screenWidth);
-        if (rightSpace <= 0) continue;
-        left = screenWidth - rightSpace - cw + _safeClamp(_scatter(i + 120, 13) * (rightSpace - 4) + _jitter(i + 120, 14, 12), 0.0, rightSpace - 4);
-        top = _safeClamp(cardsTop + _scatter2(i + 120, 15) * (cardsRect.height - ch) + _jitter(i + 120, 16, 6), cardsTop, cardsBottom - ch);
+      final band = (i * numBands) ~/ cloudCount;
+      final bandTop = topBoundary + band * bandHeight + 16;
+      final bandBottom = topBoundary + (band + 1) * bandHeight - ch - 16;
+      if (bandBottom <= bandTop) continue;
+
+      int cloudZone;
+      if (isMobile) {
+        cloudZone = i % 3;
       } else {
-        // Bottom band (full width)
-        final botTop = (cardsBottom + pad).clamp(0.0, screenHeight);
-        final botBottom = (screenHeight - ch - 8).clamp(0.0, screenHeight);
-        if (botBottom <= botTop + ch) continue;
-        left = _safeClamp(_scatter(i + 120, 17) * (screenWidth - cw - 8) + _jitter(i + 120, 18, 24), 0.0, screenWidth - cw - 8);
-        top = _safeClamp(botTop + _scatter2(i + 120, 19) * (botBottom - botTop - ch) + _jitter(i + 120, 20, 8), botTop, botBottom - ch);
+        final seq = i % 8;
+        cloudZone = seq < 4 ? 1 : (seq < 6 && useLeftZone ? 0 : (seq < 8 && useRightZone ? 2 : 1));
+      }
+      double left;
+      double top = bandTop + _safeClamp(
+        _scatter2(i + 200, 1) * (bandBottom - bandTop) + _jitter(i + 200, 2, 22),
+        0.0, bandBottom - bandTop,
+      );
+
+      if (cloudZone == 0 && useLeftZone && leftStripMax > leftStripMin + cw + 8) {
+        left = leftStripMin + _safeClamp(_scatter(i + 200, 3) * (leftStripMax - leftStripMin - cw) + _jitter(i + 200, 4, 18), 0.0, leftStripMax - leftStripMin - cw);
+      } else if (cloudZone == 1) {
+        final bandCenterY = (bandTop + bandBottom) / 2;
+        final inGap = bandCenterY >= gapTop && bandCenterY <= gapBottom;
+        final inCardBand = bandCenterY >= cardsTop && bandCenterY <= cardsBottom;
+        final contentL = inCardBand ? cardsLeft : textLeft;
+        final contentR = inCardBand ? cardsRight : textRight;
+        final centerL = (contentL - leftStripMax - pad - cw).clamp(0.0, screenWidth);
+        final centerR = (rightStripMin - contentR - pad - cw).clamp(0.0, screenWidth);
+
+        if (inGap && gapCenterWidth > cw + 12) {
+          left = textLeft + pad + _safeClamp(_scatter(i + 200, 5) * (textRight - textLeft - cw - pad * 2) + _jitter(i + 200, 6, 15), 0.0, textRight - textLeft - cw - pad * 2);
+        } else if (centerL > cw + 8) {
+          left = leftStripMax + pad + _safeClamp(_scatter(i + 200, 7) * centerL + _jitter(i + 200, 8, 12), 0.0, centerL);
+        } else if (centerR > cw + 8) {
+          left = contentR + pad + _safeClamp(_scatter(i + 200, 9) * centerR + _jitter(i + 200, 10, 12), 0.0, centerR);
+        } else if (useRightZone && rightStripMax > rightStripMin + cw + 8) {
+          final rw = (rightStripMax - rightStripMin - cw).clamp(0.0, screenWidth);
+          left = rightStripMin + _safeClamp(_scatter(i + 200, 11) * rw, 0.0, rw);
+        } else if (useLeftZone && leftStripMax > leftStripMin + cw + 8) {
+          left = leftStripMin + _safeClamp(_scatter(i + 200, 9) * (leftStripMax - leftStripMin - cw), 0.0, leftStripMax - leftStripMin - cw);
+        } else {
+          continue;
+        }
+      } else if (cloudZone == 2 && (useRightZone || isMobile)) {
+        if (rightStripMax > rightStripMin + cw + 8) {
+          final rw = (rightStripMax - rightStripMin - cw).clamp(0.0, screenWidth);
+          left = rightStripMin + _safeClamp(_scatter(i + 200, 10) * rw + _jitter(i + 200, 11, rw * 0.5), 0.0, rw);
+        } else {
+          if ((i % 2 == 0) && rightStripMax > rightStripMin + cw + 8) {
+            final rw = (rightStripMax - rightStripMin - cw).clamp(0.0, screenWidth);
+            left = rightStripMin + _safeClamp(_scatter(i + 200, 10) * rw, 0.0, rw);
+          } else if (leftStripMax > leftStripMin + cw + 8) {
+            left = leftStripMin + _safeClamp(_scatter(i + 200, 9) * (leftStripMax - leftStripMin - cw), 0.0, leftStripMax - leftStripMin - cw);
+          } else {
+            continue;
+          }
+        }
+      } else {
+        if ((i % 2 == 0) && rightStripMax > rightStripMin + cw + 8) {
+          final rw = (rightStripMax - rightStripMin - cw).clamp(0.0, screenWidth);
+          left = rightStripMin + _safeClamp(_scatter(i + 200, 10) * rw, 0.0, rw);
+        } else if (leftStripMax > leftStripMin + cw + 8) {
+          left = leftStripMin + _safeClamp(_scatter(i + 200, 9) * (leftStripMax - leftStripMin - cw), 0.0, leftStripMax - leftStripMin - cw);
+        } else {
+          continue;
+        }
       }
       if (!canPlaceCloud(left, top, cw, ch)) continue;
       elements.add(Positioned(left: left, top: top, child: SvgPicture.asset('assets/images/cloud.svg', width: cw, height: ch)));
