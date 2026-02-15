@@ -59,7 +59,6 @@ class ApiService {
     }
   }
 
- 
   /// POST /auth/register to server
   Future<void> register({ // Register is an action, therefore it needs to return nothing
     required String email,
