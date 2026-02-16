@@ -59,6 +59,46 @@ class ApiService {
     }
   }
 
+  Future<void> forgotPassword({
+    required String email,
+  }) async {
+    try{
+      final res = await _dio.post('/auth/forgot-password', data: {
+          'email': email,
+        },
+      );
+      print(res.data);
+    } on DioException catch (e) { // dio specific errors
+      final statusCode = e.response?.statusCode; // server error code 404/400/etc.
+      final body = e.response?.data; // server response data
+      throw Exception('Forgot Password: Email request failed ($statusCode): $body'); 
+    } catch (e) { // all other error points
+      throw Exception('Forgot Password: Email request failed $e');
+    }
+  }
+  
+  Future<void> resetPassword({
+    required String token,
+    required String password,
+    required String confirmPassword,
+  }) async{
+    try{
+      final res = await _dio.post('/auth/reset-password', data: {
+          'token': token,
+          'password': password,
+          'confirmPassword': confirmPassword,
+        },
+      );
+      print(res.data);
+    } on DioException catch (e) { // dio specific errors
+      final statusCode = e.response?.statusCode; // server error code 404/400/etc.
+      final body = e.response?.data; // server response data
+      throw Exception('Reset Password: request failed ($statusCode): $body'); 
+    } catch (e) { // all other error points
+      throw Exception('Forgot Password: request failed $e');
+    }
+  }
+
   /// POST /auth/register to server
   Future<void> register({ // Register is an action, therefore it needs to return nothing
     required String email,

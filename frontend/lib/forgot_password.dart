@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'main.dart';
+import 'api_service.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -30,14 +31,13 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     setState(() => _sending = true);
 
     try {
-      // TODO: hook this to your backend or Supabase reset flow
-      // Example (if using Supabase reset email):
-      // await Supabase.instance.client.auth.resetPasswordForEmail(email);
-
+      await ApiService.instance.forgotPassword( // use apiservice login function
+        email: email,
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('If that email exists, a reset link was sent.'),
+          content: const Text('Check your email. We have sent you a verification link to the address you provided.'),
           backgroundColor: MyApp.homeTealGreen,
         ),
       );
