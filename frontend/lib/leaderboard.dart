@@ -371,7 +371,7 @@ class _LeaderboardState extends State<Leaderboard> {
 
     var query = supabase
         .from('test_attempts')
-        .select('score, duration_seconds, question_list, round, profiles(name)')
+        .select('score, duration_seconds, question_list, round, profiles(name, country, school)') // added country, school
         .eq('topic_id', topicId);
 
     if (round != null && round.isNotEmpty) {
@@ -749,6 +749,10 @@ class _LeaderboardState extends State<Leaderboard> {
                             final starCount = _getStarCount(score, totalQuestions);
                             final userName = user['profiles']?['name'] ?? 'Unknown';
                             final roundLabel = _isMathRoundTopic(selectedTopic!) ? _roundLabel(user['round'] as String? ?? 'local') : null;
+
+                            final profile = user['profiles'] as Map<String, dynamic>?;
+                            final country = (profile?['country']).toString().trim();
+                            final school  = (profile?['school']).toString().trim();
                             
                             return Container(
                               margin: EdgeInsets.only(bottom: isMobile ? 12 : 16),
@@ -776,7 +780,7 @@ class _LeaderboardState extends State<Leaderboard> {
                                 children: [
                                   // User name
                                   Text(
-                                    userName,
+                                     '$userName • $country • $school',
                                     style: TextStyle(
                                       fontSize: isMobile ? 18 : 20,
                                       fontWeight: FontWeight.bold,
@@ -793,8 +797,7 @@ class _LeaderboardState extends State<Leaderboard> {
                                     children: [
                                       // Topic name, round (if Math), and points
                                       Text(
-                                        selectedTopic! + (roundLabel != null ? ' • $roundLabel' : '') + ': ${score.toInt()} pts',
-                                        style: TextStyle(
+                                         '${selectedTopic!}${roundLabel != null ? ' • $roundLabel' : ''}: ${score.toInt()} pts',                                        style: TextStyle(
                                           fontSize: isMobile ? 14 : 16,
                                           color: MyApp.homeGreyText,
                                           fontFamily: 'sans-serif',
