@@ -7,6 +7,7 @@ import 'main.dart';
 import 'api_service.dart';
 import 'signup/signup_screen1.dart';
 import 'platform_terms.dart';
+import 'forgot_password.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -261,6 +262,33 @@ class _LoginPageState extends State<LoginPage> { // stateful because transitions
           ),
         ),
       ),
+
+      SizedBox(height: 8),
+      Align(
+        alignment: Alignment.centerLeft, // change to centerRight if you want it right-aligned
+        child: TextButton(
+          style: TextButton.styleFrom(
+            padding: EdgeInsets.zero,
+            minimumSize: const Size(0, 0),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ForgotPasswordPage()),
+            );
+          },
+          child: Text(
+            'Forgot password?',
+            style: TextStyle(
+              color: greySubtitle, // subtitle color
+              fontSize: isMobile ? 13 : 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ),
+
       SizedBox(height: isMobile ? 32 : 40),
       // Loading Spinner; for whenever 'loading' is triggered.
       if (_isLoading) ...[
