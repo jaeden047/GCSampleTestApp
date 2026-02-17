@@ -297,13 +297,16 @@ class _QuizPageState extends State<QuizPage> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   // Question number and text (wraps to new lines within card width)
-                                  MathText(
-                                    '${_currentQuestionIndex + 1}. ${currentQuestion['question_text']}',
-                                    textStyle: TextStyle(
-                                      fontSize: isMobile ? 18 : 22,
-                                      fontWeight: FontWeight.bold,
-                                      color: MyApp.homeDarkGreyText,
-                                      fontFamily: 'serif',
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: MathText(
+                                      '${_currentQuestionIndex + 1}. ${currentQuestion['question_text']}',
+                                      textStyle: TextStyle(
+                                        fontSize: isMobile ? 18 : 22,
+                                        fontWeight: FontWeight.bold,
+                                        color: MyApp.homeDarkGreyText,
+                                        fontFamily: 'serif',
+                                      ),
                                     ),
                                   ),
                                   SizedBox(height: isMobile ? 20 : 24),
