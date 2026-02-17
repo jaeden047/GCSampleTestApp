@@ -128,6 +128,7 @@ class _SignupScreen3State extends State<SignupScreen3> {
         'phone_number': widget.data.phoneNumber,
         'school': widget.data.institutionSchool,
         'country': widget.data.countryCode,
+        'region': widget.data.region,
         'gender': widget.data.gender,
         'address': widget.data.address,
         'grade': widget.data.grade,

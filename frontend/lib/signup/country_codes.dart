@@ -108,5 +108,24 @@ class CountryCodes {
       return null;
     }
   }
+
+  /// Maps continent (from CountryCode) to region for quiz set assignment.
+  /// asia_oceania = Set 1, africa = Set 2, americas = Set 3, europe = Set 4.
+  static String continentToRegion(String continent) {
+    switch (continent) {
+      case 'Africa':
+        return 'africa';
+      case 'Asia':
+      case 'Oceania':
+        return 'asia_oceania';
+      case 'North America':
+      case 'South America':
+        return 'americas';
+      case 'Europe':
+        return 'europe';
+      default:
+        return 'asia_oceania'; // fallback
+    }
+  }
 }
 

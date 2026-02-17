@@ -105,9 +105,23 @@ class MathGrades extends StatelessWidget {
         return;
       }
     } else {
-      try { // if round not sample, generate questions based on the grade chosen
+      try {
+        final profile = await supabase
+            .from('profiles')
+            .select('region')
+            .eq('id', user.id)
+            .maybeSingle();
+        final region = profile?['region'] as String? ?? 'americas';
+        final mapping = await supabase
+            .from('region_set_mapping')
+            .select('set_number')
+            .eq('region', region)
+            .maybeSingle();
+        final setNumber = (mapping?['set_number'] as int?) ?? 1;
         final questions = await supabase.rpc('generate_questions', params: {
           'topic_input': topicName,
+          'p_round': round,
+          'p_set_number': setNumber,
         });
         if (questions is! List || questions.isEmpty) {
           if (context.mounted) {
@@ -118,6 +132,14 @@ class MathGrades extends StatelessWidget {
           return;
         }
         questionIds = questions.cast<int>();
+        final setRow = await supabase
+            .from('question_sets')
+            .select('set_id')
+            .eq('topic_id', topicId)
+            .eq('round', round)
+            .eq('set_number', setNumber)
+            .maybeSingle();
+        questionSetId = setRow?['set_id'] as int?;
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -423,6 +445,13 @@ class MathGrades extends StatelessWidget {
                                                   mathGradesContext,
                                                   topicName,
                                                   'sample',
+                                                  roundSelectionContext,
+                                                ),
+                                                onStartRoundQuiz: (roundSelectionContext, round) =>
+                                                    _startQuiz(
+                                                  mathGradesContext,
+                                                  topicName,
+                                                  round,
                                                   roundSelectionContext,
                                                 ),
                                               ),
