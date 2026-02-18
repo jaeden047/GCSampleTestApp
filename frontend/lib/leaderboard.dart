@@ -381,7 +381,7 @@ class _LeaderboardState extends State<Leaderboard> {
     final attemptsResponse = await query
         .order('score', ascending: false)
         .order('duration_seconds', ascending: true)
-        .limit(10);
+        .limit(50);
 
     return List<Map<String, dynamic>>.from(attemptsResponse);
   }
@@ -543,37 +543,43 @@ class _LeaderboardState extends State<Leaderboard> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Global Leaderboard',
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: MyApp.homeDarkGreyText,
-                          fontFamily: 'serif',
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minWidth: 180),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Global Leaderboard',
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: MyApp.homeDarkGreyText,
+                            fontFamily: 'serif',
+                          ),
                         ),
-                      ),
-                      SizedBox(height: 5),
-                      Text(
-                        'futuremind 2.0',
-                        style: TextStyle(
-                          fontSize: 20,
-                          color: MyApp.homeGreyText,
-                          fontFamily: 'sans-serif',
+                        SizedBox(height: 5),
+                        Text(
+                          'futuremind 2.0',
+                          style: TextStyle(
+                            fontSize: 20,
+                            color: MyApp.homeGreyText,
+                            fontFamily: 'sans-serif',
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-                Flexible(
+                SizedBox(width: 4),
+                SizedBox(
+                  width: isMobile ? 140 : 160,
                   child: gradeDropdown,
                 ),
                 if (roundDropdown != null) ...[
-                  SizedBox(width: 12),
-                  Flexible(
+                  SizedBox(width: 8),
+                  SizedBox(
+                    width: isMobile ? 120 : 140,
                     child: roundDropdown,
                   ),
                 ],
@@ -712,8 +718,8 @@ class _LeaderboardState extends State<Leaderboard> {
           final leaderboard = snapshot.data!;
           
           // Calculate estimated content height based on number of items
-          // Header: ~120px, Each card: ~100px, spacing: ~16px
-          final estimatedContentHeight = 120.0 + (leaderboard.length * 116.0);
+          // Use ~120px per user to cover up to 50 users when scrolling
+          final estimatedContentHeight = 120.0 + (leaderboard.length * 120.0);
           final actualContentHeight = estimatedContentHeight > screenHeight 
               ? estimatedContentHeight 
               : screenHeight;

@@ -617,8 +617,8 @@ class _ResultsState extends State<Results> { //
             : LayoutBuilder(
             builder: (context, constraints) {
               // Calculate estimated content height based on number of items
-              // Title header: ~80px, Each card: ~120px (collapsed), spacing: ~20px
-              final estimatedContentHeight = 100.0 + (numRows * 140.0);
+              // Use ~5500px per attempt to cover expanded state (up to 50+ questions per attempt)
+              final estimatedContentHeight = 100.0 + (numRows * 5500.0);
               final actualContentHeight = estimatedContentHeight > screenHeight 
                   ? estimatedContentHeight 
                   : screenHeight;
