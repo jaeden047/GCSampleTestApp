@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'main.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'api_service.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
@@ -29,10 +30,15 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     }
 
     setState(() => _sending = true);
+    const redirectUrl = 'https://greencontributor.org/reset-password';
 
     try {
-      await ApiService.instance.forgotPassword( // use apiservice login function
-        email: email,
+      //await ApiService.instance.forgotPassword( // use apiservice login function
+        //email: email,
+      //);
+      await Supabase.instance.client.auth.resetPasswordForEmail(
+        email,
+        redirectTo: redirectUrl,
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
