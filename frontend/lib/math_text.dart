@@ -30,6 +30,21 @@ class MathText extends StatelessWidget {
     final style = textStyle ?? DefaultTextStyle.of(context).style;
     final fontSize = mathFontSize ?? style.fontSize ?? 14.0;
 
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth;
+        if (maxWidth.isFinite && maxWidth > 0) {
+          return ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxWidth),
+            child: _buildContent(normalized, style, fontSize, maxWidth),
+          );
+        }
+        return _buildContent(normalized, style, fontSize, double.infinity);
+      },
+    );
+  }
+
+  Widget _buildContent(String normalized, TextStyle style, double fontSize, double maxWidth) {
     // Display math: split by $$ and render math segments
     if (normalized.contains(r'$$')) {
       final segments = normalized.split(r'$$');
@@ -38,9 +53,9 @@ class MathText extends StatelessWidget {
         final segment = segments[i].trim();
         if (segment.isEmpty) continue;
         if (i % 2 == 1) {
-          children.add(_buildMath(segment, fontSize, style));
+          children.add(_buildMathConstrained(segment, fontSize, style, maxWidth));
         } else {
-          children.add(_buildSegment(segment, fontSize, style));
+          children.add(_buildSegment(segment, fontSize, style, maxWidth));
         }
       }
       return Wrap(
@@ -57,9 +72,9 @@ class MathText extends StatelessWidget {
         final segment = segments[i];
         if (segment.isEmpty) continue;
         if (i % 2 == 1) {
-          children.add(_buildMath(segment.trim(), fontSize, style));
+          children.add(_buildMathConstrained(segment.trim(), fontSize, style, maxWidth));
         } else {
-          children.add(_buildSegment(segment, fontSize, style));
+          children.add(_buildSegment(segment, fontSize, style, maxWidth));
         }
       }
       return Wrap(
@@ -70,7 +85,7 @@ class MathText extends StatelessWidget {
 
     // Whole string might be a single LaTeX expression (e.g. after normalizing \\ to \)
     if (_looksLikeLatex(normalized)) {
-      return _buildMath(normalized, fontSize, style);
+      return _buildMathConstrained(normalized, fontSize, style, maxWidth);
     }
 
     return Text(normalized, style: style, textAlign: textAlign);
@@ -90,11 +105,11 @@ class MathText extends StatelessWidget {
     return count;
   }
 
-  Widget _buildSegment(String segment, double fontSize, TextStyle style) {
+  Widget _buildSegment(String segment, double fontSize, TextStyle style, [double? maxWidth]) {
     if (segment.isEmpty) return SizedBox.shrink();
     final seg = _normalizeBackslashes(segment);
     if (_looksLikeLatex(seg)) {
-      return _buildMath(seg, fontSize, style);
+      return _buildMathConstrained(seg, fontSize, style, maxWidth ?? double.infinity);
     }
     return Text(seg, style: style, textAlign: textAlign);
   }
@@ -113,6 +128,20 @@ class MathText extends StatelessWidget {
         t.contains(r'\det') ||
         t.contains(r'\int') ||
         t.contains(r'\sum');
+  }
+
+  /// Wraps Math.tex in FittedBox so it scales down on narrow screens instead of overflowing.
+  Widget _buildMathConstrained(String latex, double fontSize, TextStyle fallbackStyle, double maxWidth) {
+    final mathWidget = _buildMath(latex, fontSize, fallbackStyle);
+    if (!maxWidth.isFinite || maxWidth <= 0) return mathWidget;
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: mathWidget,
+      ),
+    );
   }
 
   Widget _buildMath(String latex, double fontSize, TextStyle fallbackStyle) {

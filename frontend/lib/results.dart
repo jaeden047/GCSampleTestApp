@@ -219,9 +219,12 @@ class _ResultsState extends State<Results> { //
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            MathText(
-              '${i + 1}. $questionText',
-              textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: MyApp.homeDarkGreyText),
+            SizedBox(
+              width: double.infinity,
+              child: MathText(
+                '${i + 1}. $questionText',
+                textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: MyApp.homeDarkGreyText),
+              ),
             ),
             SizedBox(height: 4),
             ...answerOptions.map((row) {

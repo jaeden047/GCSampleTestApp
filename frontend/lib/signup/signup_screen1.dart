@@ -39,6 +39,7 @@ class _SignupScreen1State extends State<SignupScreen1> {
       _phoneController.text = widget.initialData!.phoneNumber ?? '';
       final code = widget.initialData!.countryCode ?? 'CA';
       _selectedCountryCode = CountryCodes.findByCode(code) ?? CountryCodes.getDefault();
+      _selectedContinent = _selectedCountryCode.continent;
       _selectedGender = widget.initialData!.gender;
       print(_selectedCountryCode.code);
       // once I open up this page, it will default me to 'CA' because i have no code selected.
@@ -90,9 +91,9 @@ class _SignupScreen1State extends State<SignupScreen1> {
     final data = (widget.initialData ?? SignupData()).copyWith(
       fullName: _nameController.text.trim(),
       email: _emailController.text.trim(),
-
       phoneNumber: fullPhoneNumber,
       countryCode: _selectedCountryCode.code,
+      region: CountryCodes.continentToRegion(_selectedCountryCode.continent),
       gender: _selectedGender,
     );
     

@@ -4,16 +4,19 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'main.dart';
 
 /// Shown when the user taps a Math category (e.g. Grade 5 and 6).
-/// Shows Sample quiz (open), Local round (locked), Final round (locked).
+/// Sample quiz always open. Local/Final unlocked per region via region_round_unlocks.
 class MathRoundSelection extends StatefulWidget {
   final String topicName;
   /// Called when user taps Sample Quiz. Pass this widget's context so the caller can pop it before showing quiz rules.
   final Future<void> Function(BuildContext roundSelectionContext) onStartSampleQuiz;
+  /// Called when user taps Local or Final round (when unlocked for their region).
+  final Future<void> Function(BuildContext roundSelectionContext, String round) onStartRoundQuiz;
 
   const MathRoundSelection({
     super.key,
     required this.topicName,
     required this.onStartSampleQuiz,
+    required this.onStartRoundQuiz,
   });
 
   @override
@@ -25,11 +28,53 @@ class _MathRoundSelectionState extends State<MathRoundSelection> {
   bool _loadingEligibility = true;
   bool _eligibleForFinal = false;
   bool _loadingSample = false;
+  bool _localUnlocked = false;
+  bool _finalUnlocked = false;
+  bool _loadingUnlocks = true;
+  bool _loadingLocal = false;
+  bool _loadingFinal = false;
 
   @override
   void initState() {
     super.initState();
     _checkFinalRoundEligibility();
+    _checkRegionUnlocks();
+  }
+
+  /// Fetches region_round_unlocks for user's region. Unlock applies to all grade categories.
+  Future<void> _checkRegionUnlocks() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) {
+      setState(() => _loadingUnlocks = false);
+      return;
+    }
+    try {
+      final profile = await supabase
+          .from('profiles')
+          .select('region')
+          .eq('id', user.id)
+          .maybeSingle();
+      final region = profile?['region'] as String? ?? 'americas';
+      final rows = await supabase
+          .from('region_round_unlocks')
+          .select('round, is_unlocked')
+          .eq('region', region);
+      bool localUnlocked = false;
+      bool finalUnlocked = false;
+      for (final row in rows) {
+        if (row['round'] == 'local' && row['is_unlocked'] == true) localUnlocked = true;
+        if (row['round'] == 'final' && row['is_unlocked'] == true) finalUnlocked = true;
+      }
+      if (mounted) {
+        setState(() {
+          _loadingUnlocks = false;
+          _localUnlocked = localUnlocked;
+          _finalUnlocked = finalUnlocked;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingUnlocks = false);
+    }
   }
 
   /// Top 20% of students by best score in local round for this topic are eligible for final round.
@@ -93,17 +138,46 @@ class _MathRoundSelectionState extends State<MathRoundSelection> {
 
   Future<void> _onSampleQuizTap(BuildContext context) async {
     if (_loadingSample) return;
+    final messenger = ScaffoldMessenger.of(context);
     setState(() => _loadingSample = true);
     try {
       await widget.onStartSampleQuiz(context);
     } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Something went wrong. Please try again.')),
-        );
-      }
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Something went wrong. Please try again.')),
+      );
     } finally {
       if (mounted) setState(() => _loadingSample = false);
+    }
+  }
+
+  Future<void> _onLocalQuizTap(BuildContext context) async {
+    if (_loadingLocal || !_localUnlocked) return;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _loadingLocal = true);
+    try {
+      await widget.onStartRoundQuiz(context, 'local');
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Something went wrong. Please try again.')),
+      );
+    } finally {
+      if (mounted) setState(() => _loadingLocal = false);
+    }
+  }
+
+  Future<void> _onFinalQuizTap(BuildContext context) async {
+    if (_loadingFinal || !_finalUnlocked) return;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _loadingFinal = true);
+    try {
+      await widget.onStartRoundQuiz(context, 'final');
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Something went wrong. Please try again.')),
+      );
+    } finally {
+      if (mounted) setState(() => _loadingFinal = false);
     }
   }
 
@@ -461,19 +535,20 @@ class _MathRoundSelectionState extends State<MathRoundSelection> {
                               _RoundCard(
                                 title: 'Local Round',
                                 description: 'Take the quiz with the current question set. Your score will count toward final round eligibility.',
-                                isLocked: true,
+                                isLocked: !_localUnlocked,
                                 isMobile: isMobile,
-                                onTap: null,
+                                loading: _loadingUnlocks || _loadingLocal,
+                                onTap: _localUnlocked ? () => _onLocalQuizTap(context) : null,
                               ),
                               SizedBox(height: isMobile ? 20 : 24),
                               _RoundCard(
                                 title: 'Final Round',
                                 description: 'Top 20% of students from local round will be eligible to write the final quiz.',
-                                isLocked: true,
+                                isLocked: !(_finalUnlocked && _eligibleForFinal),
                                 isMobile: isMobile,
                                 eligible: _eligibleForFinal,
-                                loading: _loadingEligibility,
-                                onTap: null,
+                                loading: _loadingEligibility || _loadingUnlocks || _loadingFinal,
+                                onTap: (_finalUnlocked && _eligibleForFinal) ? () => _onFinalQuizTap(context) : null,
                               ),
                             ],
                           ),

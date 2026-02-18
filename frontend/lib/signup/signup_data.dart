@@ -5,6 +5,7 @@ class SignupData {
   String? email;
   String? phoneNumber;
   String? countryCode;
+  String? region; // asia_oceania, africa, americas, europe (from country for quiz set assignment)
   String? gender;
   String? grade;
 
@@ -23,6 +24,7 @@ class SignupData {
     this.email,
     this.phoneNumber,
     this.countryCode,
+    this.region,
     this.gender,
     this.grade,
     this.address,
@@ -39,6 +41,7 @@ class SignupData {
     String? email,
     String? phoneNumber,
     String? countryCode,
+    String? region,
     String? gender,
     String? grade,
     String? address,
@@ -53,6 +56,7 @@ class SignupData {
       email: email ?? this.email,
       phoneNumber: phoneNumber ?? this.phoneNumber,
       countryCode: countryCode ?? this.countryCode,
+      region: region ?? this.region,
       gender: gender ?? this.gender,
       grade: grade ?? this.grade,
       address: address ?? this.address,
