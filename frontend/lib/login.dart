@@ -90,9 +90,9 @@ class _LoginPageState extends State<LoginPage> { // stateful because transitions
     }
     setState(() => _isLoading = true); // loading wheel
     try { // After inputs validated, we send to api
-      final email = emailController.text.trim();
-      final password = passwordController.text;
-      final supabase = Supabase.instance.client;
+      //final email = emailController.text.trim();
+      //final password = passwordController.text;
+      //final supabase = Supabase.instance.client;
       try {
         // LOGIN FLOW
         if (!mounted) return;

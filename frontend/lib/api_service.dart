@@ -10,6 +10,7 @@ class ApiService {
 
   // PROD base URL from doc:
   static const String baseUrl = 'https://www.greencontributor.org/api/v1';
+  static const String supabaseHiddenPassword = 'hiddenPassword123!'; // Hidden Password due to Supabase Backend 
 
   final TokenStore _tokenStore = PlatformTokenStore();
 
@@ -31,14 +32,14 @@ class ApiService {
   // removes jwt key
   // ----- API calls -----
 
-  // Supabase Sign-Up
+  // Supabase Sign-Up (hidden Password)
   Future<void> supabaseSignUp({ // Supabase Signup is Standardized; need to import fields through profile.
     required String email,
     required String password,
   }) async {
     final res = await supabase.auth.signUp(
       email: email,
-      password: password,
+      password: supabaseHiddenPassword,
     );
     if (res.user == null) {
       throw Exception('Supabase sign up failed (no user returned).');
@@ -52,7 +53,7 @@ class ApiService {
   }) async {
     final res = await supabase.auth.signInWithPassword(
       email: email,
-      password: password,
+      password: supabaseHiddenPassword,
     );
     if (res.user == null) {
       throw Exception('Supabase login failed (no user returned).');
