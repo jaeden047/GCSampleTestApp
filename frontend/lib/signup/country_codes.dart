@@ -124,7 +124,7 @@ class CountryCodes {
       case 'Europe':
         return 'europe';
       default:
-        return 'asia_oceania'; // fallback
+        return 'americas'; // fallback
     }
   }
 }
