@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart'; //supabase flutter sdk
 import 'package:flutter_svg/flutter_svg.dart';
 import 'quiz.dart';
 import 'main.dart';
+import 'quiz_rules.dart';
 
 // EnvTopics page
 // Showcase all environmental quiz topics for the users to select
@@ -96,32 +97,6 @@ class _EnvTopicsState extends State<EnvTopics> {
 
     final topicId = topicResponse['topic_id'];
 
-    // List of quizzes that are restricted to a single attempt only
-    List<String> oneTryTopics = ['Plastic Pollution Focus'];
-
-    // Check if the user has already attempted the specific quizzes
-    if (oneTryTopics.contains(topicName)) {
-      try {
-        final response = await supabase.rpc('check_user_attempt', params: {
-          'p_user_id': user.id,  // Current user ID
-          'p_topic_id': topicId,  // Topic ID for the quiz
-        });
-        // If the response is true, user has already attempted the quiz
-        if (response == true) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('You have already attempted this quiz.')),
-          );
-          return;
-        }
-        // Proceed with starting the quiz
-      } catch (e) {
-        // Handle any errors (e.g., network, function error)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error checking previous attempts: $e')),
-        );
-      }
-    }
-
     try {
       // 1. Generate 10 question IDs for the quiz
       final questions = await supabase.rpc('generate_questions', params: {
@@ -130,6 +105,14 @@ class _EnvTopicsState extends State<EnvTopics> {
 
       if (questions is List) {
         final questionIds = questions.cast<int>();
+        if (questionIds.isEmpty) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('No questions found for this topic. Come back later.')),
+            );
+          }
+          return;
+        }
 
         // 2. Create the quiz and generate an ID
         final quizAttempt = await supabase.rpc('create_new_quiz', params: {
@@ -146,21 +129,44 @@ class _EnvTopicsState extends State<EnvTopics> {
 
           if (quizQuestions is List) {
             final questionsWithAnswers = quizQuestions.cast<Map<String, dynamic>>();
-            // 4. Navigate to quiz page if the attempt ID is returned
+            if (questionsWithAnswers.isEmpty) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('No questions could be loaded. Please try again.')),
+                );
+              }
+              return;
+            }
+            // 4. Show quiz rules first, then navigate to quiz page
+            if (!mounted) return;
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => QuizPage(
-                  attemptId: quizAttempt,
-                  questions: questionsWithAnswers,
-                  topicName: topicName,
-                  onRedoQuiz: () => _startQuiz(context, topicName),
+                builder: (context) => QuizRulesScreen(
+                  onAgree: () {
+                    // After agreeing to rules, navigate to quiz
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => QuizPage(
+                          attemptId: quizAttempt,
+                          questions: questionsWithAnswers,
+                          topicName: topicName,
+                          onRedoQuiz: () => _startQuiz(context, topicName),
+                        ),
+                      ),
+                    ).then((_) {
+                      // Refresh taken quizzes after returning from quiz
+                      _fetchTakenQuizzes();
+                    });
+                  },
+                  onClose: () {
+                    // Close quiz rules and go back to quiz topic screen
+                    Navigator.pop(context);
+                  },
                 ),
               ),
-            ).then((_) {
-              // Refresh taken quizzes after returning from quiz
-              _fetchTakenQuizzes();
-            });
+            );
           }
         }
       }
@@ -336,7 +342,7 @@ class _EnvTopicsState extends State<EnvTopics> {
                                         isMobile: isMobile,
                                         onTap: () => _startQuiz(context, topic['title']!),
                                       );
-                                    }).toList(),
+                                    }),
                                   ],
                                 ),
                               ),
@@ -364,13 +370,13 @@ class _EnvTopicsState extends State<EnvTopics> {
     final leftZone = leftBoundary - 100; // Space on the left
     final rightZone = screenWidth - rightBoundary - 100; // Space on the right
     
-    // Left side decorations (only if there's space)
+    // Left side decorations (only if there's space) - more evenly distributed vertically
     if (leftZone > 50) {
-      // Left side stars
+      // Top section
       elements.add(
         Positioned(
           left: screenWidth * 0.05,
-          top: screenHeight * 0.15,
+          top: screenHeight * 0.10,
           child: SvgPicture.asset(
             'assets/images/pinkstar.svg',
             width: isMobile ? 12.0 : 18.0,
@@ -382,7 +388,7 @@ class _EnvTopicsState extends State<EnvTopics> {
       elements.add(
         Positioned(
           left: screenWidth * 0.08,
-          top: screenHeight * 0.25,
+          top: screenHeight * 0.18,
           child: SvgPicture.asset(
             'assets/images/pinkstar.svg',
             width: isMobile ? 10.0 : 15.0,
@@ -394,7 +400,7 @@ class _EnvTopicsState extends State<EnvTopics> {
       elements.add(
         Positioned(
           left: screenWidth * 0.03,
-          top: screenHeight * 0.35,
+          top: screenHeight * 0.25,
           child: SvgPicture.asset(
             'assets/images/cloud.svg',
             width: isMobile ? 40 : 55,
@@ -403,10 +409,11 @@ class _EnvTopicsState extends State<EnvTopics> {
         ),
       );
       
+      // Middle-top section
       elements.add(
         Positioned(
           left: screenWidth * 0.06,
-          top: screenHeight * 0.50,
+          top: screenHeight * 0.35,
           child: SvgPicture.asset(
             'assets/images/pinkstar.svg',
             width: isMobile ? 14.0 : 20.0,
@@ -418,7 +425,82 @@ class _EnvTopicsState extends State<EnvTopics> {
       elements.add(
         Positioned(
           left: screenWidth * 0.04,
+          top: screenHeight * 0.42,
+          child: SvgPicture.asset(
+            'assets/images/pinkstar.svg',
+            width: isMobile ? 11.0 : 16.0,
+            height: isMobile ? 10.4 : 15.1,
+          ),
+        ),
+      );
+      
+      // Middle section
+      elements.add(
+        Positioned(
+          left: screenWidth * 0.07,
+          top: screenHeight * 0.50,
+          child: SvgPicture.asset(
+            'assets/images/cloud.svg',
+            width: isMobile ? 35 : 48,
+            height: isMobile ? 24 : 33,
+          ),
+        ),
+      );
+      
+      elements.add(
+        Positioned(
+          left: screenWidth * 0.05,
+          top: screenHeight * 0.58,
+          child: SvgPicture.asset(
+            'assets/images/pinkstar.svg',
+            width: isMobile ? 13.0 : 19.0,
+            height: isMobile ? 12.3 : 17.9,
+          ),
+        ),
+      );
+      
+      // Middle-bottom section
+      elements.add(
+        Positioned(
+          left: screenWidth * 0.08,
           top: screenHeight * 0.65,
+          child: SvgPicture.asset(
+            'assets/images/pinkstar.svg',
+            width: isMobile ? 10.0 : 15.0,
+            height: isMobile ? 9.4 : 14.2,
+          ),
+        ),
+      );
+      
+      elements.add(
+        Positioned(
+          left: screenWidth * 0.04,
+          top: screenHeight * 0.72,
+          child: SvgPicture.asset(
+            'assets/images/pinkstar.svg',
+            width: isMobile ? 12.0 : 17.0,
+            height: isMobile ? 11.3 : 16.0,
+          ),
+        ),
+      );
+      
+      // Bottom section
+      elements.add(
+        Positioned(
+          left: screenWidth * 0.06,
+          top: screenHeight * 0.80,
+          child: SvgPicture.asset(
+            'assets/images/cloud.svg',
+            width: isMobile ? 32 : 45,
+            height: isMobile ? 22 : 31,
+          ),
+        ),
+      );
+      
+      elements.add(
+        Positioned(
+          left: screenWidth * 0.03,
+          top: screenHeight * 0.88,
           child: SvgPicture.asset(
             'assets/images/pinkstar.svg',
             width: isMobile ? 11.0 : 16.0,
@@ -428,13 +510,13 @@ class _EnvTopicsState extends State<EnvTopics> {
       );
     }
     
-    // Right side decorations (only if there's space)
+    // Right side decorations (only if there's space) - more evenly distributed vertically
     if (rightZone > 50) {
-      // Right side stars
+      // Top section
       elements.add(
         Positioned(
           right: screenWidth * 0.05,
-          top: screenHeight * 0.18,
+          top: screenHeight * 0.12,
           child: SvgPicture.asset(
             'assets/images/pinkstar.svg',
             width: isMobile ? 13.0 : 19.0,
@@ -446,7 +528,7 @@ class _EnvTopicsState extends State<EnvTopics> {
       elements.add(
         Positioned(
           right: screenWidth * 0.08,
-          top: screenHeight * 0.28,
+          top: screenHeight * 0.20,
           child: SvgPicture.asset(
             'assets/images/pinkstar.svg',
             width: isMobile ? 9.0 : 14.0,
@@ -458,7 +540,7 @@ class _EnvTopicsState extends State<EnvTopics> {
       elements.add(
         Positioned(
           right: screenWidth * 0.03,
-          top: screenHeight * 0.40,
+          top: screenHeight * 0.28,
           child: SvgPicture.asset(
             'assets/images/cloud.svg',
             width: isMobile ? 35 : 48,
@@ -467,10 +549,11 @@ class _EnvTopicsState extends State<EnvTopics> {
         ),
       );
       
+      // Middle-top section
       elements.add(
         Positioned(
           right: screenWidth * 0.07,
-          top: screenHeight * 0.55,
+          top: screenHeight * 0.38,
           child: SvgPicture.asset(
             'assets/images/pinkstar.svg',
             width: isMobile ? 12.0 : 17.0,
@@ -482,7 +565,82 @@ class _EnvTopicsState extends State<EnvTopics> {
       elements.add(
         Positioned(
           right: screenWidth * 0.04,
-          top: screenHeight * 0.70,
+          top: screenHeight * 0.45,
+          child: SvgPicture.asset(
+            'assets/images/pinkstar.svg',
+            width: isMobile ? 10.0 : 15.0,
+            height: isMobile ? 9.4 : 14.2,
+          ),
+        ),
+      );
+      
+      // Middle section
+      elements.add(
+        Positioned(
+          right: screenWidth * 0.06,
+          top: screenHeight * 0.53,
+          child: SvgPicture.asset(
+            'assets/images/cloud.svg',
+            width: isMobile ? 38 : 52,
+            height: isMobile ? 26 : 36,
+          ),
+        ),
+      );
+      
+      elements.add(
+        Positioned(
+          right: screenWidth * 0.08,
+          top: screenHeight * 0.60,
+          child: SvgPicture.asset(
+            'assets/images/pinkstar.svg',
+            width: isMobile ? 14.0 : 20.0,
+            height: isMobile ? 13.2 : 18.9,
+          ),
+        ),
+      );
+      
+      // Middle-bottom section
+      elements.add(
+        Positioned(
+          right: screenWidth * 0.05,
+          top: screenHeight * 0.68,
+          child: SvgPicture.asset(
+            'assets/images/pinkstar.svg',
+            width: isMobile ? 11.0 : 16.0,
+            height: isMobile ? 10.4 : 15.1,
+          ),
+        ),
+      );
+      
+      elements.add(
+        Positioned(
+          right: screenWidth * 0.07,
+          top: screenHeight * 0.75,
+          child: SvgPicture.asset(
+            'assets/images/pinkstar.svg',
+            width: isMobile ? 13.0 : 18.0,
+            height: isMobile ? 12.3 : 17.0,
+          ),
+        ),
+      );
+      
+      // Bottom section
+      elements.add(
+        Positioned(
+          right: screenWidth * 0.04,
+          top: screenHeight * 0.83,
+          child: SvgPicture.asset(
+            'assets/images/cloud.svg',
+            width: isMobile ? 30 : 42,
+            height: isMobile ? 20 : 28,
+          ),
+        ),
+      );
+      
+      elements.add(
+        Positioned(
+          right: screenWidth * 0.06,
+          top: screenHeight * 0.90,
           child: SvgPicture.asset(
             'assets/images/pinkstar.svg',
             width: isMobile ? 10.0 : 15.0,
@@ -496,7 +654,7 @@ class _EnvTopicsState extends State<EnvTopics> {
     elements.add(
       Positioned(
         left: centerX - 100,
-        top: screenHeight * 0.08,
+        top: screenHeight * 0.05,
         child: SvgPicture.asset(
           'assets/images/pinkstar.svg',
           width: isMobile ? 11.0 : 16.0,
@@ -508,7 +666,7 @@ class _EnvTopicsState extends State<EnvTopics> {
     elements.add(
       Positioned(
         left: centerX + 50,
-        top: screenHeight * 0.10,
+        top: screenHeight * 0.08,
         child: SvgPicture.asset(
           'assets/images/cloud.svg',
           width: isMobile ? 30 : 42,
@@ -517,13 +675,24 @@ class _EnvTopicsState extends State<EnvTopics> {
       ),
     );
     
-    // Bottom decorations (below content, positioned at bottom of viewport)
-    // Only show if there's enough vertical space
+    elements.add(
+      Positioned(
+        left: centerX - 50,
+        top: screenHeight * 0.03,
+        child: SvgPicture.asset(
+          'assets/images/pinkstar.svg',
+          width: isMobile ? 9.0 : 14.0,
+          height: isMobile ? 8.5 : 13.2,
+        ),
+      ),
+    );
+    
+    // Bottom decorations (below content, more evenly distributed)
     if (screenHeight > 600) {
       elements.add(
         Positioned(
           left: centerX - 80,
-          top: screenHeight * 0.85,
+          top: screenHeight * 0.92,
           child: SvgPicture.asset(
             'assets/images/pinkstar.svg',
             width: isMobile ? 13.0 : 18.0,
@@ -535,11 +704,23 @@ class _EnvTopicsState extends State<EnvTopics> {
       elements.add(
         Positioned(
           right: centerX - 120,
-          top: screenHeight * 0.88,
+          top: screenHeight * 0.95,
           child: SvgPicture.asset(
             'assets/images/pinkstar.svg',
             width: isMobile ? 10.0 : 14.0,
             height: isMobile ? 9.4 : 13.2,
+          ),
+        ),
+      );
+      
+      elements.add(
+        Positioned(
+          left: centerX + 30,
+          top: screenHeight * 0.88,
+          child: SvgPicture.asset(
+            'assets/images/cloud.svg',
+            width: isMobile ? 28 : 40,
+            height: isMobile ? 19 : 27,
           ),
         ),
       );

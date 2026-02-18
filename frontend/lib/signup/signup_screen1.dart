@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../main.dart';
 import 'signup_data.dart';
@@ -22,7 +21,8 @@ class _SignupScreen1State extends State<SignupScreen1> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   
-  CountryCode _selectedCountryCode = CountryCodes.getDefault();
+  CountryCode _selectedCountryCode = CountryCodes.getDefault(); // "CA" originally.
+  String _selectedContinent = CountryCodes.getDefault().continent;
   String? _selectedGender;
   
   final tealBackground = MyApp.loginTealBackground;
@@ -36,25 +36,15 @@ class _SignupScreen1State extends State<SignupScreen1> {
     if (widget.initialData != null) {
       _nameController.text = widget.initialData!.fullName ?? '';
       _emailController.text = widget.initialData!.email ?? '';
-      // Extract phone number without dial code if it exists
-      final phone = widget.initialData!.phoneNumber ?? '';
-      if (phone.startsWith('+')) {
-        // Find country code from phone number
-        final countryCode = CountryCodes.findByDialCode(
-          phone.split(' ').first,
-        );
-        if (countryCode != null) {
-          _selectedCountryCode = countryCode;
-          _phoneController.text = phone.substring(countryCode.dialCode.length).trim();
-        } else {
-          _phoneController.text = phone;
-        }
-      } else {
-        _phoneController.text = phone;
-      }
+      _phoneController.text = widget.initialData!.phoneNumber ?? '';
       final code = widget.initialData!.countryCode ?? 'CA';
       _selectedCountryCode = CountryCodes.findByCode(code) ?? CountryCodes.getDefault();
+      _selectedContinent = _selectedCountryCode.continent;
       _selectedGender = widget.initialData!.gender;
+      print(_selectedCountryCode.code);
+      // once I open up this page, it will default me to 'CA' because i have no code selected.
+      // Then I click US, once I do, it saves into selectedCountryCode as object
+      // 
     }
   }
   
@@ -79,6 +69,7 @@ class _SignupScreen1State extends State<SignupScreen1> {
     if (_phoneController.text.trim().isEmpty) {
       return 'Phone number is required';
     }
+
     if (_selectedGender == null || _selectedGender!.isEmpty) {
       return 'Please select your gender';
     }
@@ -102,6 +93,7 @@ class _SignupScreen1State extends State<SignupScreen1> {
       email: _emailController.text.trim(),
       phoneNumber: fullPhoneNumber,
       countryCode: _selectedCountryCode.code,
+      region: CountryCodes.continentToRegion(_selectedCountryCode.continent),
       gender: _selectedGender,
     );
     
@@ -122,6 +114,10 @@ class _SignupScreen1State extends State<SignupScreen1> {
     
     // Calculate content area position for desktop (centered with maxWidth 500)
     final starSize = isMobile ? 18.0 : 20.0;
+
+    final filteredCountries = CountryCodes.codes
+    .where((c) => c.continent == _selectedContinent)
+    .toList();
     
     return Scaffold(
       backgroundColor: tealBackground,
@@ -221,9 +217,11 @@ class _SignupScreen1State extends State<SignupScreen1> {
                                             
                         SizedBox(height: isMobile ? 16 : 20),
                         // Phone number with country code dropdown
+                        Column(
+                        children: [
                         Row(
                           children: [
-                            // Country code dropdown - wider with full country names
+                            // Continent container
                             Expanded(
                               flex: 2,
                               child: Container(
@@ -232,8 +230,8 @@ class _SignupScreen1State extends State<SignupScreen1> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: DropdownButtonHideUnderline(
-                                  child: DropdownButtonFormField<CountryCode>(
-                                    value: _selectedCountryCode,
+                                  child: DropdownButtonFormField<String>(
+                                    initialValue: _selectedContinent,
                                     isExpanded: true,
                                     icon: Icon(Icons.arrow_drop_down, color: greySubtitle),
                                     style: TextStyle(
@@ -248,11 +246,69 @@ class _SignupScreen1State extends State<SignupScreen1> {
                                       ),
                                     ),
                                     dropdownColor: Colors.white,
-                                    items: CountryCodes.codes.map((CountryCode country) {
+                                    items: const [
+                                      'Africa',
+                                      'Asia',
+                                      'Europe',
+                                      'North America',
+                                      'Oceania',
+                                      'South America',
+                                    ].map((c) => DropdownMenuItem<String>(
+                                          value: c,
+                                          child: Text(c),
+                                        )).toList(),
+                                    onChanged: (v) {
+                                      if (v == null) return;
+
+                                      setState(() {
+                                        _selectedContinent = v;
+
+                                        final filtered = CountryCodes.codes
+                                            .where((c) => c.continent == _selectedContinent)
+                                            .toList();
+
+                                        // If current country isn't inside the new filtered list, snap to first.
+                                        if (filtered.isNotEmpty &&
+                                            !filtered.any((c) => c.code == _selectedCountryCode.code)) {
+                                          _selectedCountryCode = filtered.first;
+                                        }
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12), // make list in country_codes, make dropdown, connect to country name, split with another container for country code, if statement to see if it bears continent field
+                            // Country container  - wider with full country names
+                            Expanded(
+                              flex: 2,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.9),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButtonFormField<CountryCode>(
+                                    initialValue: _selectedCountryCode,
+                                    isExpanded: true,
+                                    icon: Icon(Icons.arrow_drop_down, color: greySubtitle),
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: isMobile ? 14 : 16,
+                                    ),
+                                    decoration: InputDecoration(
+                                      border: InputBorder.none,
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: isMobile ? 16 : 18,
+                                      ),
+                                    ),
+                                    dropdownColor: Colors.white,
+                                    items: filteredCountries.map((CountryCode country) {
                                       return DropdownMenuItem<CountryCode>(
                                         value: country,
                                         child: Text(
-                                          '${country.dialCode} ${country.name}',
+                                          '${country.name} (${country.dialCode})',
                                           style: TextStyle(
                                             color: Colors.black,
                                             fontSize: isMobile ? 14 : 16,
@@ -260,9 +316,13 @@ class _SignupScreen1State extends State<SignupScreen1> {
                                         ),
                                       );
                                     }).toList(),
+                                    //CountryCodes.codes is a List<CountryCode>.
+                                    //.map(...).toList() walks that list from index 0 → end.
+                                    //DropdownButtonFormField displays the items list in the same order you provided.
+                                    //The dropdown widget does not sort anything for you.
                                     onChanged: (CountryCode? newValue) {
                                       if (newValue != null) {
-                                        setState(() {
+                                        setState(() { // Sets the new CountryCode Object into the _selected Country Code
                                           _selectedCountryCode = newValue;
                                         });
                                       }
@@ -272,33 +332,34 @@ class _SignupScreen1State extends State<SignupScreen1> {
                               ),
                             ),
                             const SizedBox(width: 12),
-                            // Phone number field 
-                            Expanded(
-                              flex: 3,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.9),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: TextField(
-                                  controller: _phoneController,
-                                  keyboardType: TextInputType.phone,
-                                  style: TextStyle(fontSize: isMobile ? 14 : 16),
-                                  decoration: InputDecoration(
-                                    hintText: 'Phone number',
-                                    hintStyle: TextStyle(color: greySubtitle, fontSize: isMobile ? 14 : 16),
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: isMobile ? 16 : 18,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
                           ],
                         ),
                         SizedBox(height: isMobile ? 16 : 20),
+                        // Phone number field 
+                            Container(
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.9),
+                              borderRadius: BorderRadius.circular(12),
+                              ),
+                                  child: TextField(
+                                    controller: _phoneController,
+                                    keyboardType: TextInputType.phone,
+                                    style: TextStyle(fontSize: isMobile ? 14 : 16),
+                                    decoration: InputDecoration(
+                                      hintText: 'Phone number',
+                                      hintStyle: TextStyle(color: greySubtitle, fontSize: isMobile ? 14 : 16),
+                                      border: InputBorder.none,
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: isMobile ? 16 : 18,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: isMobile ? 16 : 20),
                         // Gender selector
                         Container(
                           decoration: BoxDecoration(
@@ -310,7 +371,7 @@ class _SignupScreen1State extends State<SignupScreen1> {
                               canvasColor: Colors.white,
                             ),
                             child: DropdownButtonFormField<String>(
-                              value: _selectedGender,
+                              initialValue: _selectedGender,
                               decoration: InputDecoration(
                                 hintText: 'Select Gender',
                                 hintStyle: TextStyle(color: greySubtitle, fontSize: isMobile ? 14 : 16),

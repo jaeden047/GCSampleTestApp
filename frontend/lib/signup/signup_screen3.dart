@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../api_service.dart';
 import '../main.dart';
 import 'signup_data.dart';
 import 'signup_screen1.dart';
@@ -18,8 +19,7 @@ class SignupScreen3 extends StatefulWidget {
 class _SignupScreen3State extends State<SignupScreen3> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final supabase = Supabase.instance.client;
-  
+    
   bool _passwordVisible = false;
   bool _confirmPasswordVisible = false;
   bool _isLoading = false;
@@ -44,8 +44,8 @@ class _SignupScreen3State extends State<SignupScreen3> {
       return 'Password is required';
     }
     
-    if (password.length < 6) {
-      return 'Password must be at least 6 characters';
+    if (password.length < 8) {
+      return 'Password must be at least 8 characters';
     }
 
     final specialCharRegex = RegExp(r'[!@#$%^&*(),.?":{}|<>]');
@@ -92,92 +92,74 @@ class _SignupScreen3State extends State<SignupScreen3> {
     });
     
     try {
-      // Create Supabase auth account
-      final response = await supabase.auth.signUp(
-        email: widget.data.email!,
-        password: _passwordController.text,
-        data: {
-          'phone': widget.data.phoneNumber,
-        },
+      // Register via REST API
+      print(widget.data.countryCode);
+      
+      await ApiService.instance.register(
+      email: widget.data.email!,
+      password: _passwordController.text,
+      name: widget.data.fullName ?? '',
+      interestedProgram: '69598383bfc1a2a7926b46f6', 
+      studentType: 'school',               
+      photo: 'https://example.com/profile.jpg',
+      userType: 'STUDENT', 
+      
+      phone: widget.data.phoneNumber,
+      institution: widget.data.institutionSchool,
+      address: widget.data.address,
+      country: widget.data.countryCode,
+      gender: widget.data.gender,
+      grade: widget.data.grade, 
+      referenceCode: widget.data.referenceCode,); 
+      await ApiService.instance.supabaseSignUp(
+        email: widget.data.email!, 
+        password: _passwordController.text
       );
-      
-      if (!mounted) return;
-      
-      if (response.user != null && response.user?.id != null) {
-        final userId = response.user!.id;
-        
-        // Save to profiles table (only old fields for now)
-        try {
-          await supabase.from('profiles').insert({
-            'id': userId,
-            'name': widget.data.fullName,
-            'email': widget.data.email,
-            'phone_number': widget.data.phoneNumber,
-            // New fields will be saved later when database is updated
-            // 'gender': widget.data.gender,
-            // 'address': widget.data.address,
-            // 'school': widget.data.institutionSchool,
-            // 'country': widget.data.residentialCountry,
-          });
-          
-          final updatedData = widget.data.copyWith(
-            password: _passwordController.text,
-            confirmPassword: _confirmPasswordController.text,
-          );
-          
-          setState(() {
-            _isLoading = false;
-          });
-          
-          // Navigate to confirmation screen
-          if (mounted) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => SignupScreen4(data: updatedData)),
-            );
-          }
-        } catch (profileError) {
-          if (!mounted) return;
-          print('Profile insert failed: $profileError');
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Account created, but profile setup failed. Please contact support.'),
-              duration: Duration(seconds: 5),
-            ),
-          );
-          setState(() {
-            _isLoading = false;
-          });
-        }
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Sign up completed, but user data is missing. Please try logging in.')),
-        );
-        setState(() {
-          _isLoading = false;
-        });
+      final sb = Supabase.instance.client;
+      final user = sb.auth.currentUser;
+      if (user == null) {
+        throw Exception('Supabase sign up succeeded but no currentUser session was found.');
       }
-    } on AuthException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
+
+      await sb.from('profiles').upsert({
+        'id': user.id, // MUST match auth.users.id
+        'email': user.email,
+        'name': widget.data.fullName ?? '',
+        'phone_number': widget.data.phoneNumber,
+        'school': widget.data.institutionSchool,
+        'country': widget.data.countryCode,
+        'region': widget.data.region,
+        'gender': widget.data.gender,
+        'address': widget.data.address,
+        'grade': widget.data.grade,
+        'institution': widget.data.institutionSchool,
+        'student_type': 'school',
+        'reference_code': widget.data.referenceCode,
+        'user_type': 'STUDENT',
+        'interested_program': '69598383bfc1a2a7926b46f6',
+      });    
+
+    if (!mounted) return;
+
+    setState(() => _isLoading = false);
+
+      final updatedData = widget.data.copyWith(
+        password: _passwordController.text,
+        confirmPassword: _confirmPasswordController.text,
       );
-      setState(() {
-        _isLoading = false;
-      });
+
+        Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => SignupScreen4(data: updatedData)),
+      );
+      
     } catch (e) {
       if (!mounted) return;
-      print('Unexpected error during signup: $e');
+      print('Signup failed: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('An error occurred. Please try again.'),
-          duration: Duration(seconds: 3),
-        ),
+        SnackBar(content: Text(e.toString())),
       );
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
   
@@ -227,7 +209,7 @@ class _SignupScreen3State extends State<SignupScreen3> {
                     SizedBox(height: isMobile ? 16 : 20),
                     // Instruction text
                     Text(
-                      'Password should have a combination of alphabets, numbers, special characters, and be at least 6 characters long.',
+                      'Password should have a combination of alphabets, numbers, special characters, and be at least 8 characters long.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: greySubtitle,
