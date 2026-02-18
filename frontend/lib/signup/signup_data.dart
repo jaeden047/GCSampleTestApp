@@ -5,14 +5,13 @@ class SignupData {
   String? email;
   String? phoneNumber;
   String? countryCode;
-  String? region; // asia_oceania, africa, americas, europe (from country for quiz set assignment)
+  String? region;
   String? gender;
   String? grade;
 
   // Screen 2 - Additional Details
   String? address;
   String? institutionSchool;
-  String? residentialCountry;
   String? referenceCode;
   
   // Screen 3 - Password
@@ -29,7 +28,6 @@ class SignupData {
     this.grade,
     this.address,
     this.institutionSchool,
-    this.residentialCountry,
     this.referenceCode,
     this.password,
     this.confirmPassword,
@@ -46,7 +44,6 @@ class SignupData {
     String? grade,
     String? address,
     String? institutionSchool,
-    String? residentialCountry,
     String? referenceCode,
     String? password,
     String? confirmPassword,
@@ -61,7 +58,6 @@ class SignupData {
       grade: grade ?? this.grade,
       address: address ?? this.address,
       institutionSchool: institutionSchool ?? this.institutionSchool,
-      residentialCountry: residentialCountry ?? this.residentialCountry,
       referenceCode: referenceCode ?? this.referenceCode,
       password: password ?? this.password,
       confirmPassword: confirmPassword ?? this.confirmPassword,

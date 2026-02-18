@@ -1,12 +1,7 @@
-import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
-import 'package:timezone/timezone.dart' as tz;
-import 'main.dart';
-import 'math_text.dart';
 
 // Results page
 class Results extends StatefulWidget { // Results is a type of widget (Class) 
@@ -17,24 +12,22 @@ class Results extends StatefulWidget { // Results is a type of widget (Class)
   State<Results> createState() => _ResultsState(); //
 }
 
-class TestAttempt {
+class TestAttempt { // Here we create a custom type (i.e. String is a type)
+  // Data fields, 'dynamic' => can hold any type of value
   final String dateTime;
   final List<dynamic> questionList;
   final List<dynamic> answerOrder;
-  /// From DB: Map (question_id -> answer_id) or legacy List of answer_ids.
-  final dynamic selectedAnswers;
+  final List<dynamic> selectedAnswers;
   final double score;
   final int topicId;
-  final String round;
 
-  TestAttempt({
+  TestAttempt({ // Model for Constructor for the class: To create an object - this is what you require
     required this.dateTime,
     required this.questionList,
     required this.answerOrder,
     required this.selectedAnswers,
     required this.score,
     required this.topicId,
-    this.round = 'local',
   });
 }
 
@@ -67,31 +60,11 @@ class Questions {
 class Topics {
   final int topicId2;
   final String topicName;
-  final bool resultsReleased;
-  final bool isSampleQuiz;
 
   Topics({
     required this.topicId2,
     required this.topicName,
-    required this.resultsReleased,
-    required this.isSampleQuiz,
   });
-
-  bool get canShowResults => isSampleQuiz || resultsReleased;
-}
-
-List<dynamic> _toListDynamic(dynamic value) {
-  if (value == null) return [];
-  if (value is List) return List<dynamic>.from(value);
-  if (value is String) {
-    try {
-      final decoded = jsonDecode(value);
-      return decoded is List ? List<dynamic>.from(decoded) : [];
-    } catch (_) {
-      return [];
-    }
-  }
-  return [];
 }
 
 class _ResultsState extends State<Results> { // 
@@ -101,1022 +74,243 @@ class _ResultsState extends State<Results> { //
   List<Answers> answerList = []; // List of Test Attempt Data
   List<Questions> questionList = []; // List of Test Attempt Data
   List<Topics> topicList = [];
-  String? selectedFilter; // Selected filter option
-  bool _isLoadingAttempts = true;
-  String? _loadError; // Non-null when fetch failed (e.g. auth or network)
-  StreamSubscription<AuthState>? _authSubscription;
 
-  // Check if screen is mobile
-  bool _isMobile(BuildContext context) {
-    return MediaQuery.of(context).size.width < 768;
+  @override // Overriding the initState function
+  void initState() { // Function called before screen loads
+    super.initState();
+    fetchTestAttempts(); // Now, fetchTestAttempts will be apart of the function
   }
+  Future<void> fetchTestAttempts() async {
+    final testRawData = await supabase.from('test_attempts').select().eq('user_id', supabase.auth.currentUser!.id); 
+    // Retrieve Raw Data Rows ONLY from currently signed in user_id from testRawData
+    final questionAnswers = await supabase.from('answers').select(); 
+    final questionData = await supabase.from('questions').select();
+    final topicData = await supabase.from('topics').select();
+    // questionAnswers pulls all rows from the answers table 
+    setState(() { // Rebuild UI
+      numRows = testRawData.length;
+      testList = testRawData.map<TestAttempt>((row) { // Each 'row' is now a separate function.
+      // Map each row in testRows to a TestAttempt Object. 
+      // Collect all TestAttempt Objects and save it in List<TestAttempt>: testList
+        return TestAttempt( 
+          dateTime: row['test_datetime']?.toString() ?? 'No Date',
+          questionList: List<dynamic>.from(row['question_list'] ?? []), // Make a List from row or leave empty
+          answerOrder: List<dynamic>.from(row['answer_order'] ?? []),
+          selectedAnswers: List<dynamic>.from(row['selected_answers'] ?? []),
+          score: row['score'] ?? 0,
+          topicId: row['topic_id'] ?? 0,
+        );
+        // ?.toString => Is not null: Keep value, Is null: "null"
+        // ?? 'No Date' => left side: "null" => switch to 'No Date' text, else, keep. 
+      }).toList(); // Converts to List<TestAttempt>.
 
-  static const _mathRoundTopicNames = ['Grade 5 and 6', 'Grade 7 and 8', 'Grade 9 and 10', 'Grade 11 and 12'];
-  bool _isMathRoundTopic(String topicName) => _mathRoundTopicNames.contains(topicName);
-  static String _roundLabel(String round) => round == 'sample' ? 'Sample Quiz' : round == 'final' ? 'Final Round' : 'Local Round';
+      answerList = questionAnswers.map<Answers>((row) {
+        return Answers(
+          answerID: row['answer_id'],
+          questionID: row['question_id'],
+          answerText: row['answer_text'],
+          isCorrect: row['is_correct'],
+        );
+      }).toList();
 
-  /// Answered question IDs in display order (only those with an entry in selected_answers). Supports partial attempts.
-  List<int> _getAnsweredQuestionIdsInOrder(TestAttempt a) {
-    if (a.selectedAnswers is Map) {
-      final m = a.selectedAnswers as Map;
-      return [
-        for (var qid in a.questionList)
-          if (m.containsKey(qid.toString()))
-            (qid is int ? qid : int.tryParse(qid.toString()) ?? 0)
-      ];
-    }
-    return List<int>.from(a.questionList);
+      questionList = questionData.map<Questions>((row) {
+        return Questions(
+          questionID: row['question_id'],
+          topicID: row['topic_id'],
+          questionText: row['question_text'],
+        );
+      }).toList();
+      // numRows = number of user's testattempts
+
+      topicList = topicData.map<Topics>((row) {
+        return Topics(
+          topicId2: row['topic_id'],
+          topicName: row['topic_name'],
+        );
+      }).toList(); 
+    });
   }
-
-  bool _isAnswerSelected(TestAttempt a, int questionId, int answerId) {
-    if (a.selectedAnswers is Map) return (a.selectedAnswers as Map)[questionId.toString()] == answerId;
-    if (a.selectedAnswers is List) return (a.selectedAnswers as List).contains(answerId);
-    return false;
-  }
-
-  /// For math grade topics: sample round always visible; local/final visible only when topic.resultsReleased.
-  /// For other topics (e.g. Plastic): use topic.canShowResults.
-  bool _canShowResultsForAttempt(Topics topic, String topicName, TestAttempt attempt) {
-    if (_isMathRoundTopic(topicName)) {
-      if (attempt.round == 'sample') return true;
-      if (attempt.round == 'local' || attempt.round == 'final') return topic.resultsReleased;
-      return topic.resultsReleased;
-    }
-    return topic.canShowResults;
-  }
-
-  static int _parseId(dynamic v) {
-    if (v == null) return 0;
-    if (v is int) return v;
-    if (v is num) return v.toInt();
-    return int.tryParse(v.toString()) ?? 0;
-  }
-
-  /// answer_order can be nested [[a1,a2,a3,a4],[...],...] or flat [a1,a2,...,a4,a5,...]. Returns answer IDs for question at [questionIndex].
-  static int _parseAnswerId(dynamic e) {
-    if (e is int) return e;
-    if (e is num) return e.toInt();
-    return int.tryParse(e.toString()) ?? 0;
-  }
-
-  List<int> _getAnswerIdsForQuestion(List<dynamic> answerOrder, int questionIndex) {
-    if (questionIndex < 0 || questionIndex >= answerOrder.length) return [];
-    final raw = answerOrder[questionIndex];
-    if (raw is List) {
-      return raw.map(_parseAnswerId).where((id) => id != 0).toList();
-    }
-    int start = questionIndex * 4;
-    int end = start + 4;
-    if (end <= answerOrder.length) {
-      return answerOrder.sublist(start, end).map(_parseAnswerId).toList();
-    }
-    if (raw is int || raw is num) {
-      final id = raw is int ? raw : (raw as num).toInt();
-      return id != 0 ? [id] : [];
-    }
-    if (raw == null) return [];
-    return [];
-  }
-
-  /// Index of questionId in questionList; handles int/string mismatch from JSON.
-  int _questionListIndex(List<dynamic> questionList, int questionId) {
-    for (int i = 0; i < questionList.length; i++) {
-      final q = questionList[i];
-      final qId = q is int ? q : int.tryParse(q?.toString() ?? '');
-      if (qId == questionId) return i;
-    }
-    return -1;
-  }
-
-  List<Widget> _buildAttemptAnswerTiles(int index) {
-    final attempt = testList[index];
-    final answeredIds = _getAnsweredQuestionIdsInOrder(attempt);
-    return List.generate(answeredIds.length, (i) {
-      int questionID = answeredIds[i];
-      final origIndex = _questionListIndex(attempt.questionList, questionID);
-      if (origIndex < 0) return SizedBox.shrink();
-      List<int> correctAnswerOrder = _getAnswerIdsForQuestion(attempt.answerOrder, origIndex);
-      List<Answers> answerOptions = [];
-      for (final id in correctAnswerOrder) {
-        final match = answerList.where((a) => _parseId(a.answerID) == id).toList();
-        if (match.isNotEmpty) answerOptions.add(match.first);
-      }
-      final allForQuestion = answerList.where((a) => _parseId(a.questionID) == questionID).toList();
-      if (answerOptions.length < allForQuestion.length) {
-        answerOptions = allForQuestion;
-      }
-      final questionMatch = questionList.where((q) => _parseId(q.questionID) == questionID).toList();
-      final questionText = questionMatch.isEmpty ? 'Question (unavailable)' : questionMatch.first.questionText;
-      return Container(
-        margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        padding: EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: MyApp.homeWhite.withOpacity(0.9),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: MyApp.homeWhite.withOpacity(0.3), width: 1),
-          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
+@override
+Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+          title: Text('Past Results'),
         ),
+      body: numRows == 0
+        ?  Center( // empty results look
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center, // Vertically center the content
+          crossAxisAlignment: CrossAxisAlignment.center, // Horizontally center the content
           children: [
-            SizedBox(
-              width: double.infinity,
-              child: MathText(
-                '${i + 1}. $questionText',
-                textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: MyApp.homeDarkGreyText),
-              ),
+            // SVG Image
+            SvgPicture.asset(
+              'assets/images/grey_results.svg',
+              height: 100,
             ),
-            SizedBox(height: 4),
-            ...answerOptions.map((row) {
-              bool isSelected = _isAnswerSelected(attempt, questionID, row.answerID);
-              bool isCorrect = row.isCorrect;
-              Icon iconChosen = Icon(Icons.check_circle_outline);
-              Color colorChosen = MyApp.homeDarkGreyText;
-              if (isSelected && isCorrect) {
-                iconChosen = Icon(Icons.circle, color: Color(0xFF628B35));
-                colorChosen = Color(0xFF628B35);
-              } else if (isSelected && !isCorrect) {
-                iconChosen = Icon(Icons.circle, color: Color(0xFFBD433E));
-                colorChosen = Color(0xFFBD433E);
-              } else if (!isSelected && isCorrect) {
-                iconChosen = Icon(Icons.circle_outlined, color: Color(0xFF628B35));
-                colorChosen = Color(0xFF628B35);
-              } else {
-                iconChosen = Icon(Icons.circle_outlined, color: MyApp.homeDarkGreyText);
-                colorChosen = MyApp.homeDarkGreyText;
-              }
-              return Row(
-                children: [
-                  iconChosen,
-                  SizedBox(width: 6),
-                  Flexible(child: MathText(row.answerText, textStyle: TextStyle(color: colorChosen))),
-                ],
-              );
-            }),
+            SizedBox(height: 20), // Space between the image and the text
+            // Text message
+            Text(
+              'Empty History',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              'Try a quiz before coming back',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            ),
           ],
         ),
-      );
-    });
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _authSubscription = supabase.auth.onAuthStateChange.listen((AuthState state) {
-      if (state.event == AuthChangeEvent.signedIn ||
-          state.event == AuthChangeEvent.initialSession ||
-          state.event == AuthChangeEvent.signedOut ||
-          state.event == AuthChangeEvent.userUpdated) {
-        fetchTestAttempts();
-      }
-    });
-    fetchTestAttempts();
-  }
-
-  @override
-  void dispose() {
-    _authSubscription?.cancel();
-    super.dispose();
-  }
-
-  Future<void> fetchTestAttempts() async {
-    final user = supabase.auth.currentUser;
-    if (user == null) {
-      if (mounted) {
-        setState(() {
-          _isLoadingAttempts = false;
-          _loadError = 'Please sign in to see your quiz history.';
-          numRows = 0;
-          testList = [];
-          answerList = [];
-          questionList = [];
-          topicList = [];
-          selectedFilter = 'newest';
-        });
-      }
-      return;
-    }
-
-    if (mounted) {
-      setState(() {
-        _isLoadingAttempts = true;
-        _loadError = null;
-      });
-    }
-
-    try {
-      final testRawData = await supabase
-          .from('test_attempts')
-          .select()
-          .eq('user_id', user.id);
-
-      // Collect all question IDs from every attempt so we can load answers via RPC (bypasses RLS).
-      final allQuestionIds = <int>{};
-      for (final row in testRawData) {
-        for (final q in _toListDynamic(row['question_list'])) {
-          allQuestionIds.add(_parseId(q));
-        }
-      }
-      final questionAnswersRaw = allQuestionIds.isEmpty
-          ? <dynamic>[]
-          : (await supabase.rpc(
-                'get_answers_for_question_ids',
-                params: {'p_question_ids': allQuestionIds.toList()},
-              ) as List<dynamic>?)
-              ?? <dynamic>[];
-
-      final questionData = await supabase.from('questions').select();
-      final topicData = await supabase.from('topics').select('topic_id, topic_name, results_released, is_sample_quiz');
-
-      if (!mounted) return;
-      setState(() {
-        _isLoadingAttempts = false;
-        _loadError = null;
-        numRows = testRawData.length;
-        testList = testRawData.map<TestAttempt>((row) {
-          return TestAttempt(
-            dateTime: row['test_datetime']?.toString() ?? 'No Date',
-            questionList: _toListDynamic(row['question_list']),
-            answerOrder: _toListDynamic(row['answer_order']),
-            selectedAnswers: row['selected_answers'],
-            score: ((row['score'] as num?)?.toDouble()) ?? 0,
-            topicId: _parseId(row['topic_id']),
-            round: (row['round'] as String?) ?? 'local',
-          );
-        }).toList();
-
-        answerList = questionAnswersRaw.map<Answers>((row) {
-          final m = row as Map<String, dynamic>;
-          return Answers(
-            answerID: _parseId(m['answer_id']),
-            questionID: _parseId(m['question_id']),
-            answerText: m['answer_text']?.toString() ?? '',
-            isCorrect: m['is_correct'] == true,
-          );
-        }).toList();
-
-        questionList = questionData.map<Questions>((row) {
-          return Questions(
-            questionID: _parseId(row['question_id']),
-            topicID: _parseId(row['topic_id']),
-            questionText: row['question_text']?.toString() ?? '',
-          );
-        }).toList();
-
-        topicList = topicData.map<Topics>((row) {
-          return Topics(
-            topicId2: _parseId(row['topic_id']),
-            topicName: row['topic_name']?.toString() ?? '',
-            resultsReleased: row['results_released'] == true,
-            isSampleQuiz: row['is_sample_quiz'] == true,
-          );
-        }).toList();
-
-        testList.sort((a, b) {
-          try {
-            final dateA = DateTime.parse(a.dateTime);
-            final dateB = DateTime.parse(b.dateTime);
-            return dateB.compareTo(dateA);
-          } catch (e) {
-            return 0;
-          }
-        });
-        selectedFilter = 'newest';
-      });
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoadingAttempts = false;
-          _loadError = 'Could not load quiz history. Please try again.';
-          numRows = 0;
-          testList = [];
-          answerList = [];
-          questionList = [];
-          topicList = [];
-          selectedFilter = 'newest';
-        });
-      }
-    }
-  }
-  
-  // Sort test list based on selected filter
-  void _sortTestList(String? filter) {
-    if (filter == null) {
-      setState(() {
-        selectedFilter = filter;
-      });
-      return;
-    }
-    
-    setState(() {
-      selectedFilter = filter;
-      final sortedList = List<TestAttempt>.from(testList);
-      
-      switch (filter) {
-        case 'newest':
-          sortedList.sort((a, b) {
-            try {
-              final dateA = DateTime.parse(a.dateTime);
-              final dateB = DateTime.parse(b.dateTime);
-              return dateB.compareTo(dateA); // Descending (newest first)
-            } catch (e) {
-              return 0;
-            }
-          });
-          break;
-        case 'oldest':
-          sortedList.sort((a, b) {
-            try {
-              final dateA = DateTime.parse(a.dateTime);
-              final dateB = DateTime.parse(b.dateTime);
-              return dateA.compareTo(dateB); // Ascending (oldest first)
-            } catch (e) {
-              return 0;
-            }
-          });
-          break;
-        case 'highest':
-          sortedList.sort((a, b) => b.score.compareTo(a.score)); // Descending (highest first)
-          break;
-        case 'lowest':
-          sortedList.sort((a, b) => a.score.compareTo(b.score)); // Ascending (lowest first)
-          break;
-      }
-      
-      testList = sortedList;
-    });
-  }
-  
-  // Format date in Toronto timezone
-  String _formatDateToronto(String dateTimeString) {
-    try {
-      // Parse the datetime string - handle ISO format (e.g., "2026-01-22T17:24:03.99345")
-      DateTime parsedDateTime;
-      
-      // Remove microseconds if present for easier parsing, but preserve timezone
-      String cleanDateTime = dateTimeString.trim();
-      
-      // Check if it has timezone info FIRST (before removing microseconds)
-      // Look for patterns like: "2026-01-22T17:40:00+00:00" or "2026-01-22T17:40:00Z"
-      bool hasTimezone = cleanDateTime.endsWith('Z') || 
-                         RegExp(r'[+-]\d{2}:\d{2}$').hasMatch(cleanDateTime);
-      
-      // Extract timezone part if present (e.g., "+00:00" or "-05:00")
-      String? timezonePart;
-      if (hasTimezone && !cleanDateTime.endsWith('Z')) {
-        final timezoneMatch = RegExp(r'([+-]\d{2}:\d{2})$').firstMatch(cleanDateTime);
-        if (timezoneMatch != null) {
-          timezonePart = timezoneMatch.group(1);
-        }
-      }
-      
-      // Handle different formats from Supabase
-      // Supabase typically returns timestamps in ISO 8601 format
-      // Remove microseconds but preserve timezone
-      if (cleanDateTime.contains('.')) {
-        // Split on '.' but keep timezone if present
-        final parts = cleanDateTime.split('.');
-        cleanDateTime = parts[0];
-        // Re-add timezone if it was present
-        if (timezonePart != null) {
-          cleanDateTime += timezonePart;
-        } else if (hasTimezone && cleanDateTime.endsWith('Z')) {
-          // Z is already at the end, keep it
-        }
-      }
-      
-      if (!hasTimezone) {
-        // No timezone indicator - add 'Z' to indicate UTC
-        cleanDateTime += 'Z';
-      }
-      
-      // Parse the datetime - DateTime.parse handles timezone if present
-      parsedDateTime = DateTime.parse(cleanDateTime);
-      
-      // Always convert to UTC for consistent handling
-      // If it had timezone info, toUtc() converts it
-      // If it didn't, we already added 'Z' so it's treated as UTC
-      parsedDateTime = parsedDateTime.toUtc();
-      
-      // Convert to Toronto timezone using timezone package
-      final torontoLocation = tz.getLocation('America/Toronto');
-      
-      // Create TZDateTime in UTC from the parsed DateTime
-      final utcTZ = tz.TZDateTime.utc(
-        parsedDateTime.year,
-        parsedDateTime.month,
-        parsedDateTime.day,
-        parsedDateTime.hour,
-        parsedDateTime.minute,
-        parsedDateTime.second,
-      );
-      
-      // Convert UTC to Toronto time using the timezone package's proper method
-      // Create a TZDateTime in Toronto timezone directly from the UTC TZDateTime
-      final torontoTZ = tz.TZDateTime.fromMillisecondsSinceEpoch(
-        torontoLocation,
-        utcTZ.millisecondsSinceEpoch,
-      );
-      
-      // Create a regular DateTime from the TZDateTime for formatting
-      // Use the year, month, day, hour, minute, second from the Toronto TZDateTime
-      final torontoDateTime = DateTime(
-        torontoTZ.year,
-        torontoTZ.month,
-        torontoTZ.day,
-        torontoTZ.hour,
-        torontoTZ.minute,
-        torontoTZ.second,
-      );
-      
-      // Format as MM/dd/yyyy h:mm a with space between date and time (e.g., "01/22/2026 12:24 PM")
-      return DateFormat('MM/dd/yyyy h:mm a').format(torontoDateTime);
-    } catch (e) {
-      // If parsing fails, try to format the original string as-is
-      try {
-        final fallbackDateTime = DateTime.parse(dateTimeString);
-        return DateFormat('MM/dd/yyyy h:mma').format(fallbackDateTime);
-      } catch (_) {
-        // Last resort: return a formatted version of the original string
-        return dateTimeString;
-      }
-    }
-  }
-  @override
-  Widget build(BuildContext context) {
-    final isMobile = _isMobile(context);
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-
-    return Scaffold(
-      backgroundColor: MyApp.homeLightGreyBackground,
-      appBar: AppBar(
-        backgroundColor: MyApp.homeLightGreyBackground,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: MyApp.homeDarkGreyText),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: _isLoadingAttempts
-        ? Center(child: CircularProgressIndicator(color: MyApp.homeDarkGreyText))
-        : (numRows == 0
-            ? LayoutBuilder(
-                builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        ..._buildDecorativeElements(screenWidth, screenHeight, isMobile, 0),
-                        Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: isMobile ? 16.0 : 24.0,
-                            vertical: isMobile ? 16.0 : 24.0,
-                          ),
-                          child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                SizedBox(height: screenHeight * 0.15),
-                                SvgPicture.asset(
-                                  'assets/images/grey_results.svg',
-                                  height: 100,
-                                ),
-                                SizedBox(height: 20),
-                                Text(
-                                  _loadError ?? 'Empty History',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: isMobile ? 20 : 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: MyApp.homeDarkGreyText,
-                                  ),
-                                ),
-                                SizedBox(height: 8),
-                                Text(
-                                  _loadError != null
-                                      ? 'Sign in or check your connection and open this screen again.'
-                                      : 'Try a quiz before coming back',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: isMobile ? 14 : 16,
-                                    fontWeight: FontWeight.w500,
-                                    color: MyApp.homeGreyText,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              )
-            : LayoutBuilder(
-            builder: (context, constraints) {
-              // Calculate estimated content height based on number of items
-              // Title header: ~80px, Each card: ~120px (collapsed), spacing: ~20px
-              final estimatedContentHeight = 100.0 + (numRows * 140.0);
-              final actualContentHeight = estimatedContentHeight > screenHeight 
-                  ? estimatedContentHeight 
-                  : screenHeight;
-              
-              return SingleChildScrollView(
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    // Decorative elements - dynamically distributed
-                    ..._buildDecorativeElements(screenWidth, actualContentHeight, isMobile, numRows),
-                    // Main content
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isMobile ? 16.0 : 24.0,
-                        vertical: isMobile ? 16.0 : 24.0,
+      )
+        : ListView.builder(
+            itemCount: numRows,
+            itemBuilder: (context, index) {
+              DateTime parsedDate = DateTime.parse(testList[index].dateTime); // parses raw ISO Date into a DateTime Variable
+              String formattedDate = DateFormat('MM/dd/yyyy h:mma').format(parsedDate);
+              double scoreNumber = testList[index].score; 
+              return Card(
+                color: Colors.green[50], // Color of the Attempt {} Card
+                shadowColor: Colors.black, // Attempt {} - Shadow Underlayer
+                shape: RoundedRectangleBorder( // Shape of the Attempt {} Card
+                  borderRadius: BorderRadius.all(Radius.circular(12)), // Attempt {} - Rounded Corners (20 px)
+                ),
+                margin: EdgeInsets.all(16), // Attempt {} is 16 px from other Attempt {} cards or edge of screen.
+                child: ExpansionTile(
+                  tilePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 6), // Space between tile and detail
+                  title: Column( // Title of Expansion Block
+                    crossAxisAlignment: CrossAxisAlignment.start, // Place text at far left
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Attempt ${index + 1} • ${topicList.firstWhere((t) => t.topicId2 == testList[index].topicId, orElse: () => Topics(topicId2: 0, topicName: 'Unknown')).topicName}',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87),
                       ),
-                      child: Center(
-                        child: Container(
-                          constraints: BoxConstraints(
-                            maxWidth: isMobile ? double.infinity : 800,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Title header with filter dropdown
-                              Container(
-                                width: double.infinity,
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: isMobile ? 16 : 20,
-                                  vertical: isMobile ? 12 : 16,
-                                ),
-                                margin: EdgeInsets.only(bottom: isMobile ? 16 : 20),
+                      SizedBox(height: 6),
+                      Row( // Row displays two widgets side by side; must be declared in children block.
+                        children: [
+                          Icon(Icons.calendar_today),
+                          SizedBox(width: 6), // controls width spacing between any widget
+                          Text(formattedDate, style: TextStyle(fontSize: 14, color: const Color.fromARGB(137, 36, 36, 36),)),
+                          Spacer(), // takes all available space ~ pushes score widget on the far right
+                          SizedBox( // Fixed width
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.star, color: Colors.amber),
+                                SizedBox(width: 6), // controls width spacing between any widget
+                                Text(
+                                  'Score: ${scoreNumber.toStringAsFixed(1)}%',
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87)
+                                )
+                             ],
+                            ),
+                          ) 
+                        ]
+                      ),
+                    ]
+                  ),
+                  children: [ // When you click on tile, this is what is displayed
+                    Padding( 
+                      padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0), // 16 pixels left/right in space, 8 pixes up/down in space
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center, // align to left
+                        children: [
+                          SizedBox(height: 8),
+                          ...List.generate(
+                            testList[index].questionList.length, 
+                            (i) {
+                              int questionID = testList[index].questionList[i]; 
+                              //List<Answers> answerOptions = answerList.where((a) => a.questionID == questionID).toList();
+                              int start = i * 4; // Start index: i = 0 : 0 * 4 = 0, 1 * 4 = 4
+                              int end = start + 4; // End index: 8
+                              // 0 - 4 : Question 1, 4 - 8 : Question 2,
+                              List<int> correctAnswerOrder = testList[index].answerOrder.sublist(start, end).cast<int>();
+                              // We loop through each question, i = question number.
+                              // i = 1, loop through answer-order 4-8. This is the list of answer IDs for Question 1 (i), in the correct order.
+                              List<Answers> answerOptions = correctAnswerOrder.map((id) => answerList.firstWhere((a) => a.answerID == id)).toList();
+                              // id = the id of each question in the correctAnswerOrder list. a.answerID (answerID of answer Object) mapped to id (answerID in List<int> - correctAnswerOrder)
+                              // 28 (correctAnswerOrder) -> find the corresponding answer object -> "Answer B" - QID: 28 -> add to list
+                              return Container(
+                                //width: 360,
+                                margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8), // space outside card
+                                padding: EdgeInsets.all(12), // space inside card
                                 decoration: BoxDecoration(
-                                  color: MyApp.homeLightPink,
+                                  color: Colors.white60,
                                   borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        'Past Results',
-                                        style: TextStyle(
-                                          fontSize: isMobile ? 24 : 32,
-                                          fontWeight: FontWeight.bold,
-                                          color: MyApp.homeDarkGreyText,
-                                          fontFamily: 'serif',
-                                        ),
-                                      ),
-                                    ),
-                                    // Filter dropdown
-                                    Container(
-                                      padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12),
-                                      decoration: BoxDecoration(
-                                        color: MyApp.homeLightPink,
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: MyApp.homeDarkGreyText.withOpacity(0.3),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: DropdownButton<String>(
-                                        value: selectedFilter,
-                                        hint: Text(
-                                          'Filter by',
-                                          style: TextStyle(
-                                            fontSize: isMobile ? 12 : 14,
-                                            color: MyApp.homeDarkGreyText.withOpacity(0.7),
-                                          ),
-                                        ),
-                                        underline: SizedBox(), // Remove default underline
-                                        icon: Icon(
-                                          Icons.arrow_drop_down,
-                                          color: MyApp.homeDarkGreyText,
-                                          size: isMobile ? 20 : 24,
-                                        ),
-                                        style: TextStyle(
-                                          fontSize: isMobile ? 12 : 14,
-                                          color: MyApp.homeDarkGreyText,
-                                        ),
-                                        dropdownColor: MyApp.homeLightPink,
-                                        items: [
-                                          DropdownMenuItem<String>(
-                                            value: 'newest',
-                                            child: Text('Newest to oldest'),
-                                          ),
-                                          DropdownMenuItem<String>(
-                                            value: 'oldest',
-                                            child: Text('Oldest to newest'),
-                                          ),
-                                          DropdownMenuItem<String>(
-                                            value: 'highest',
-                                            child: Text('Highest scores'),
-                                          ),
-                                          DropdownMenuItem<String>(
-                                            value: 'lowest',
-                                            child: Text('Lowest scores'),
-                                          ),
-                                        ],
-                                        onChanged: (String? newValue) {
-                                          _sortTestList(newValue);
-                                        },
-                                      ),
+                                  border: Border.all(
+                                    color: Color(0xFFE0E0E0),
+                                    width: 1,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black12,
+                                      blurRadius: 4,
+                                      offset: Offset(0, 2),
                                     ),
                                   ],
-                                ),
-                              ),
-                              // Results list
-                              ...List.generate(
-                                numRows,
-                                (index) {
-                                  String formattedDate = _formatDateToronto(testList[index].dateTime);
-                                  double scoreNumber = testList[index].score;
-                                  final topic = topicList.firstWhere((t) => t.topicId2 == testList[index].topicId, orElse: () => Topics(topicId2: 0, topicName: 'Unknown', resultsReleased: false, isSampleQuiz: false));
-                                  final canShow = _canShowResultsForAttempt(topic, topic.topicName, testList[index]);
-                                  return Container(
-                                    margin: EdgeInsets.only(bottom: isMobile ? 16 : 20),
-                                    decoration: BoxDecoration(
-                                      color: MyApp.homeTealGreen,
-                                      borderRadius: BorderRadius.circular(16),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.15),
-                                          blurRadius: 10,
-                                          offset: Offset(0, 5),
-                                        ),
-                                      ],
+                                ),  
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                      Text( // questionList i = answer questionID -> answerText, allAnswers[i] = correct/wrong
+                                      '${i + 1}. ${(questionList.firstWhere((q) => q.questionID == questionID).questionText)}', 
+                                      //'${answerOptions.map((a) => '- ${a.answerText}').join('\n')}',
+                                      // .map turns each answerOptions object into a String
+                                      // .join puts each on it's own line
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
-                                    child: ExpansionTile(
-                                      tilePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                                      backgroundColor: MyApp.homeTealGreen,
-                                      collapsedBackgroundColor: MyApp.homeTealGreen,
-                                      iconColor: MyApp.homeWhite,
-                                      collapsedIconColor: MyApp.homeWhite,
-                                      title: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisSize: MainAxisSize.min,
+                                    SizedBox(height: 4), // Gap between questiontext and answertext  
+                                    ...answerOptions.map((row) {
+                                      bool isSelected = testList[index].selectedAnswers.contains(row.answerID); 
+                                      // Is answer a selected answer ; T/F
+                                      bool isCorrect = row.isCorrect;
+                                      // Is answer a correct answer ; T/F
+                                      Icon iconChosen = Icon(Icons.check_circle_outline);
+                                      Color colorChosen = Colors.black;
+                                      if (isSelected && isCorrect) { // if Selected and Right
+                                        iconChosen = Icon(Icons.circle, color: Color(0xFF628B35));
+                                        colorChosen = Color(0xFF628B35);
+                                      } else if (isSelected && !isCorrect) { // if Selected but Wrong
+                                        iconChosen = Icon(Icons.circle, color: Color(0xFFBD433E));
+                                        colorChosen = Color(0xFFBD433E);
+                                      } else if (!isSelected && isCorrect) { // if Not Selected but Right
+                                        iconChosen = Icon(Icons.circle_outlined, color: Color(0xFF628B35));
+                                        colorChosen = Color(0xFF628B35);
+                                      } else if (!isSelected && !isCorrect) { // If Not Selected but Wrong
+                                        iconChosen = Icon(Icons.circle_outlined); 
+                                        colorChosen = Colors.black;
+                                      }
+                                      return Row(
                                         children: [
-                                          Text(
-                                            'Attempt ${index + 1} • ${topic.topicName}${_isMathRoundTopic(topic.topicName) ? ' • ${_roundLabel(testList[index].round)}' : ''}',
-                                            overflow: TextOverflow.ellipsis,
-                                            maxLines: 1,
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w600,
-                                              color: MyApp.homeWhite,
+                                          iconChosen,
+                                          SizedBox(width: 6),
+                                          Flexible(
+                                            child: Text(
+                                              row.answerText,
+                                              style: TextStyle(color: colorChosen),
+                                              softWrap: true,
                                             ),
                                           ),
-                                          SizedBox(height: 6),
-                                          Row(
-                                            children: [
-                                              Icon(Icons.calendar_today, color: MyApp.homeWhite, size: 16),
-                                              SizedBox(width: 6),
-                                              Expanded(
-                                                child: Text(
-                                                  formattedDate,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  maxLines: 1,
-                                                  style: TextStyle(
-                                                    fontSize: 14,
-                                                    color: MyApp.homeWhite.withOpacity(0.9),
-                                                  ),
-                                                ),
-                                              ),
-                                              SizedBox(width: 8),
-                                              Flexible(
-                                                child: Row(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                    if (canShow) ...[
-                                                      Icon(Icons.star, color: MyApp.homeYellow, size: 18),
-                                                      SizedBox(width: 6),
-                                                      Flexible(
-                                                        child: Text(
-                                                          'Score: ${scoreNumber.toInt()} pts',
-                                                          overflow: TextOverflow.ellipsis,
-                                                          maxLines: 1,
-                                                          style: TextStyle(
-                                                            fontSize: 16,
-                                                            fontWeight: FontWeight.w600,
-                                                            color: MyApp.homeWhite,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ] else ...[
-                                                      Icon(Icons.lock_outline, color: MyApp.homeWhite.withOpacity(0.9), size: 18),
-                                                      SizedBox(width: 6),
-                                                      Flexible(
-                                                        child: Text(
-                                                          'Results locked',
-                                                          overflow: TextOverflow.ellipsis,
-                                                          maxLines: 1,
-                                                          style: TextStyle(
-                                                            fontSize: 14,
-                                                            fontWeight: FontWeight.w500,
-                                                            color: MyApp.homeWhite.withOpacity(0.9),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
-                                          ),
                                         ],
-                                      ),
-                                      children: [
-                                        Padding(
-                                          padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                                          child: canShow
-                                              ? Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                                  children: [
-                                                    SizedBox(height: 8),
-                                                    ..._buildAttemptAnswerTiles(index),
-                                                  ],
-                                                )
-                                              : Padding(
-                                                  padding: EdgeInsets.symmetric(vertical: 16),
-                                                  child: Row(
-                                                    children: [
-                                                      Icon(Icons.info_outline, color: MyApp.homeWhite.withOpacity(0.9), size: 20),
-                                                      SizedBox(width: 8),
-                                                      Expanded(
-                                                        child: Text(
-                                                          'Results will be available when your admin releases them.',
-                                                          style: TextStyle(
-                                                            fontSize: 14,
-                                                            color: MyApp.homeWhite.withOpacity(0.95),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
+                                      );
+                                    }) // elipses (...) is a spread operator used to insert a list of widgets into another list of widgets, i.e. Column
+                                  ]
+                                )
+                              );
+                            }
                           ),
-                        ),
+                        ],
                       ),
+                      )
                     ),
                   ],
                 ),
               );
             },
-          )),
-    );
-  }
-
-  // Build decorative clouds and stars dynamically distributed along content height
-  List<Widget> _buildDecorativeElements(
-    double screenWidth,
-    double contentHeight,
-    bool isMobile,
-    int numItems,
-  ) {
-    final elements = <Widget>[];
-    final centerX = screenWidth / 2;
-    final containerHalfWidth = 400; // Half of maxWidth 800
-    final leftBoundary = centerX - containerHalfWidth;
-    final rightBoundary = centerX + containerHalfWidth;
-    
-    // Calculate safe zones for decorations (outside the centered container)
-    final leftZone = leftBoundary - 100; // Space on the left
-    final rightZone = screenWidth - rightBoundary - 100; // Space on the right
-    
-    // Calculate spacing between decorations
-    // Further reduced spacing for even higher density - decorations every 60-80px vertically
-    final minSpacing = isMobile ? 60.0 : 80.0;
-    
-    // Calculate number of decoration rows needed (increased for more density)
-    final numDecorationRows = (contentHeight / minSpacing).ceil();
-    
-    // Top padding to start decorations below the header
-    final topPadding = 100.0;
-    final bottomPadding = 50.0;
-    final usableHeight = contentHeight - topPadding - bottomPadding;
-    final adjustedSpacing = usableHeight / (numDecorationRows + 1);
-    
-    // Star sizes (varied for visual interest)
-    final starSizes = [
-      {'w': isMobile ? 9.0 : 14.0, 'h': isMobile ? 8.5 : 13.2},
-      {'w': isMobile ? 10.0 : 15.0, 'h': isMobile ? 9.4 : 14.2},
-      {'w': isMobile ? 11.0 : 16.0, 'h': isMobile ? 10.4 : 15.1},
-      {'w': isMobile ? 12.0 : 17.0, 'h': isMobile ? 11.3 : 16.0},
-      {'w': isMobile ? 13.0 : 18.0, 'h': isMobile ? 12.3 : 17.0},
-      {'w': isMobile ? 14.0 : 20.0, 'h': isMobile ? 13.2 : 18.9},
-    ];
-    
-    // Cloud sizes (varied)
-    final cloudSizes = [
-      {'w': isMobile ? 28 : 40, 'h': isMobile ? 19 : 27},
-      {'w': isMobile ? 30 : 42, 'h': isMobile ? 20 : 28},
-      {'w': isMobile ? 32 : 45, 'h': isMobile ? 22 : 31},
-      {'w': isMobile ? 35 : 48, 'h': isMobile ? 24 : 33},
-      {'w': isMobile ? 38 : 52, 'h': isMobile ? 26 : 36},
-      {'w': isMobile ? 40 : 55, 'h': isMobile ? 28 : 38},
-    ];
-    
-    // Left side positions (varied for natural look)
-    final leftPositions = [0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08];
-    // Right side positions
-    final rightPositions = [0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08];
-    
-    // Track used positions separately for left and right to ensure even distribution
-    final usedPositionsLeft = <double>[];
-    final usedPositionsRight = <double>[];
-    final minDistanceBetween = 40.0; // Further reduced for higher density
-    
-    // Generate decorations dynamically - ensuring BOTH sides get decorations evenly
-    for (int i = 0; i < numDecorationRows; i++) {
-      final baseY = topPadding + (adjustedSpacing * (i + 1));
-      
-      // Add some randomness to Y position (±12px) to make it look more natural
-      final randomOffset = (i % 3 - 1) * 12.0; // -12, 0, or 12
-      final y = baseY + randomOffset;
-      
-      // Determine decoration type ONCE per row - ensures both sides get the same type
-      // Clouds appear less frequently: every 5th or 7th item for balance
-      final useCloud = (i % 5 == 0 || i % 7 == 0);
-      
-      // Add decoration on LEFT side (if space available)
-      if (leftZone > 50) {
-        // Check if left position is not too close to other left decorations
-        bool leftTooClose = false;
-        for (final usedY in usedPositionsLeft) {
-          if ((y - usedY).abs() < minDistanceBetween) {
-            leftTooClose = true;
-            break;
-          }
-        }
-        
-        if (!leftTooClose) {
-          usedPositionsLeft.add(y);
-          final leftPos = leftPositions[i % leftPositions.length];
-          
-          if (useCloud) {
-            final cloudSize = cloudSizes[i % cloudSizes.length];
-            elements.add(
-              Positioned(
-                left: screenWidth * leftPos,
-                top: y,
-                child: SvgPicture.asset(
-                  'assets/images/cloud.svg',
-                  width: cloudSize['w']!.toDouble(),
-                  height: cloudSize['h']!.toDouble(),
-                ),
-              ),
-            );
-          } else {
-            final starSize = starSizes[i % starSizes.length];
-            elements.add(
-              Positioned(
-                left: screenWidth * leftPos,
-                top: y,
-                child: SvgPicture.asset(
-                  'assets/images/pinkstar.svg',
-                  width: starSize['w']!,
-                  height: starSize['h']!,
-                ),
-              ),
-            );
-          }
-        }
-      }
-      
-      // Add decoration on RIGHT side (if space available) - use SAME type as left for balance
-      if (rightZone > 50) {
-        // Use slightly different Y position for right side to avoid exact mirroring
-        final rightY = y + ((i % 2 == 0) ? 8.0 : -8.0);
-        
-        // Check if right side position is not too close to other right decorations
-        bool rightTooClose = false;
-        for (final usedY in usedPositionsRight) {
-          if ((rightY - usedY).abs() < minDistanceBetween) {
-            rightTooClose = true;
-            break;
-          }
-        }
-        
-        if (!rightTooClose) {
-          usedPositionsRight.add(rightY);
-          final rightPos = rightPositions[i % rightPositions.length];
-          
-          // Use the SAME decoration type as left side to ensure perfect balance
-          if (useCloud) {
-            final cloudSize = cloudSizes[(i + 1) % cloudSizes.length];
-            elements.add(
-              Positioned(
-                right: screenWidth * rightPos,
-                top: rightY,
-                child: SvgPicture.asset(
-                  'assets/images/cloud.svg',
-                  width: cloudSize['w']!.toDouble(),
-                  height: cloudSize['h']!.toDouble(),
-                ),
-              ),
-            );
-          } else {
-            final starSize = starSizes[(i + 1) % starSizes.length];
-            elements.add(
-              Positioned(
-                right: screenWidth * rightPos,
-                top: rightY,
-                child: SvgPicture.asset(
-                  'assets/images/pinkstar.svg',
-                  width: starSize['w']!,
-                  height: starSize['h']!,
-                ),
-              ),
-            );
-          }
-        }
-      }
-    }
-    
-    // Add top decorations (above content)
-    elements.add(
-      Positioned(
-        left: centerX - 100,
-        top: 30,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 11.0 : 16.0,
-          height: isMobile ? 10.4 : 15.1,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        left: centerX + 50,
-        top: 50,
-        child: SvgPicture.asset(
-          'assets/images/cloud.svg',
-          width: isMobile ? 30 : 42,
-          height: isMobile ? 20 : 28,
-        ),
-      ),
-    );
-    
-    elements.add(
-      Positioned(
-        left: centerX - 50,
-        top: 20,
-        child: SvgPicture.asset(
-          'assets/images/pinkstar.svg',
-          width: isMobile ? 9.0 : 14.0,
-          height: isMobile ? 8.5 : 13.2,
-        ),
-      ),
-    );
-    
-    // Add bottom decorations (below content)
-    final bottomY = contentHeight - 30;
-    if (bottomY > 0) {
-      elements.add(
-        Positioned(
-          left: centerX - 80,
-          top: bottomY - 20,
-          child: SvgPicture.asset(
-            'assets/images/pinkstar.svg',
-            width: isMobile ? 13.0 : 18.0,
-            height: isMobile ? 12.3 : 17.0,
           ),
-        ),
-      );
-      
-      elements.add(
-        Positioned(
-          right: centerX - 120,
-          top: bottomY - 10,
-          child: SvgPicture.asset(
-            'assets/images/pinkstar.svg',
-            width: isMobile ? 10.0 : 14.0,
-            height: isMobile ? 9.4 : 13.2,
-          ),
-        ),
-      );
-      
-      elements.add(
-        Positioned(
-          left: centerX + 30,
-          top: bottomY - 30,
-          child: SvgPicture.asset(
-            'assets/images/cloud.svg',
-            width: isMobile ? 28 : 40,
-            height: isMobile ? 19 : 27,
-          ),
-        ),
-      );
-    }
-    
-    return elements;
+    );
   }
 }
