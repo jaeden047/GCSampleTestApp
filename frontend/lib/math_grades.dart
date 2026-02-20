@@ -106,18 +106,11 @@ class MathGrades extends StatelessWidget {
       }
     } else {
       try {
-        final profile = await supabase
-            .from('profiles')
-            .select('region')
-            .eq('id', user.id)
-            .maybeSingle();
-        final region = profile?['region'] as String? ?? 'americas';
-        final mapping = await supabase
-            .from('region_set_mapping')
-            .select('set_number')
-            .eq('region', region)
-            .maybeSingle();
-        final setNumber = (mapping?['set_number'] as int?) ?? 1;
+        final setNumber = await supabase.rpc('get_set_for_quiz', params: {
+          'p_user_id': user.id,
+          'p_topic_name': topicName,
+          'p_round': round,
+        }) as int? ?? 1;
         final questions = await supabase.rpc('generate_questions', params: {
           'topic_input': topicName,
           'p_round': round,
