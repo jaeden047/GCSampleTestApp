@@ -69,7 +69,7 @@ class _SignupScreen2State extends State<SignupScreen2> {
       institutionSchool: _institutionController.text.trim(),
       grade: _selectedGrade,
       referenceCode: _referenceCodeController.text.trim().isEmpty 
-          ? 'NOTREDAMEUALAA' 
+          ? 'FUTUREMINDG8R1' 
           : _referenceCodeController.text.trim(),
     );
     

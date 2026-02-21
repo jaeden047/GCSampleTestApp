@@ -369,6 +369,7 @@ class _LeaderboardState extends State<Leaderboard> {
 
     final topicId = topicResponse['topic_id'];
 
+    /*
     var query = supabase
         .from('test_attempts')
         .select('score, duration_seconds, question_list, round, profiles(name, country, school)') // added country, school
@@ -383,7 +384,14 @@ class _LeaderboardState extends State<Leaderboard> {
         .order('duration_seconds', ascending: true)
         .limit(10);
 
-    return List<Map<String, dynamic>>.from(attemptsResponse);
+    */
+
+    final data = await supabase.rpc('leaderboard_best_attempts', params: {
+      'p_topic_id': topicId,
+      if (round != null && round.isNotEmpty) 'p_round': round,
+    }); // We use the function leaderboard_best_attempts, plug in topic_id and round
+
+    return List<Map<String, dynamic>>.from(data);
   }
 
   static const _mathRoundTopicNames = ['Grade 5 and 6', 'Grade 7 and 8', 'Grade 9 and 10', 'Grade 11 and 12'];
@@ -742,15 +750,15 @@ class _LeaderboardState extends State<Leaderboard> {
                           _buildHeaderRow(isMobile),
                           
                           // Leaderboard cards
-                          ...leaderboard.map((user) {
-                            final score = (user['score'] as num?)?.toDouble() ?? 0.0;
-                            final questionList = user['question_list'] as List<dynamic>? ?? [];
+                          ...leaderboard.map((row) {
+                            final score = (row['score'] as num?)?.toDouble() ?? 0.0;
+                            final questionList = row['question_list'] as List<dynamic>? ?? [];
                             final totalQuestions = questionList.length;
                             final starCount = _getStarCount(score, totalQuestions);
-                            final userName = user['profiles']?['name'] ?? 'Unknown';
-                            final roundLabel = _isMathRoundTopic(selectedTopic!) ? _roundLabel(user['round'] as String? ?? 'local') : null;
+                            final userName = row['profiles']?['name'] ?? 'Unknown';
+                            final roundLabel = _isMathRoundTopic(selectedTopic!) ? _roundLabel(row['round'] as String? ?? 'local') : null;
 
-                            final profile = user['profiles'] as Map<String, dynamic>?;
+                            final profile = row['profiles'] as Map<String, dynamic>?;
                             final country = (profile?['country']).toString().trim();
                             final school  = (profile?['school']).toString().trim();
                             

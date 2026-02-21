@@ -7,6 +7,7 @@ class ApiService {
   ApiService._();
   static final ApiService instance = ApiService._();
   final supabase = Supabase.instance.client;
+  final supabaseHiddenPassword = "test123!";
 
   // PROD base URL from doc:
   static const String baseUrl = 'https://www.greencontributor.org/api/v1';
@@ -117,11 +118,14 @@ class ApiService {
       );
       print(res.data);
       // token key depends on backend; "jwt" is only correct if response uses that key
-    } 
-      on DioException catch (e) { // dio specific errors
-      final statusCode = e.response?.statusCode; // server error code 404/400/etc.
-      final body = e.response?.data; // server response data
-      throw Exception('Register failed ($statusCode): $body'); 
+    } on DioException catch (e) {
+      print('REGISTER DioException: type=${e.type}');
+      print('REGISTER message=${e.message}');
+      print('REGISTER error=${e.error}');
+      print('REGISTER uri=${e.requestOptions.uri}');
+      print('REGISTER data=${e.requestOptions.data}');
+      print('REGISTER response=${e.response?.statusCode} body=${e.response?.data}');
+      rethrow;
     } catch (e) { // all other error points
       throw Exception('Register failed: $e');
     }

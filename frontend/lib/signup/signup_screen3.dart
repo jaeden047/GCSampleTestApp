@@ -44,8 +44,8 @@ class _SignupScreen3State extends State<SignupScreen3> {
       return 'Password is required';
     }
     
-    if (password.length < 8) {
-      return 'Password must be at least 8 characters';
+    if (password.length < 6) {
+      return 'Password must be at least 6 characters';
     }
 
     final specialCharRegex = RegExp(r'[!@#$%^&*(),.?":{}|<>]');
@@ -99,7 +99,7 @@ class _SignupScreen3State extends State<SignupScreen3> {
       email: widget.data.email!,
       password: _passwordController.text,
       name: widget.data.fullName ?? '',
-      interestedProgram: '69598383bfc1a2a7926b46f6', 
+      interestedProgram: '6994dfd1ea414286dd452760', 
       studentType: 'school',               
       photo: 'https://example.com/profile.jpg',
       userType: 'STUDENT', 
@@ -209,7 +209,7 @@ class _SignupScreen3State extends State<SignupScreen3> {
                     SizedBox(height: isMobile ? 16 : 20),
                     // Instruction text
                     Text(
-                      'Password should have a combination of alphabets, numbers, special characters, and be at least 8 characters long.',
+                      'Password should have a combination of alphabets, numbers, special characters, and be at least 6 characters long.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: greySubtitle,

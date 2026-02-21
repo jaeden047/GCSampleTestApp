@@ -67,8 +67,8 @@ class _LoginPageState extends State<LoginPage> { // stateful because transitions
     if (password.isEmpty) {
       return 'Password is required';
     }
-    if (password.length < 8) {
-      return 'Password must be at least 8 characters';
+    if (password.length < 6) {
+      return 'Password must be at least 6 characters';
     }
     //Password Checks
 
@@ -113,7 +113,7 @@ class _LoginPageState extends State<LoginPage> { // stateful because transitions
         }  catch (e, st) {
           debugPrint('Login failed: $e');
           debugPrint('$st');
-
+          setState(() => _isLoading = false);
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Login failed: $e')),
@@ -122,7 +122,7 @@ class _LoginPageState extends State<LoginPage> { // stateful because transitions
     } catch (e, st) {
       debugPrint('Login failed: $e');
       debugPrint('$st');
-
+        setState(() => _isLoading = false);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Login failed: $e')),
