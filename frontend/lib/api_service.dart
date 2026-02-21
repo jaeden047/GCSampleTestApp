@@ -11,7 +11,6 @@ class ApiService {
 
   // PROD base URL from doc:
   static const String baseUrl = 'https://www.greencontributor.org/api/v1';
-  static const String supabaseHiddenPassword = 'hiddenPassword123!'; // Hidden Password due to Supabase Backend 
 
   final TokenStore _tokenStore = PlatformTokenStore();
 
